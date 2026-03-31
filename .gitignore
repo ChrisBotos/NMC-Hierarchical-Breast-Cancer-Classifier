@@ -1,0 +1,52 @@
+# TB-Project (CATS) .gitignore
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+build/
+dist/
+*.egg-info/
+*.egg
+
+# ===== Virtual Environments =====
+venv*/
+.venv/
+ENV/
+env/
+
+# ===== Testing =====
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ===== Jupyter =====
+.ipynb_checkpoints/
+
+# ===== Claude Code =====
+.claude/
+CLAUDE.md
+
+# ===== Data (keep structure, ignore contents) =====
+data/**/*
+!data/**/
+!data/**/.gitkeep
+
+# ===== Model artifacts =====
+model/model.pkl
+
+# ===== OS Files =====
+.DS_Store
+Thumbs.db
+
+# ===== Archives =====
+*.zip
+*.tar.gz
+*.rar
