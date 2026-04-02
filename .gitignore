@@ -34,6 +34,9 @@ htmlcov/
 .claude/
 CLAUDE.md
 
+# ===== Internal planning =====
+docs/research_plan.md
+
 # ===== Data (keep structure, ignore contents) =====
 data/**/*
 !data/**/
