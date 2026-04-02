@@ -1,0 +1,175 @@
+================================================================================
+              CATS Pipeline Flowchart — Breast Cancer Subtype Classification
+================================================================================
+
+  Research Question:
+  Does Wessels' principle (simple classifier + univariate filtering > complex
+  pipelines) hold on discrete aCGH data with 3 classes and feature redundancy?
+
+================================================================================
+
+  INPUT DATA
+  ──────────
+  Train_call.tsv ──────────> 100 samples x 2834 genomic regions (CN: -1,0,1,2)
+  Train_clinical.tsv ──────> 100 sample labels (HER2+: 32, HR+: 36, TN: 32)
+  Validation_call.tsv ─────> 57 unlabelled samples x 2834 regions
+
+
+================================================================================
+  PHASE 0: DATA EXPLORATION  [COMPLETE]
+================================================================================
+
+  Train_call.tsv + Train_clinical.tsv
+          │
+          ▼
+  ┌─────────────────────────────────────────────┐
+  │  Exploration Analyses                        │
+  │  ├── Class distribution (balanced)           │
+  │  ├── Genome-wide aberration frequency        │
+  │  ├── PCA / t-SNE (HER2+ separates)          │
+  │  ├── Hierarchical clustering (sil=0.092)     │
+  │  ├── Kruskal-Wallis per region               │
+  │  │   └── 6 regions pass Bonferroni (chr12/17)│
+  │  ├── Spatial correlation analysis            │
+  │  │   └── r=0.92 at <0.1 Mb, heavy redundancy│
+  │  └── Sample similarity matrix                │
+  └─────────────────────────────────────────────┘
+          │
+          ▼
+  KEY FINDINGS:
+  • Feature selection is essential (raw space has no cluster structure).
+  • Must handle spatial autocorrelation (nearby regions are redundant).
+  • HER2+ is easy to separate; HR+ vs TN is the hard boundary.
+
+
+================================================================================
+  PHASE 1: FEATURE SELECTION
+  Script: code/feature_selection_phase.py
+================================================================================
+
+                        2834 raw features
+                              │
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+  ┌─────────────────────────┐   ┌─────────────────────────────┐
+  │   UNIVARIATE METHOD     │   │   MULTIVARIATE METHOD       │
+  │                         │   │                             │
+  │ 1. Kruskal-Wallis test  │   │ L1-penalised multinomial    │
+  │    per region (H-stat)  │   │ logistic regression (LASSO) │
+  │         │               │   │         │                   │
+  │ 2. Rank by p-value,     │   │ Features with non-zero      │
+  │    take top k           │   │ coefficients are selected   │
+  │         │               │   │         │                   │
+  │ 3. Cluster correlated   │   │ Tune C via inner CV         │
+  │    regions (r > thresh) │   │                             │
+  │         │               │   │                             │
+  │ 4. Merge each cluster   │   │                             │
+  │    to median CN         │   │                             │
+  │         │               │   │                             │
+  │ 5. Backfill from ranked │   │                             │
+  │    list, repeat until   │   │                             │
+  │    stable               │   │                             │
+  │         │               │   │                             │
+  │ Tune k, r-threshold     │   │                             │
+  │ via inner CV            │   │                             │
+  └────────────┬────────────┘   └──────────────┬──────────────┘
+               │                               │
+               ▼                               ▼
+       Univariate feature set          Multivariate feature set
+       (k non-redundant features)      (sparse coefficient vector)
+
+
+================================================================================
+  PHASE 2: MODEL TRAINING & EVALUATION
+  Script: code/model_training_phase.py
+================================================================================
+
+  CROSS-VALIDATION SCHEME: Stratified 5-fold, repeated 10x (50 fits per cell).
+  Feature selection runs INSIDE each fold (no data leakage).
+
+  ┌──────────────────────────────────────────────────────────────────────────┐
+  │                        OUTER CV (5-fold x 10 repeats)                    │
+  │                                                                          │
+  │   For each fold split:                                                   │
+  │   ┌────────────────────────────────────────────────────────────────────┐ │
+  │   │  80 train samples                        20 test samples           │ │
+  │   │       │                                                            │ │
+  │   │       ▼                                                            │ │
+  │   │  Feature selection                                                 │ │
+  │   │  (on train only)                                                   │ │
+  │   │       │                                                            │ │
+  │   │       ▼                                                            │ │
+  │   │  Train classifier                                                  │ │
+  │   │  (on selected features)                                            │ │
+  │   │       │                                                            │ │
+  │   │       ▼                                                            │ │
+  │   │  Predict on test fold ───────────────────> fold accuracy           │ │
+  │   └────────────────────────────────────────────────────────────────────┘ │
+  │                                                                          │
+  │   Aggregate: mean accuracy +/- std across 50 folds                       │
+  └──────────────────────────────────────────────────────────────────────────┘
+
+  RUN FOR ALL FOUR CELLS OF THE 2x2 GRID:
+
+  ┌──────────────────────────┬───────────────────────┬────────────────────────┐
+  │                          │  NMC (simple)         │  Random Forest (cplx)  │
+  ├──────────────────────────┼───────────────────────┼────────────────────────┤
+  │  Univariate              │  Cell A               │  Cell B                │
+  │  (KW + merge)            │  Wessels' prediction: │  Complex model +       │
+  │                          │  should win at n=100  │  simple features       │
+  ├──────────────────────────┼───────────────────────┼────────────────────────┤
+  │  Multivariate            │  Cell C               │  Cell D                │
+  │  (LASSO)                 │  Joint selection +    │  Max complexity,       │
+  │                          │  simple model         │  expected to overfit   │
+  └──────────────────────────┴───────────────────────┴────────────────────────┘
+
+  OUTPUTS:
+  • 2x2 accuracy table (mean +/- std).
+  • Confusion matrices per cell.
+  • Statistical comparison (paired test on fold accuracies).
+  • Best single biomarker region.
+
+
+================================================================================
+  PHASE 3: FINAL PREDICTION
+  Script: code/final_prediction_phase.py
+================================================================================
+
+  Select best cell from 2x2 grid
+          │
+          ▼
+  ┌─────────────────────────────────────┐
+  │  Retrain on ALL 100 training samples│
+  │  (feature selection on full data)   │
+  └──────────────────┬──────────────────┘
+                     │
+          ┌──────────┴──────────┐
+          ▼                     ▼
+  ┌──────────────┐    ┌─────────────────────────┐
+  │ model.pkl    │    │ Apply to 57 validation   │
+  │ (joblib)     │    │ samples                  │
+  └──────────────┘    └────────────┬────────────┘
+                                   │
+                      ┌────────────┴────────────┐
+                      ▼                         ▼
+              ┌──────────────┐         ┌──────────────┐
+              │prediction.txt│         │ estimate.txt │
+              │(57 labels)   │         │ (0-57)       │
+              └──────────────┘         └──────────────┘
+
+  VALIDATION CHECKS:
+  • python3 code/predictions_file_format_check_v2.py results/prediction.txt
+  • python3 model/run_model.py -i data/Validation_call.tsv -m model/model.pkl -o output.txt
+  • diff output.txt results/prediction.txt  (must be identical)
+
+
+================================================================================
+  PAPER FIGURES (2-4)
+================================================================================
+
+  Fig 1: CV workflow diagram (based on this flowchart, publication quality).
+  Fig 2: 2x2 accuracy table — directly answers the research question.
+  Fig 3: Genome-wide feature importance map (which regions were selected).
+  Fig 4: (optional) Confusion matrix for the winning model.
+
+================================================================================
