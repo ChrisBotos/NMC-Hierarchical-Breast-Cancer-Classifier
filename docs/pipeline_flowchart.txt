@@ -43,40 +43,24 @@
 
 
 ================================================================================
-  PHASE 1: FEATURE SELECTION
-  Script: code/feature_selection_phase.py
+  PHASE 1: LABEL-FREE REGION MERGING
+  Script: code/preprocessing_phase.py
 ================================================================================
 
-                        2834 raw features
+  2834 raw regions (per chromosome)
+          │
+          ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │  Greedy one-pass merge per chromosome                   │
+  │  Adjacent regions with Pearson r > 0.8 merged into      │
+  │  consensus segments. Consensus value = median CN.       │
+  │  Label-free (no class labels used) -> no leakage.       │
+  │  2834 regions -> ~273 consensus segments (10x reduction)│
+  │  Same merge map applied to Validation_call.tsv.         │
+  └───────────────────────────┬─────────────────────────────┘
                               │
-              ┌───────────────┴───────────────┐
-              ▼                               ▼
-  ┌─────────────────────────┐   ┌─────────────────────────────┐
-  │   UNIVARIATE METHOD     │   │   MULTIVARIATE METHOD       │
-  │                         │   │                             │
-  │ 1. Kruskal-Wallis test  │   │ L1-penalised multinomial    │
-  │    per region (H-stat)  │   │ logistic regression (LASSO) │
-  │         │               │   │         │                   │
-  │ 2. Rank by p-value,     │   │ Features with non-zero      │
-  │    take top k           │   │ coefficients are selected   │
-  │         │               │   │         │                   │
-  │ 3. Cluster correlated   │   │ Tune C via inner CV         │
-  │    regions (r > thresh) │   │                             │
-  │         │               │   │                             │
-  │ 4. Merge each cluster   │   │                             │
-  │    to median CN         │   │                             │
-  │         │               │   │                             │
-  │ 5. Backfill from ranked │   │                             │
-  │    list, repeat until   │   │                             │
-  │    stable               │   │                             │
-  │         │               │   │                             │
-  │ Tune k, r-threshold     │   │                             │
-  │ via inner CV            │   │                             │
-  └────────────┬────────────┘   └──────────────┬──────────────┘
-               │                               │
-               ▼                               ▼
-       Univariate feature set          Multivariate feature set
-       (k non-redundant features)      (sparse coefficient vector)
+                              ▼
+                  ~273 consensus segments
 
 
 ================================================================================
@@ -84,8 +68,39 @@
   Script: code/model_training_phase.py
 ================================================================================
 
+  Input: ~273 consensus segments from Phase 1.
+
+  FEATURE SELECTION METHODS (applied inside each CV fold):
+
+  ┌─────────────────────────────┐   ┌─────────────────────────────────────┐
+  │   UNIVARIATE: KW top-k     │   │   MULTIVARIATE: Elastic Net         │
+  │                             │   │                                     │
+  │ 1. Kruskal-Wallis test per  │   │ L1+L2 penalised multinomial         │
+  │    consensus segment        │   │ logistic regression                 │
+  │ 2. Rank by p-value          │   │ (sklearn LogisticRegression with    │
+  │ 3. Select top k segments    │   │  penalty='elasticnet', solver='saga'│
+  │                             │   │  l1_ratio controls L1/L2 balance)   │
+  │ Tune: k                     │   │                                     │
+  │  {5,10,15,20,30,50,75,100}  │   │ Tune: C x l1_ratio (10 x 5 grid)   │
+  └─────────────────────────────┘   └─────────────────────────────────────┘
+
+  CLASSIFIER METHODS:
+
+  ┌─────────────────────────────┐   ┌─────────────────────────────────────┐
+  │   SIMPLE: NMC               │   │   COMPLEX: Random Forest            │
+  │                             │   │                                     │
+  │ Nearest Mean Classifier     │   │ 500 trees, min_samples_leaf=2       │
+  │ Zero hyperparameters        │   │ Fixed params (not tuned at n=100)   │
+  │ Linear decision boundary    │   │ Non-linear, captures interactions   │
+  │ Probabilities via softmax   │   │ Native predict_proba()             │
+  │ of negative distances       │   │                                     │
+  └─────────────────────────────┘   └─────────────────────────────────────┘
+
+  = 4 pipelines: KW+NMC | KW+RF | ENet+NMC | ENet+RF
+
   CROSS-VALIDATION SCHEME: Stratified 5-fold, repeated 10x (50 fits per cell).
   Feature selection runs INSIDE each fold (no data leakage).
+  Scoring metric: weighted one-vs-rest AUROC.
 
   ┌──────────────────────────────────────────────────────────────────────────┐
   │                        OUTER CV (5-fold x 10 repeats)                    │
@@ -95,18 +110,20 @@
   │   │  80 train samples                        20 test samples           │ │
   │   │       │                                                            │ │
   │   │       ▼                                                            │ │
-  │   │  Feature selection                                                 │ │
-  │   │  (on train only)                                                   │ │
+  │   │  INNER CV (5-fold on train only)                                   │ │
+  │   │  ├── Feature selection (on inner train folds)                      │ │
+  │   │  ├── Train classifier (on inner train folds)                       │ │
+  │   │  ├── Score AUROC on inner validation fold                          │ │
+  │   │  └── Pick best hyperparameters (highest mean inner AUROC)          │ │
   │   │       │                                                            │ │
   │   │       ▼                                                            │ │
-  │   │  Train classifier                                                  │ │
-  │   │  (on selected features)                                            │ │
+  │   │  Retrain with best hyperparams on full outer training set          │ │
   │   │       │                                                            │ │
   │   │       ▼                                                            │ │
-  │   │  Predict on test fold ───────────────────> fold accuracy           │ │
+  │   │  Predict on test fold ───────────────────> fold AUROC              │ │
   │   └────────────────────────────────────────────────────────────────────┘ │
   │                                                                          │
-  │   Aggregate: mean accuracy +/- std across 50 folds                       │
+  │   Aggregate: mean AUROC +/- std across 50 folds                          │
   └──────────────────────────────────────────────────────────────────────────┘
 
   RUN FOR ALL FOUR CELLS OF THE 2x2 GRID:
@@ -115,19 +132,20 @@
   │                          │  NMC (simple)         │  Random Forest (cplx)  │
   ├──────────────────────────┼───────────────────────┼────────────────────────┤
   │  Univariate              │  Cell A               │  Cell B                │
-  │  (KW + merge)            │  Wessels' prediction: │  Complex model +       │
+  │  (KW top-k)              │  Wessels' prediction: │  Complex model +       │
   │                          │  should win at n=100  │  simple features       │
   ├──────────────────────────┼───────────────────────┼────────────────────────┤
   │  Multivariate            │  Cell C               │  Cell D                │
-  │  (LASSO)                 │  Joint selection +    │  Max complexity,       │
+  │  (Elastic Net)           │  Joint selection +    │  Max complexity,       │
   │                          │  simple model         │  expected to overfit   │
   └──────────────────────────┴───────────────────────┴────────────────────────┘
 
   OUTPUTS:
-  • 2x2 accuracy table (mean +/- std).
+  • 2x2 AUROC table (mean +/- std).
   • Confusion matrices per cell.
-  • Statistical comparison (paired test on fold accuracies).
+  • Statistical comparison (Wilcoxon signed-rank on 50 fold AUROCs).
   • Best single biomarker region.
+  • Feature importance / selection frequency across folds.
 
 
 ================================================================================
@@ -135,13 +153,15 @@
   Script: code/final_prediction_phase.py
 ================================================================================
 
-  Select best cell from 2x2 grid
+  Select best pipeline from 2x2 AUROC results
           │
           ▼
-  ┌─────────────────────────────────────┐
-  │  Retrain on ALL 100 training samples│
-  │  (feature selection on full data)   │
-  └──────────────────┬──────────────────┘
+  ┌──────────────────────────────────────────────────────┐
+  │  Tune hyperparams (k, or C + l1_ratio) via 5-fold   │
+  │  CV on all 100 samples (scored by AUROC).            │
+  │  Train final model on all 100 samples with best      │
+  │  hyperparams. Apply Phase 1 merge map to validation. │
+  └──────────────────────────┬───────────────────────────┘
                      │
           ┌──────────┴──────────┐
           ▼                     ▼
@@ -168,7 +188,7 @@
 ================================================================================
 
   Fig 1: CV workflow diagram (based on this flowchart, publication quality).
-  Fig 2: 2x2 accuracy table — directly answers the research question.
+  Fig 2: 2x2 AUROC table — directly answers the research question.
   Fig 3: Genome-wide feature importance map (which regions were selected).
   Fig 4: (optional) Confusion matrix for the winning model.
 
