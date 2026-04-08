@@ -9,19 +9,23 @@ Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
 Script Name: compare_explorations.py.
 Description:
-    Standalone comparison of exploration analyses on raw (2834 regions) vs
-    merged (273 consensus segments) data. Produces a single multi-panel
-    figure showing PCA, t-SNE, and summary metrics side-by-side.
+    Compare two data exploration runs side-by-side. Loads pre-computed
+    PCA, t-SNE, and Kruskal-Wallis results from exploration output
+    directories (produced by data_exploration_phase.py) and generates
+    a single multi-panel comparison figure.
 
 Usage:
-    python3 code/compare_explorations.py
+    python3 code/compare_explorations.py --dir-a results/data/data_exploration_phase --dir-b results/data/data_exploration_phase_merged
+    python3 code/compare_explorations.py --dir-a results/data/data_exploration_phase --dir-b results/data/data_exploration_phase_merged --label-a "Raw (2834)" --label-b "Merged (273)" --tag raw_vs_merged
 
 Dependencies:
     Python >= 3.10.
-    scikit-learn, pandas, numpy, scipy, matplotlib, rich.
+    pandas, numpy, matplotlib, rich.
 """
 
+import argparse
 import logging
+import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -30,28 +34,20 @@ import pandas as pd
 import rich.traceback
 from rich.console import Console
 from rich.logging import RichHandler
-from scipy import stats
-from sklearn.cluster import AgglomerativeClustering
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
-from sklearn.metrics import silhouette_score
 
 rich.traceback.install()
 
 # ---------------------------------------------------------------------------
-# Path setup — works from any working directory.
+# Path setup.
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 DATA_DIR = PROJECT_DIR / "data"
-MERGED_DIR = PROJECT_DIR / "results" / "data" / "preprocessing_phase"
-FIG_DIR = PROJECT_DIR / "results" / "figures" / "compare_explorations"
 LOG_DIR = PROJECT_DIR / "results" / "logs"
-FIG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Logging setup — dual output to rich console and log file.
+# Logging setup.
 # ---------------------------------------------------------------------------
 console = Console()
 logging.basicConfig(
@@ -69,7 +65,6 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 SUBTYPE_COLORS = {"HER2+": "#E64B35", "HR+": "#4DBBD5", "Triple Neg": "#00A087"}
 SUBTYPE_ORDER = ["HER2+", "HR+", "Triple Neg"]
-RANDOM_SEED = 42
 
 plt.rcParams.update({
     "figure.dpi": 300,
@@ -84,218 +79,112 @@ plt.rcParams.update({
     "font.family": "sans-serif",
 })
 
+# Files that must exist in each exploration output directory.
+REQUIRED_FILES = [
+    "pca_coordinates.tsv",
+    "pca_variance_explained.tsv",
+    "tsne_perp30.tsv",
+    "kruskal_wallis_per_region.tsv",
+]
+
+
+"""Validation."""
+
+
+def validate_directory(dir_path):
+    """Check that an exploration output directory has all required files.
+
+    Args:
+        dir_path (Path): Path to a data_exploration_phase output directory.
+
+    Returns:
+        list[str]: List of missing file names (empty if all present).
+    """
+    missing = []
+    for fname in REQUIRED_FILES:
+        if not (dir_path / fname).exists():
+            missing.append(fname)
+    return missing
+
 
 """Data Loading."""
 
 
-def load_data():
-    """Load raw and merged training data plus clinical labels.
-
-    Returns:
-        tuple: (raw_df, merged_df, clinical_df).
-
-    Raises:
-        FileNotFoundError: If merged data does not exist (run
-            preprocessing_phase.py first).
-    """
-    raw_df = pd.read_csv(DATA_DIR / "Train_call.tsv", sep="\t")
-    clinical_df = pd.read_csv(DATA_DIR / "Train_clinical.tsv", sep="\t")
-
-    merged_path = MERGED_DIR / "train_merged.tsv"
-    if not merged_path.exists():
-        raise FileNotFoundError(
-            f"Merged data not found at {merged_path}. "
-            "Run preprocessing_phase.py first."
-        )
-    merged_df = pd.read_csv(merged_path, sep="\t")
-
-    return raw_df, merged_df, clinical_df
-
-
-def get_sample_columns(cn_df):
-    """Return sample column names (excluding genomic coordinate columns).
+def load_exploration(dir_path):
+    """Load pre-computed exploration results from an output directory.
 
     Args:
-        cn_df (pd.DataFrame): Copy-number data.
+        dir_path (Path): Path to a data_exploration_phase output directory.
 
     Returns:
-        list[str]: Sample column names.
+        dict: Keys are 'pca_coords', 'pca_variance', 'tsne', 'kw'.
     """
-    return [c for c in cn_df.columns
-            if c not in ("Chromosome", "Start", "End", "Nclone")]
+    pca_coords = pd.read_csv(dir_path / "pca_coordinates.tsv", sep="\t", index_col=0)
+    pca_var = pd.read_csv(dir_path / "pca_variance_explained.tsv", sep="\t")
+    tsne = pd.read_csv(dir_path / "tsne_perp30.tsv", sep="\t", index_col=0)
+    kw = pd.read_csv(dir_path / "kruskal_wallis_per_region.tsv", sep="\t")
 
-
-"""Analysis Functions."""
-
-
-def run_pca(X, n_components=10):
-    """Fit PCA and return transformed data and explained variance ratios.
-
-    Args:
-        X (np.ndarray): Samples-by-features matrix.
-        n_components (int): Number of components.
-
-    Returns:
-        tuple: (X_pca, explained_variance_ratio).
-    """
-    pca = PCA(n_components=n_components, random_state=RANDOM_SEED)
-    X_pca = pca.fit_transform(X)
-    return X_pca, pca.explained_variance_ratio_
-
-
-def run_tsne(X, perplexity=30):
-    """Fit t-SNE and return 2D embedding.
-
-    Args:
-        X (np.ndarray): Samples-by-features matrix.
-        perplexity (int): t-SNE perplexity parameter.
-
-    Returns:
-        np.ndarray: 2D embedding (n_samples, 2).
-    """
-    tsne = TSNE(
-        n_components=2, perplexity=perplexity,
-        random_state=RANDOM_SEED, max_iter=1000,
-    )
-    return tsne.fit_transform(X)
-
-
-def compute_silhouette(X):
-    """Compute silhouette score for k=3 Ward clustering.
-
-    Args:
-        X (np.ndarray): Samples-by-features matrix.
-
-    Returns:
-        float: Silhouette score.
-    """
-    agg = AgglomerativeClustering(n_clusters=3, linkage="ward")
-    labels = agg.fit_predict(X)
-    return silhouette_score(X, labels)
-
-
-def compute_bonferroni_significant(cn_df, clinical_df, sample_cols):
-    """Count Bonferroni-significant features via Kruskal-Wallis test.
-
-    Args:
-        cn_df (pd.DataFrame): Copy-number data.
-        clinical_df (pd.DataFrame): Clinical labels.
-        sample_cols (list[str]): Sample column names.
-
-    Returns:
-        int: Number of features passing Bonferroni correction.
-    """
-    label_map = dict(zip(clinical_df["Sample"], clinical_df["Subgroup"]))
-    groups = {}
-    for subtype in SUBTYPE_ORDER:
-        groups[subtype] = [s for s in sample_cols
-                           if label_map.get(s) == subtype]
-
-    pvals = []
-    for idx in range(len(cn_df)):
-        row = cn_df.iloc[idx]
-        samples_by_group = [
-            row[groups[s]].values.astype(float) for s in SUBTYPE_ORDER
-        ]
-        _, p = stats.kruskal(*samples_by_group)
-        pvals.append(p)
-
-    pvals = np.array(pvals)
-    bonf_alpha = 0.05 / len(pvals)
-    return int((pvals < bonf_alpha).sum())
-
-
-def compute_adjacent_corr_median(cn_df, sample_cols):
-    """Compute median Pearson r between adjacent same-chromosome regions.
-
-    Args:
-        cn_df (pd.DataFrame): Copy-number data.
-        sample_cols (list[str]): Sample column names.
-
-    Returns:
-        float: Median adjacent correlation.
-    """
-    data = cn_df[sample_cols].values.astype(float)
-    chroms = cn_df["Chromosome"].values
-
-    correlations = []
-    for i in range(len(cn_df) - 1):
-        if chroms[i] == chroms[i + 1]:
-            r = np.corrcoef(data[i], data[i + 1])[0, 1]
-            if not np.isnan(r):
-                correlations.append(r)
-
-    return float(np.median(correlations)) if correlations else 0.0
+    return {
+        "pca_coords": pca_coords,
+        "pca_variance": pca_var,
+        "tsne": tsne,
+        "kw": kw,
+    }
 
 
 """Figure."""
 
 
-def make_comparison_figure(raw_df, merged_df, clinical_df):
-    """Create a single multi-panel figure comparing raw vs merged exploration.
+def make_comparison_figure(data_a, data_b, label_a, label_b, clinical_df, fig_path):
+    """Create a multi-panel figure comparing two exploration runs.
 
     Layout (2 rows x 3 columns):
-        Row 1: PCA scatter (raw), PCA scatter (merged), scree overlay.
-        Row 2: t-SNE (raw), t-SNE (merged), summary metrics bar chart.
+        Row 1: PCA scatter (A), PCA scatter (B), cumulative variance overlay.
+        Row 2: t-SNE (A), t-SNE (B), summary metrics bar chart.
 
     Args:
-        raw_df (pd.DataFrame): Raw copy-number data (2834 regions).
-        merged_df (pd.DataFrame): Merged consensus data (273 segments).
+        data_a (dict): Exploration results for dataset A.
+        data_b (dict): Exploration results for dataset B.
+        label_a (str): Display label for dataset A.
+        label_b (str): Display label for dataset B.
         clinical_df (pd.DataFrame): Clinical labels.
+        fig_path (Path): Output path for the figure.
     """
-    sample_cols = get_sample_columns(raw_df)
     label_map = dict(zip(clinical_df["Sample"], clinical_df["Subgroup"]))
-    labels = [label_map[s] for s in sample_cols]
 
-    X_raw = raw_df[sample_cols].T.values
-    X_merged = merged_df[sample_cols].T.values
+    # Build subtype label arrays aligned to PCA/t-SNE sample order.
+    samples_a = data_a["pca_coords"].index.tolist()
+    samples_b = data_b["pca_coords"].index.tolist()
+    labels_a = [label_map.get(s, "Unknown") for s in samples_a]
+    labels_b = [label_map.get(s, "Unknown") for s in samples_b]
 
-    # --- Compute all metrics ---
-    log.info("Computing PCA (raw) ...")
-    pca_raw, var_raw = run_pca(X_raw)
-    log.info("Computing PCA (merged) ...")
-    pca_merged, var_merged = run_pca(X_merged)
-
-    log.info("Computing t-SNE (raw, perplexity=30) ...")
-    tsne_raw = run_tsne(X_raw, perplexity=30)
-    log.info("Computing t-SNE (merged, perplexity=30) ...")
-    tsne_merged = run_tsne(X_merged, perplexity=30)
-
-    log.info("Computing silhouette scores ...")
-    sil_raw = compute_silhouette(X_raw)
-    sil_merged = compute_silhouette(X_merged)
-    log.info("  Raw: %.3f, Merged: %.3f", sil_raw, sil_merged)
-
-    log.info("Computing Kruskal-Wallis (raw) ...")
-    kw_raw = compute_bonferroni_significant(raw_df, clinical_df, sample_cols)
-    log.info("Computing Kruskal-Wallis (merged) ...")
-    kw_merged = compute_bonferroni_significant(
-        merged_df, clinical_df, sample_cols,
-    )
-    log.info("  Bonferroni-significant: raw=%d/%d, merged=%d/%d",
-             kw_raw, len(raw_df), kw_merged, len(merged_df))
-
-    log.info("Computing adjacent correlations ...")
-    adj_raw = compute_adjacent_corr_median(raw_df, sample_cols)
-    adj_merged = compute_adjacent_corr_median(merged_df, sample_cols)
-    log.info("  Median adjacent r: raw=%.3f, merged=%.3f",
-             adj_raw, adj_merged)
+    # Extract arrays.
+    pca_a = data_a["pca_coords"].values
+    pca_b = data_b["pca_coords"].values
+    var_a = data_a["pca_variance"]["variance_explained"].values
+    var_b = data_b["pca_variance"]["variance_explained"].values
+    tsne_a = data_a["tsne"].values
+    tsne_b = data_b["tsne"].values
+    n_features_a = len(data_a["kw"])
+    n_features_b = len(data_b["kw"])
+    bonf_a = int((data_a["kw"]["significant_bonferroni"]).sum())
+    bonf_b = int((data_b["kw"]["significant_bonferroni"]).sum())
 
     # --- Build figure ---
     fig, axes = plt.subplots(2, 3, figsize=(14, 8.5))
 
-    # Helper to plot a subtype-colored scatter.
-    def scatter_by_subtype(ax, X_2d, panel_label, subtitle):
+    def scatter_by_subtype(ax, X_2d, sample_labels, panel_label, subtitle):
         """Plot a 2D scatter colored by subtype with panel label.
 
         Args:
             ax (matplotlib.axes.Axes): Target axes.
             X_2d (np.ndarray): 2D coordinates (n_samples, 2).
+            sample_labels (list[str]): Subtype label per sample.
             panel_label (str): Panel letter, e.g. "a".
             subtitle (str): Text annotation inside the panel.
         """
         for subtype in SUBTYPE_ORDER:
-            mask = [l == subtype for l in labels]
+            mask = [l == subtype for l in sample_labels]
             ax.scatter(
                 X_2d[mask, 0], X_2d[mask, 1],
                 c=SUBTYPE_COLORS[subtype], label=subtype,
@@ -306,26 +195,26 @@ def make_comparison_figure(raw_df, merged_df, clinical_df):
                 fontweight="bold", va="top")
         ax.spines[["top", "right"]].set_visible(False)
 
-    # (a) PCA raw.
-    scatter_by_subtype(axes[0, 0], pca_raw,
-                       "a", f"Raw data ({len(raw_df)} regions)")
-    axes[0, 0].set_xlabel(f"PC1 ({var_raw[0]*100:.1f}% variance)")
-    axes[0, 0].set_ylabel(f"PC2 ({var_raw[1]*100:.1f}% variance)")
+    # (a) PCA A.
+    scatter_by_subtype(axes[0, 0], pca_a[:, :2], labels_a,
+                       "a", label_a)
+    axes[0, 0].set_xlabel(f"PC1 ({var_a[0]*100:.1f}% variance)")
+    axes[0, 0].set_ylabel(f"PC2 ({var_a[1]*100:.1f}% variance)")
 
-    # (b) PCA merged.
-    scatter_by_subtype(axes[0, 1], pca_merged,
-                       "b", f"Merged data ({len(merged_df)} segments)")
-    axes[0, 1].set_xlabel(f"PC1 ({var_merged[0]*100:.1f}% variance)")
-    axes[0, 1].set_ylabel(f"PC2 ({var_merged[1]*100:.1f}% variance)")
+    # (b) PCA B.
+    scatter_by_subtype(axes[0, 1], pca_b[:, :2], labels_b,
+                       "b", label_b)
+    axes[0, 1].set_xlabel(f"PC1 ({var_b[0]*100:.1f}% variance)")
+    axes[0, 1].set_ylabel(f"PC2 ({var_b[1]*100:.1f}% variance)")
     axes[0, 1].legend(framealpha=0.9, loc="upper right")
 
-    # (c) Scree overlay.
+    # (c) Cumulative variance overlay.
     ax = axes[0, 2]
-    pcs = range(1, 11)
-    ax.plot(pcs, np.cumsum(var_raw) * 100, "o-", color="#3C5488",
-            markersize=4, label=f"Raw ({len(raw_df)} regions)")
-    ax.plot(pcs, np.cumsum(var_merged) * 100, "s-", color="#00A087",
-            markersize=4, label=f"Merged ({len(merged_df)} segments)")
+    pcs = range(1, len(var_a) + 1)
+    ax.plot(pcs, np.cumsum(var_a) * 100, "o-", color="#3C5488",
+            markersize=4, label=label_a)
+    ax.plot(pcs, np.cumsum(var_b) * 100, "s-", color="#00A087",
+            markersize=4, label=label_b)
     ax.set_xlabel("Number of principal components")
     ax.set_ylabel("Cumulative variance explained (%)")
     ax.set_xticks(list(pcs))
@@ -335,94 +224,152 @@ def make_comparison_figure(raw_df, merged_df, clinical_df):
             transform=ax.transAxes, fontsize=9,
             fontweight="bold", va="top")
 
-    # (d) t-SNE raw.
-    scatter_by_subtype(axes[1, 0], tsne_raw,
-                       "d", f"Raw data (perplexity=30)")
+    # (d) t-SNE A.
+    scatter_by_subtype(axes[1, 0], tsne_a, labels_a,
+                       "d", f"{label_a} (perplexity=30)")
     axes[1, 0].set_xlabel("t-SNE dimension 1 (arbitrary units)")
     axes[1, 0].set_ylabel("t-SNE dimension 2 (arbitrary units)")
 
-    # (e) t-SNE merged.
-    scatter_by_subtype(axes[1, 1], tsne_merged,
-                       "e", f"Merged data (perplexity=30)")
+    # (e) t-SNE B.
+    scatter_by_subtype(axes[1, 1], tsne_b, labels_b,
+                       "e", f"{label_b} (perplexity=30)")
     axes[1, 1].set_xlabel("t-SNE dimension 1 (arbitrary units)")
     axes[1, 1].set_ylabel("t-SNE dimension 2 (arbitrary units)")
 
-    # (f) Summary metrics grouped bars.
+    # (f) Summary metrics.
     ax = axes[1, 2]
     metric_names = [
-        "Silhouette\nscore",
         "Cumulative\nvariance\n(PC1-10, %)",
-        "Median\nadjacent\ncorrelation",
+        "Bonferroni-\nsignificant\n(%)",
     ]
-    raw_vals = [sil_raw, np.sum(var_raw) * 100, adj_raw]
-    merged_vals = [sil_merged, np.sum(var_merged) * 100, adj_merged]
+    bonf_pct_a = (bonf_a / n_features_a * 100) if n_features_a > 0 else 0
+    bonf_pct_b = (bonf_b / n_features_b * 100) if n_features_b > 0 else 0
+    vals_a = [np.sum(var_a) * 100, bonf_pct_a]
+    vals_b = [np.sum(var_b) * 100, bonf_pct_b]
 
     x = np.arange(len(metric_names))
     width = 0.3
-    bars_raw = ax.bar(x - width / 2, raw_vals, width, color="#3C5488",
-                      edgecolor="black", linewidth=0.3,
-                      label=f"Raw ({len(raw_df)})")
-    bars_merged = ax.bar(x + width / 2, merged_vals, width, color="#00A087",
-                         edgecolor="black", linewidth=0.3,
-                         label=f"Merged ({len(merged_df)})")
+    bars_a = ax.bar(x - width / 2, vals_a, width, color="#3C5488",
+                    edgecolor="black", linewidth=0.3, label=label_a)
+    bars_b = ax.bar(x + width / 2, vals_b, width, color="#00A087",
+                    edgecolor="black", linewidth=0.3, label=label_b)
 
-    # Add value labels on bars.
-    for bar in bars_raw:
+    for bar in bars_a:
         h = bar.get_height()
         ax.text(bar.get_x() + bar.get_width() / 2, h + 0.5,
-                f"{h:.2f}" if h < 1 else f"{h:.1f}",
+                f"{h:.1f}",
                 ha="center", va="bottom", fontsize=7)
-    for bar in bars_merged:
+    for bar in bars_b:
         h = bar.get_height()
         ax.text(bar.get_x() + bar.get_width() / 2, h + 0.5,
-                f"{h:.2f}" if h < 1 else f"{h:.1f}",
+                f"{h:.1f}",
                 ha="center", va="bottom", fontsize=7)
 
     ax.set_xticks(x)
     ax.set_xticklabels(metric_names, fontsize=7)
-    ax.set_ylabel("Value")
+    ax.set_ylabel("Value (%)")
     ax.legend(fontsize=7)
     ax.spines[["top", "right"]].set_visible(False)
     ax.text(0.02, 0.98, "(f) Summary metrics",
             transform=ax.transAxes, fontsize=9,
             fontweight="bold", va="top")
 
-    # Annotate Bonferroni-significant count below the summary panel.
+    # Annotate feature counts and raw Bonferroni numbers below the panel.
     ax.text(0.5, -0.18,
-            f"Bonferroni-significant features: "
-            f"raw = {kw_raw}/{len(raw_df)}, "
-            f"merged = {kw_merged}/{len(merged_df)}",
+            f"Features: A = {n_features_a}, B = {n_features_b}. "
+            f"Bonferroni-significant: A = {bonf_a}/{n_features_a}, "
+            f"B = {bonf_b}/{n_features_b}.",
             transform=ax.transAxes, fontsize=8, ha="center",
             style="italic")
 
     fig.subplots_adjust(hspace=0.35, wspace=0.30)
-    fig.savefig(FIG_DIR / "01_raw_vs_merged_comparison.png")
+    fig.savefig(fig_path)
     plt.close(fig)
-    log.info("Saved: 01_raw_vs_merged_comparison.png")
+    log.info("Saved: %s", fig_path)
 
 
 """Main."""
 
 
 def main():
-    """Run exploration comparison: raw vs merged data."""
+    """Run exploration comparison between two datasets."""
+    parser = argparse.ArgumentParser(
+        description="Compare two data exploration runs side-by-side.",
+    )
+    parser.add_argument(
+        "--dir-a", type=Path,
+        default=PROJECT_DIR / "results" / "data" / "data_exploration_phase",
+        help="Path to first exploration output directory.",
+    )
+    parser.add_argument(
+        "--dir-b", type=Path,
+        default=PROJECT_DIR / "results" / "data" / "data_exploration_phase_merged",
+        help="Path to second exploration output directory.",
+    )
+    parser.add_argument(
+        "--label-a", type=str, default=None,
+        help="Display label for dataset A (default: directory name).",
+    )
+    parser.add_argument(
+        "--label-b", type=str, default=None,
+        help="Display label for dataset B (default: directory name).",
+    )
+    parser.add_argument(
+        "--clinical", type=Path,
+        default=DATA_DIR / "Train_clinical.tsv",
+        help="Path to clinical labels TSV.",
+    )
+    parser.add_argument(
+        "--tag", type=str, default="",
+        help="Output tag. Figure saved to compare_explorations_{tag}/.",
+    )
+    args = parser.parse_args()
+
     log.info("=" * 60)
-    log.info("COMPARE EXPLORATIONS: RAW VS MERGED DATA")
+    log.info("COMPARE EXPLORATIONS")
     log.info("=" * 60)
 
-    raw_df, merged_df, clinical_df = load_data()
-    log.info("Raw data: %d regions x %d samples",
-             len(raw_df), len(get_sample_columns(raw_df)))
-    log.info("Merged data: %d segments x %d samples",
-             len(merged_df), len(get_sample_columns(merged_df)))
+    # Validate directories.
+    for name, dir_path in [("dir-a", args.dir_a), ("dir-b", args.dir_b)]:
+        if not dir_path.is_dir():
+            log.error("%s is not a directory: %s", name, dir_path)
+            sys.exit(1)
+        missing = validate_directory(dir_path)
+        if missing:
+            log.error(
+                "%s is missing required files: %s\n"
+                "Expected files: %s\n"
+                "Run data_exploration_phase.py first to generate them.",
+                dir_path, ", ".join(missing), ", ".join(REQUIRED_FILES),
+            )
+            sys.exit(1)
+
+    # Load data.
+    data_a = load_exploration(args.dir_a)
+    data_b = load_exploration(args.dir_b)
+    clinical_df = pd.read_csv(args.clinical, sep="\t")
+
+    label_a = args.label_a or args.dir_a.name
+    label_b = args.label_b or args.dir_b.name
+
+    log.info("A: %s (%d features)", label_a, len(data_a["kw"]))
+    log.info("B: %s (%d features)", label_b, len(data_b["kw"]))
     log.info("")
 
-    make_comparison_figure(raw_df, merged_df, clinical_df)
+    # Output directory.
+    suffix = f"_{args.tag}" if args.tag else ""
+    fig_dir = PROJECT_DIR / "results" / "figures" / f"compare_explorations{suffix}"
+    fig_dir.mkdir(parents=True, exist_ok=True)
+
+    make_comparison_figure(
+        data_a, data_b, label_a, label_b, clinical_df,
+        fig_dir / "01_comparison.png",
+    )
 
     log.info("")
     log.info("=" * 60)
     log.info("COMPARISON COMPLETE.")
-    log.info("  Figure: %s", FIG_DIR)
+    log.info("  Figure: %s", fig_dir)
     log.info("  Log:    %s", LOG_DIR / "compare_explorations.log")
     log.info("=" * 60)
 

@@ -50,7 +50,11 @@ STEPS = [
     ),
     (
         "Comparison: Raw vs Merged",
-        [sys.executable, str(SCRIPT_DIR / "compare_explorations.py")],
+        [
+            sys.executable, str(SCRIPT_DIR / "compare_explorations.py"),
+            "--label-a", "Raw (2834 regions)",
+            "--label-b", "Merged (273 segments)",
+        ],
     ),
 ]
 
