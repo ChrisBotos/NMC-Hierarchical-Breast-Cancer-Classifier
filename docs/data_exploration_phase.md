@@ -1,6 +1,6 @@
 # Phase 0: Data Exploration
 
-Summary of all figures produced by `code/eda_exploration.py`.
+Summary of all figures produced by `code/data_exploration_phase.py`.
 
 ---
 

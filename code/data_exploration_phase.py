@@ -11,16 +11,20 @@ Script Name: data_exploration_phase.py.
 Description:
     Phase 0 data exploration for the CATS breast cancer subtype
     classification project. Produces publication-quality figures and
-    logs summary statistics to console and log file.
+    logs summary statistics to console and log file. Supports running
+    on alternative input data (e.g. merged segments) via --input and
+    --tag CLI arguments.
 
 Usage:
     python3 code/data_exploration_phase.py
+    python3 code/data_exploration_phase.py --input results/data/preprocessing_phase/train_merged.tsv --tag merged
 
 Dependencies:
     Python >= 3.10.
     scikit-learn, pandas, numpy, scipy, matplotlib, rich.
 """
 
+import argparse
 import logging
 from pathlib import Path
 
@@ -48,26 +52,54 @@ rich.traceback.install()
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = SCRIPT_DIR.parent
 DATA_DIR = PROJECT_DIR / "data"
-FIG_DIR = PROJECT_DIR / "results" / "figures" / "data_exploration_phase"
-OUT_DIR = PROJECT_DIR / "results" / "data" / "data_exploration_phase"
-LOG_DIR = PROJECT_DIR / "results" / "logs"
-FIG_DIR.mkdir(parents=True, exist_ok=True)
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-# ---------------------------------------------------------------------------
-# Logging setup — dual output to rich console and log file.
-# ---------------------------------------------------------------------------
-console = Console()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[
-        RichHandler(console=console, show_time=False, show_path=False),
-        logging.FileHandler(LOG_DIR / "data_exploration_phase.log", mode="w"),
-    ],
-)
-log = logging.getLogger(__name__)
+# Set by setup() before any analysis runs.
+FIG_DIR = None
+OUT_DIR = None
+LOG_DIR = None
+console = None
+log = None
+
+
+def setup(tag=""):
+    """Initialise output directories and logging for a given run tag.
+
+    When tag is empty, outputs go to the default locations
+    (data_exploration_phase/). When tag is non-empty (e.g. "merged"),
+    outputs go to data_exploration_phase_merged/ so that raw and merged
+    runs do not overwrite each other.
+
+    Args:
+        tag (str): Optional suffix appended to directory and log names.
+    """
+    global FIG_DIR, OUT_DIR, LOG_DIR, console, log
+
+    suffix = f"_{tag}" if tag else ""
+    FIG_DIR = PROJECT_DIR / "results" / "figures" / f"data_exploration_phase{suffix}"
+    OUT_DIR = PROJECT_DIR / "results" / "data" / f"data_exploration_phase{suffix}"
+    LOG_DIR = PROJECT_DIR / "results" / "logs"
+
+    FIG_DIR.mkdir(parents=True, exist_ok=True)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    console = Console()
+
+    # Remove any existing handlers to allow re-initialisation.
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+        handlers=[
+            RichHandler(console=console, show_time=False, show_path=False),
+            logging.FileHandler(
+                LOG_DIR / f"data_exploration_phase{suffix}.log", mode="w",
+            ),
+        ],
+    )
+    log = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Global plot settings.
@@ -93,13 +125,20 @@ plt.rcParams.update({
 """Data Loading."""
 
 
-def load_data():
+def load_data(input_path=None):
     """Load training CN calls, clinical labels, and gene map.
+
+    Args:
+        input_path (str | Path | None): Optional path to an alternative CN
+            data file (e.g. merged segments). Defaults to Train_call.tsv.
 
     Returns:
         tuple: (cn_df, clinical_df, gene_map_df).
     """
-    cn_df = pd.read_csv(DATA_DIR / "Train_call.tsv", sep="\t")
+    if input_path is not None:
+        cn_df = pd.read_csv(input_path, sep="\t")
+    else:
+        cn_df = pd.read_csv(DATA_DIR / "Train_call.tsv", sep="\t")
     clinical_df = pd.read_csv(DATA_DIR / "Train_clinical.tsv", sep="\t")
     gene_map_df = pd.read_csv(DATA_DIR / "BasepairToGeneMap.tsv", sep="\t")
     # Harmonise chromosome column to int (gene map has strings, CN data has ints).
@@ -972,7 +1011,22 @@ def plot_similarity_matrix(cn_df, clinical_df):
 
 def main():
     """Run all Phase 0 exploration sections."""
-    cn_df, clinical_df, gene_map_df = load_data()
+    parser = argparse.ArgumentParser(
+        description="Phase 0 data exploration (raw or merged data).",
+    )
+    parser.add_argument(
+        "--input", type=str, default=None,
+        help="Path to alternative CN data file (e.g. merged segments TSV).",
+    )
+    parser.add_argument(
+        "--tag", type=str, default="",
+        help="Suffix for output directories and log file (e.g. 'merged').",
+    )
+    args = parser.parse_args()
+
+    setup(tag=args.tag)
+
+    cn_df, clinical_df, gene_map_df = load_data(input_path=args.input)
 
     # Data basics.
     validate_data(cn_df, clinical_df)
@@ -1001,7 +1055,8 @@ def main():
     log.info("PHASE 0 EXPLORATION COMPLETE.")
     log.info("  Figures: %s", FIG_DIR)
     log.info("  Data:    %s", OUT_DIR)
-    log.info("  Log:     %s", LOG_DIR / "data_exploration_phase.log")
+    suffix = f"_{args.tag}" if args.tag else ""
+    log.info("  Log:     %s", LOG_DIR / f"data_exploration_phase{suffix}.log")
     log.info("=" * 60)
 
 
