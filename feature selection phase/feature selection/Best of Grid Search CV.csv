@@ -1,0 +1,2 @@
+best_C,best_l1_ratio,best_cv_accuracy,n_selected_features,total_features_before_selection,solver,penalty,max_iterations,scaler,cv_folds
+0.1,0.3,0.86,65,273,saga,elasticnet,10000,StandardScaler,5
