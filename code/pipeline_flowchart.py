@@ -21,12 +21,12 @@ Dependencies:
     matplotlib.
 """
 
-from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 
-PROJECT_DIR = Path(__file__).resolve().parent.parent
+from utils.paths import PROJECT_DIR
+
 FIG_DIR = PROJECT_DIR / "figures"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
 

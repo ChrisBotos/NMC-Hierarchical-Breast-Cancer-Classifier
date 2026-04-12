@@ -10,9 +10,9 @@ Affiliation: Computer Science and Bioinformatics Master's Programmes.
 Script Name: run_full_pipeline.py.
 Description:
     Orchestrator that runs the full analysis pipeline sequentially:
-        1. Phase 0 — Data exploration on raw data.
-        2. Phase 1 — Preprocessing (label-free region merging).
-        3. Phase 0 — Data exploration on merged data (--tag merged).
+        1. Phase 0 - Data exploration on raw data.
+        2. Phase 1 - Preprocessing (label-free region merging).
+        3. Phase 0 - Data exploration on merged data (--tag merged).
         4. Comparison figure (raw vs merged).
 
 Usage:
@@ -24,26 +24,25 @@ Dependencies:
 
 import subprocess
 import sys
-from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_DIR = SCRIPT_DIR.parent
+from utils.paths import CODE_DIR, PROJECT_DIR
+
 MERGED_DATA = PROJECT_DIR / "results" / "data" / "preprocessing_phase" / "train_merged.tsv"
 
 # Pipeline steps: (description, command list).
 STEPS = [
     (
         "Phase 0: Exploration (raw data)",
-        [sys.executable, str(SCRIPT_DIR / "data_exploration_phase.py")],
+        [sys.executable, str(CODE_DIR / "data_exploration_phase.py")],
     ),
     (
         "Phase 1: Preprocessing (region merging)",
-        [sys.executable, str(SCRIPT_DIR / "preprocessing_phase.py")],
+        [sys.executable, str(CODE_DIR / "preprocessing_phase.py")],
     ),
     (
         "Phase 0: Exploration (merged data)",
         [
-            sys.executable, str(SCRIPT_DIR / "data_exploration_phase.py"),
+            sys.executable, str(CODE_DIR / "data_exploration_phase.py"),
             "--input", str(MERGED_DATA),
             "--tag", "merged",
         ],
@@ -51,7 +50,7 @@ STEPS = [
     (
         "Comparison: Raw vs Merged",
         [
-            sys.executable, str(SCRIPT_DIR / "compare_explorations.py"),
+            sys.executable, str(CODE_DIR / "compare_explorations.py"),
             "--label-a", "Raw (2834 regions)",
             "--label-b", "Merged (273 segments)",
         ],

@@ -24,7 +24,6 @@ Dependencies:
 """
 
 import argparse
-import logging
 import sys
 from pathlib import Path
 
@@ -32,52 +31,21 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import rich.traceback
-from rich.console import Console
-from rich.logging import RichHandler
+
+from utils import (
+    DATA_DIR,
+    PROJECT_DIR,
+    SUBTYPE_COLORS,
+    SUBTYPE_ORDER,
+    apply_plot_style,
+    setup_logging,
+)
 
 rich.traceback.install()
 
-# ---------------------------------------------------------------------------
-# Path setup.
-# ---------------------------------------------------------------------------
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_DIR = SCRIPT_DIR.parent
-DATA_DIR = PROJECT_DIR / "data"
-LOG_DIR = PROJECT_DIR / "results" / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-# ---------------------------------------------------------------------------
-# Logging setup.
-# ---------------------------------------------------------------------------
-console = Console()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[
-        RichHandler(console=console, show_time=False, show_path=False),
-        logging.FileHandler(LOG_DIR / "compare_explorations.log", mode="w"),
-    ],
-)
-log = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Global settings.
-# ---------------------------------------------------------------------------
-SUBTYPE_COLORS = {"HER2+": "#E64B35", "HR+": "#4DBBD5", "Triple Neg": "#00A087"}
-SUBTYPE_ORDER = ["HER2+", "HR+", "Triple Neg"]
-
-plt.rcParams.update({
-    "figure.dpi": 300,
-    "savefig.dpi": 300,
-    "savefig.bbox": "tight",
-    "font.size": 9,
-    "axes.titlesize": 10,
-    "axes.labelsize": 9,
-    "xtick.labelsize": 7,
-    "ytick.labelsize": 7,
-    "legend.fontsize": 7,
-    "font.family": "sans-serif",
-})
+# Initialise logging.
+log, console = setup_logging("compare_explorations")
+apply_plot_style(scale="compact")
 
 # Files that must exist in each exploration output directory.
 REQUIRED_FILES = [
@@ -370,7 +338,8 @@ def main():
     log.info("=" * 60)
     log.info("COMPARISON COMPLETE.")
     log.info("  Figure: %s", fig_dir)
-    log.info("  Log:    %s", LOG_DIR / "compare_explorations.log")
+    log.info("  Log:    %s",
+             PROJECT_DIR / "results" / "logs" / "compare_explorations.log")
     log.info("=" * 60)
 
 

@@ -23,67 +23,36 @@ Dependencies:
 """
 
 import json
-import logging
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import rich.traceback
-from rich.console import Console
-from rich.logging import RichHandler
 from rich.progress import track
-from scipy import stats
+
+from utils import (
+    DATA_DIR,
+    SUBTYPE_COLORS,
+    SUBTYPE_ORDER,
+    apply_plot_style,
+    get_phase_dirs,
+    get_sample_columns,
+    kruskal_wallis_per_region,
+    setup_logging,
+)
+from utils.statistics import bonferroni_threshold
 
 rich.traceback.install()
 
 # ---------------------------------------------------------------------------
-# Path setup — works from any working directory.
+# Phase-specific settings.
 # ---------------------------------------------------------------------------
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_DIR = SCRIPT_DIR.parent
-DATA_DIR = PROJECT_DIR / "data"
-FIG_DIR = PROJECT_DIR / "results" / "figures" / "preprocessing_phase"
-OUT_DIR = PROJECT_DIR / "results" / "data" / "preprocessing_phase"
-LOG_DIR = PROJECT_DIR / "results" / "logs"
-FIG_DIR.mkdir(parents=True, exist_ok=True)
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-# ---------------------------------------------------------------------------
-# Logging setup — dual output to rich console and log file.
-# ---------------------------------------------------------------------------
-console = Console()
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s",
-    handlers=[
-        RichHandler(console=console, show_time=False, show_path=False),
-        logging.FileHandler(LOG_DIR / "preprocessing_phase.log", mode="w"),
-    ],
-)
-log = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Global settings.
-# ---------------------------------------------------------------------------
-SUBTYPE_COLORS = {"HER2+": "#E64B35", "HR+": "#4DBBD5", "Triple Neg": "#00A087"}
-SUBTYPE_ORDER = ["HER2+", "HR+", "Triple Neg"]
 MERGE_THRESHOLD = 0.8
-RANDOM_SEED = 42
 
-plt.rcParams.update({
-    "figure.dpi": 300,
-    "savefig.dpi": 300,
-    "savefig.bbox": "tight",
-    "font.size": 10,
-    "axes.titlesize": 11,
-    "axes.labelsize": 10,
-    "xtick.labelsize": 8,
-    "ytick.labelsize": 8,
-    "legend.fontsize": 8,
-    "font.family": "sans-serif",
-})
+# Initialise output directories and logging.
+FIG_DIR, OUT_DIR = get_phase_dirs("preprocessing_phase")
+log, console = setup_logging("preprocessing_phase")
+apply_plot_style()
 
 
 """Data Loading."""
@@ -99,18 +68,6 @@ def load_data():
     val_df = pd.read_csv(DATA_DIR / "Validation_call.tsv", sep="\t")
     clinical_df = pd.read_csv(DATA_DIR / "Train_clinical.tsv", sep="\t")
     return train_df, val_df, clinical_df
-
-
-def get_sample_columns(cn_df):
-    """Return list of sample column names (excluding genomic coordinate columns).
-
-    Args:
-        cn_df (pd.DataFrame): Copy-number data with genomic and sample columns.
-
-    Returns:
-        list[str]: Sample column names.
-    """
-    return [c for c in cn_df.columns if c not in ("Chromosome", "Start", "End", "Nclone")]
 
 
 """Region Merging."""
@@ -130,7 +87,7 @@ def merge_regions(cn_df, sample_cols, threshold=MERGE_THRESHOLD):
         threshold (float): Pearson r threshold for merging adjacent regions.
 
     Returns:
-        dict: Merge map — keys are consensus segment indices (str for JSON
+        dict: Merge map - keys are consensus segment indices (str for JSON
             compatibility), values are lists of raw region row indices (0-based).
     """
     data = cn_df[sample_cols].values.astype(float)
@@ -335,31 +292,12 @@ def compute_kruskal_wallis(merged_df, clinical_df, sample_cols):
         sample_cols (list[str]): Sample column names.
 
     Returns:
-        tuple: (pvals, h_stats) — arrays of p-values and H-statistics.
+        tuple: (pvals, h_stats) - arrays of p-values and H-statistics.
     """
-    label_map = dict(zip(clinical_df["Sample"], clinical_df["Subgroup"]))
-    groups = {}
-    for subtype in SUBTYPE_ORDER:
-        groups[subtype] = [s for s in sample_cols
-                           if label_map.get(s) == subtype]
-
-    pvals = []
-    h_stats = []
-    for idx in track(range(len(merged_df)),
-                     description="Kruskal-Wallis tests"):
-        row = merged_df.iloc[idx]
-        samples_by_group = [
-            row[groups[s]].values.astype(float) for s in SUBTYPE_ORDER
-        ]
-        h, p = stats.kruskal(*samples_by_group)
-        pvals.append(p)
-        h_stats.append(h)
-
-    pvals = np.array(pvals)
-    h_stats = np.array(h_stats)
+    pvals, h_stats = kruskal_wallis_per_region(merged_df, clinical_df, sample_cols)
 
     n_tests = len(pvals)
-    bonf_alpha = 0.05 / n_tests
+    bonf_alpha = bonferroni_threshold(n_tests)
     n_sig = (pvals < bonf_alpha).sum()
     log.info("Kruskal-Wallis: %d / %d segments pass Bonferroni (alpha=%.2e)",
              n_sig, n_tests, bonf_alpha)
@@ -415,7 +353,7 @@ def save_handoff_files(train_merged, val_merged, merge_map, pvals, h_stats,
 
     # Kruskal-Wallis results (two sorted versions).
     n_tests = len(pvals)
-    bonf_alpha = 0.05 / n_tests
+    bonf_alpha = bonferroni_threshold(n_tests)
     n_raw_per_seg = [len(merge_map[str(i)]) for i in range(len(merge_map))]
 
     kw_df = pd.DataFrame({
@@ -511,7 +449,8 @@ def main():
     log.info("PHASE 1 PREPROCESSING COMPLETE.")
     log.info("  Figures: %s", FIG_DIR)
     log.info("  Data:    %s", OUT_DIR)
-    log.info("  Log:     %s", LOG_DIR / "preprocessing_phase.log")
+    log.info("  Log:     %s",
+             FIG_DIR.parent.parent / "logs" / "preprocessing_phase.log")
     log.info("=" * 60)
 
 

@@ -25,16 +25,12 @@ Dependencies:
 """
 
 import argparse
-import logging
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import rich.traceback
 from matplotlib.patches import Patch
-from rich.console import Console
-from rich.logging import RichHandler
 from rich.progress import track
 from scipy import stats
 from scipy.cluster.hierarchy import dendrogram, linkage
@@ -44,20 +40,27 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics import silhouette_score
 
-rich.traceback.install()
+from utils import (
+    CN_LABELS,
+    DATA_DIR,
+    PROJECT_DIR,
+    SUBTYPE_COLORS,
+    SUBTYPE_ORDER,
+    apply_plot_style,
+    bonferroni_threshold,
+    get_phase_dirs,
+    get_sample_columns,
+    get_sample_matrix,
+    kruskal_wallis_per_region,
+    load_gene_map,
+    setup_logging,
+)
 
-# ---------------------------------------------------------------------------
-# Path setup — works from any working directory.
-# ---------------------------------------------------------------------------
-SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_DIR = SCRIPT_DIR.parent
-DATA_DIR = PROJECT_DIR / "data"
+rich.traceback.install()
 
 # Set by setup() before any analysis runs.
 FIG_DIR = None
 OUT_DIR = None
-LOG_DIR = None
-console = None
 log = None
 
 
@@ -72,54 +75,11 @@ def setup(tag=""):
     Args:
         tag (str): Optional suffix appended to directory and log names.
     """
-    global FIG_DIR, OUT_DIR, LOG_DIR, console, log
+    global FIG_DIR, OUT_DIR, log
 
-    suffix = f"_{tag}" if tag else ""
-    FIG_DIR = PROJECT_DIR / "results" / "figures" / f"data_exploration_phase{suffix}"
-    OUT_DIR = PROJECT_DIR / "results" / "data" / f"data_exploration_phase{suffix}"
-    LOG_DIR = PROJECT_DIR / "results" / "logs"
-
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-    console = Console()
-
-    # Remove any existing handlers to allow re-initialisation.
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(message)s",
-        handlers=[
-            RichHandler(console=console, show_time=False, show_path=False),
-            logging.FileHandler(
-                LOG_DIR / f"data_exploration_phase{suffix}.log", mode="w",
-            ),
-        ],
-    )
-    log = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# Global plot settings.
-# ---------------------------------------------------------------------------
-SUBTYPE_COLORS = {"HER2+": "#E64B35", "HR+": "#4DBBD5", "Triple Neg": "#00A087"}
-SUBTYPE_ORDER = ["HER2+", "HR+", "Triple Neg"]
-CN_LABELS = {-1: "Loss", 0: "Normal", 1: "Gain", 2: "Amplification"}
-
-plt.rcParams.update({
-    "figure.dpi": 300,
-    "savefig.dpi": 300,
-    "savefig.bbox": "tight",
-    "font.size": 10,
-    "axes.titlesize": 11,
-    "axes.labelsize": 10,
-    "xtick.labelsize": 8,
-    "ytick.labelsize": 8,
-    "legend.fontsize": 8,
-    "font.family": "sans-serif",
-})
+    FIG_DIR, OUT_DIR = get_phase_dirs("data_exploration_phase", tag=tag)
+    log, _console = setup_logging("data_exploration_phase", tag=tag)
+    apply_plot_style()
 
 
 """Data Loading."""
@@ -140,39 +100,8 @@ def load_data(input_path=None):
     else:
         cn_df = pd.read_csv(DATA_DIR / "Train_call.tsv", sep="\t")
     clinical_df = pd.read_csv(DATA_DIR / "Train_clinical.tsv", sep="\t")
-    gene_map_df = pd.read_csv(DATA_DIR / "BasepairToGeneMap.tsv", sep="\t")
-    # Harmonise chromosome column to int (gene map has strings, CN data has ints).
-    # Map X->23, Y->24 to match CN data convention, then convert to int.
-    gene_map_df["Chromosome"] = gene_map_df["Chromosome"].replace({"X": "23", "Y": "24"})
-    gene_map_df["Chromosome"] = pd.to_numeric(gene_map_df["Chromosome"], errors="coerce")
-    gene_map_df = gene_map_df.dropna(subset=["Chromosome"])
-    gene_map_df["Chromosome"] = gene_map_df["Chromosome"].astype(int)
+    gene_map_df = load_gene_map(DATA_DIR)
     return cn_df, clinical_df, gene_map_df
-
-
-def get_sample_columns(cn_df):
-    """Return list of sample column names (excluding genomic coordinate columns).
-
-    Args:
-        cn_df (pd.DataFrame): Copy-number data with genomic and sample columns.
-
-    Returns:
-        list[str]: Sample column names.
-    """
-    return [c for c in cn_df.columns if c not in ("Chromosome", "Start", "End", "Nclone")]
-
-
-def get_sample_matrix(cn_df):
-    """Return samples-by-regions matrix (rows=samples, columns=regions).
-
-    Args:
-        cn_df (pd.DataFrame): Copy-number data.
-
-    Returns:
-        pd.DataFrame: Transposed sample matrix.
-    """
-    sample_cols = get_sample_columns(cn_df)
-    return cn_df[sample_cols].T
 
 
 """Section 1: Data Validation."""
@@ -400,7 +329,7 @@ def plot_pca(cn_df, clinical_df):
         clinical_df (pd.DataFrame): Clinical labels.
 
     Returns:
-        tuple: (X_pca, labels, pca) — PCA-transformed matrix, subtype labels, fitted PCA.
+        tuple: (X_pca, labels, pca) - PCA-transformed matrix, subtype labels, fitted PCA.
     """
     log.info("=" * 60)
     log.info("SECTION 4: PCA")
@@ -615,36 +544,20 @@ def statistical_tests(cn_df, clinical_df, gene_map_df):
         gene_map_df (pd.DataFrame): Gene coordinate mapping.
 
     Returns:
-        tuple: (pvals, h_stats) — arrays of p-values and H-statistics per region.
+        tuple: (pvals, h_stats) - arrays of p-values and H-statistics per region.
     """
     log.info("=" * 60)
     log.info("SECTION 7: PER-REGION STATISTICAL TESTS")
     log.info("=" * 60)
 
     sample_cols = get_sample_columns(cn_df)
-    label_map = dict(zip(clinical_df["Sample"], clinical_df["Subgroup"]))
-
-    # Group samples by subtype.
-    groups = {}
-    for subtype in SUBTYPE_ORDER:
-        groups[subtype] = [s for s in sample_cols if label_map.get(s) == subtype]
 
     # Kruskal-Wallis test per region.
-    pvals = []
-    h_stats = []
-    for idx in track(range(len(cn_df)), description="Kruskal-Wallis tests"):
-        row = cn_df.iloc[idx]
-        samples_by_group = [row[groups[s]].values.astype(float) for s in SUBTYPE_ORDER]
-        h, p = stats.kruskal(*samples_by_group)
-        pvals.append(p)
-        h_stats.append(h)
-
-    pvals = np.array(pvals)
-    h_stats = np.array(h_stats)
+    pvals, h_stats = kruskal_wallis_per_region(cn_df, clinical_df, sample_cols)
 
     # Bonferroni correction: 0.05 / number_of_tests.
     n_tests = len(pvals)
-    bonf_alpha = 0.05 / n_tests
+    bonf_alpha = bonferroni_threshold(n_tests)
     sig_bonf = pvals < bonf_alpha
     log.info("Bonferroni threshold: 0.05 / %d = %.2e", n_tests, bonf_alpha)
     log.info("Significant regions: %d / %d", sig_bonf.sum(), n_tests)
@@ -805,7 +718,7 @@ def analyze_correlation(cn_df):
                 if gap > max_dist:
                     break  # Regions are sorted by position, so further ones are even farther.
                 if gap < 0:
-                    gap = 0  # Overlapping regions — treat as distance zero.
+                    gap = 0  # Overlapping regions - treat as distance zero.
                 r = np.corrcoef(data[i], data[j])[0, 1]
                 if not np.isnan(r):
                     distances.append(gap)
@@ -1056,7 +969,8 @@ def main():
     log.info("  Figures: %s", FIG_DIR)
     log.info("  Data:    %s", OUT_DIR)
     suffix = f"_{args.tag}" if args.tag else ""
-    log.info("  Log:     %s", LOG_DIR / f"data_exploration_phase{suffix}.log")
+    log.info("  Log:     %s",
+             PROJECT_DIR / "results" / "logs" / f"data_exploration_phase{suffix}.log")
     log.info("=" * 60)
 
 
