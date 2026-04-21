@@ -1,0 +1,21 @@
+sample,true_label,predicted_label
+Array.112,Triple Neg,Triple Neg
+Array.19,HER2+,HER2+
+Array.106,HER2+,HR+
+Array.69,Triple Neg,HR+
+Array.73,HER2+,HER2+
+Array.149,HR+,HR+
+Array.99,Triple Neg,HR+
+Array.113,Triple Neg,HR+
+Array.25,Triple Neg,HR+
+Array.68,HER2+,HER2+
+Array.142,HR+,Triple Neg
+Array.37,HR+,HR+
+Array.75,HER2+,HER2+
+Array.2,HR+,Triple Neg
+Array.60,HR+,HR+
+Array.137,HR+,HR+
+Array.111,Triple Neg,Triple Neg
+Array.7,HR+,HR+
+Array.35,HR+,HR+
+Array.10,HER2+,HER2+
