@@ -131,15 +131,22 @@ def validate_data(cn_df, clinical_df):
     nan_count = data.isna().sum().sum()
     log.info("Missing values (NaN): %d", nan_count)
 
-    # Check that all values are in {-1, 0, 1, 2}.
-    valid_values = {-1, 0, 1, 2}
+    # Check that all values are in the expected range.
+    discrete_values = {-1, 0, 1, 2}
     unique_values = set(data.values.flatten())
-    invalid_values = unique_values - valid_values
     log.info("Unique CN values: %s", sorted(unique_values))
-    if invalid_values:
-        log.warning("  Invalid values found: %s", invalid_values)
+    fractional = unique_values - discrete_values
+    if fractional:
+        # Merged consensus data can contain fractional medians (e.g. 0.5)
+        # when a segment merges an even number of raw regions.
+        out_of_range = {v for v in unique_values if v < -1 or v > 2}
+        if out_of_range:
+            log.warning("  Values outside [-1, 2] range: %s", sorted(out_of_range))
+        else:
+            log.info("  Fractional values present (expected for median-consensus "
+                     "merged data): %s", sorted(fractional))
     else:
-        log.info("  All values are valid (-1, 0, 1, 2).")
+        log.info("  All values are discrete (-1, 0, 1, 2).")
 
     # Check sample overlap between CN and clinical data.
     cn_samples = set(sample_cols)
@@ -159,13 +166,25 @@ def validate_data(cn_df, clinical_df):
     log.info("  (23 = X chromosome)")
 
     # Value distribution across entire dataset.
+    # For merged data with fractional medians, bin values into the nearest
+    # discrete CN category using midpoint boundaries: <-0.5 -> loss,
+    # -0.5..0.5 -> normal, 0.5..1.5 -> gain, >=1.5 -> amplification.
     log.info("")
     log.info("Overall CN value distribution:")
     flat = data.values.flatten()
-    for v in sorted(valid_values):
-        count = (flat == v).sum()
-        pct = count / len(flat) * 100
-        log.info("  %2d (%13s): %8d  (%.1f%%)", v, CN_LABELS[v], count, pct)
+    if fractional:
+        bins = {"Loss (CN <= -0.5)": (flat <= -0.5).sum(),
+                "Normal (-0.5 < CN < 0.5)": ((flat > -0.5) & (flat < 0.5)).sum(),
+                "Gain (0.5 <= CN < 1.5)": ((flat >= 0.5) & (flat < 1.5)).sum(),
+                "Amplification (CN >= 1.5)": (flat >= 1.5).sum()}
+        for label, count in bins.items():
+            pct = count / len(flat) * 100
+            log.info("  %-30s: %8d  (%.1f%%)", label, count, pct)
+    else:
+        for v in sorted(discrete_values):
+            count = (flat == v).sum()
+            pct = count / len(flat) * 100
+            log.info("  %2d (%13s): %8d  (%.1f%%)", v, CN_LABELS[v], count, pct)
 
     log.info("")
 
