@@ -65,7 +65,7 @@
 
 ================================================================================
   PHASE 2: MODEL TRAINING & EVALUATION
-  Script: code/model_training_phase.py
+  Script: code/nested_cv_2x2_runner.py
 ================================================================================
 
   Input: ~273 consensus segments from Phase 1.

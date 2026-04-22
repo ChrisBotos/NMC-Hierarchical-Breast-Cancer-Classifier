@@ -47,7 +47,7 @@ Revision 2 incorporates outside reviewer feedback:
     - TRIAL_REPEATS = 3, PRODUCTION_REPEATS = 10
     - build_pipeline(pipeline_name, random_state) factory function.
 
-1.3 code/model_training_phase.py
+1.3 code/nested_cv_2x2_runner.py
     - Unified runner. One invocation = one (pipeline, repeat) job = 5 outer folds.
     - CLI: --pipeline {kw_nmc,kw_rf,en_nmc,en_rf} --repeat <int>
            --config {trial,production} --input <path> --clinical <path>
@@ -180,7 +180,7 @@ Production config (10 repeats, 8-10x grid sizes):
     Corrected resampled t-test (Nadeau-Bengio) needed after all jobs finish.
 
 6.2 Figures and documentation.
-    docs/model_training_phase.md and results/figures/model_training_phase/
+    docs/nested_cv_2x2_runner.md and results/figures/nested_cv_2x2_runner/
     not yet created.
 
 6.3 Phase 4 (final prediction).

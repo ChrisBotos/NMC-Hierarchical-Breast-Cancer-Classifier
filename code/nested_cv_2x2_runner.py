@@ -7,16 +7,16 @@ Authors:
     Yan Qiao (2874296).
 Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
-Script Name: model_training_phase.py.
+Script Name: nested_cv_2x2_runner.py.
 Description:
     Unified nested cross-validation runner for the 2x2 experimental design.
     Each invocation runs one pipeline (kw_nmc, kw_rf, en_nmc, en_rf) for
     one repeat (a single seed), producing 5 outer-fold balanced accuracy
-    scores. Jobs can be parallelised trivially via shell.
+    scores. Jobs can be parallelized trivially via shell.
 
 Usage:
-    python3 code/model_training_phase.py --pipeline kw_nmc --repeat 1
-    python3 code/model_training_phase.py --pipeline en_rf --repeat 3 --config production
+    python3 code/nested_cv_2x2_runner.py --pipeline kw_nmc --repeat 1
+    python3 code/nested_cv_2x2_runner.py --pipeline en_rf --repeat 3 --config production
 
 Dependencies:
     Python >= 3.10.
@@ -273,7 +273,7 @@ def main():
 
     # Construct a tag for logging and output directories.
     tag = f"{args.pipeline}_r{args.repeat}"
-    log, console = setup_logging("model_training_phase", tag=tag)
+    log, console = setup_logging("nested_cv_2x2_runner", tag=tag)
 
     log.info("Pipeline: %s", args.pipeline)
     log.info("Repeat seed: %d", args.repeat)
@@ -316,7 +316,7 @@ def main():
     log.info("  Total time: %.1fs", job_elapsed)
 
     # Save fold results CSV.
-    _, out_dir = get_phase_dirs("model_training_phase")
+    _, out_dir = get_phase_dirs("nested_cv_2x2_runner")
     csv_name = f"fold_results_{args.pipeline}_r{args.repeat}.csv"
     csv_path = out_dir / csv_name
 

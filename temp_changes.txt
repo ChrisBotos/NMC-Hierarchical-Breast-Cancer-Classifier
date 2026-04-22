@@ -193,9 +193,9 @@ Created:
     temp_changes.txt                       - This file
 
 Not modified (to be created during merge):
-    code/model_training_phase.py           - The unified merged script (Phase 2)
-    figures/model_training_phase/          - Figures directory
-    docs/model_training_phase.md           - Phase documentation
+    code/nested_cv_2x2_runner.py           - The unified merged script (Phase 2)
+    figures/nested_cv_2x2_runner/          - Figures directory
+    docs/nested_cv_2x2_runner.md           - Phase documentation
 
 ================================================================================
 6. VERIFICATION
