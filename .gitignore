@@ -42,6 +42,11 @@ data/**/*
 !data/**/
 !data/**/.gitkeep
 
+# ===== Results (keep structure, ignore contents) =====
+results/**/*
+!results/**/
+!results/**/.gitkeep
+
 # ===== Model artifacts =====
 model/model.pkl
 
