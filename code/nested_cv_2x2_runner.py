@@ -11,16 +11,16 @@ Script Name: nested_cv_2x2_runner.py.
 Description:
     Unified nested cross-validation runner for the 2x2 experimental design.
     Each invocation runs one pipeline (kw_nmc, kw_rf, en_nmc, en_rf) for
-    one repeat (a single seed), producing 5 outer-fold balanced accuracy
+    one repeat (a single seed), producing outer-fold balanced accuracy
     scores. Jobs can be parallelized trivially via shell.
 
 Usage:
-    python3 code/nested_cv_2x2_runner.py --pipeline kw_nmc --repeat 1
-    python3 code/nested_cv_2x2_runner.py --pipeline en_rf --repeat 3 --config production
+    python3 code/nested_cv_2x2_runner.py --pipeline kw_nmc --repeat 1 --config config_files/local.yaml
+    python3 code/nested_cv_2x2_runner.py --pipeline en_rf --repeat 3 --config config_files/server.yaml
 
 Dependencies:
     Python >= 3.10.
-    scikit-learn, pandas, numpy, scipy, rich.
+    scikit-learn, pandas, numpy, scipy, rich, pyyaml.
 """
 
 """Imports and Configuration"""
@@ -45,16 +45,13 @@ if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
 from utils.constants import GENOMIC_COLUMNS
+from utils.config_loader import get_grids, load_config
 from utils.cv_config import (
     PIPELINE_NAMES,
-    PRODUCTION_GRIDS,
-    PRODUCTION_REPEATS,
-    TRIAL_GRIDS,
-    TRIAL_REPEATS,
     build_pipeline,
 )
 from utils.logging_setup import setup_logging
-from utils.paths import DATA_DIR, PROJECT_DIR, get_phase_dirs
+from utils.paths import DATA_DIR, PROJECT_DIR, get_run_dirs, save_config
 
 rich.traceback.install()
 
@@ -113,14 +110,14 @@ def load_data(input_path, clinical_path):
 
 
 def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
-                      param_grid, log):
-    """Run 5-fold outer CV for one pipeline and one repeat seed.
+                      param_grid, config, log):
+    """Run outer CV for one pipeline and one repeat seed.
 
     Constructs a fresh pipeline per repeat so stochastic components
     (RF, ElasticNet solver) use the repeat seed. The inner CV loop is
-    handled entirely by GridSearchCV with balanced accuracy scoring.
-    AUROC (weighted one-vs-rest) is computed as a secondary metric using
-    predict_proba on the outer test fold.
+    handled entirely by GridSearchCV. AUROC (weighted one-vs-rest) is
+    computed as a secondary metric using predict_proba on the outer
+    test fold. CV fold counts and scoring metric are read from config.
 
     Args:
         X (np.ndarray): Feature matrix of shape (n_samples, n_features).
@@ -129,35 +126,43 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
         pipeline_name (str): One of the four pipeline identifiers.
         repeat_seed (int): Random seed for this repeat.
         param_grid (dict): Hyperparameter grid for GridSearchCV.
+        config (dict): Loaded configuration dictionary.
         log (logging.Logger): Logger instance.
 
     Returns:
         list[dict]: One dict per outer fold with evaluation results.
     """
-    pipeline = build_pipeline(pipeline_name, random_state=repeat_seed)
+    cv_cfg = config["cv"]
+    outer_folds = cv_cfg.get("outer_folds", 5)
+    inner_folds = cv_cfg.get("inner_folds", 5)
+    scoring = cv_cfg.get("scoring", "balanced_accuracy")
+
+    pipeline = build_pipeline(
+        pipeline_name, random_state=repeat_seed, config=config,
+    )
 
     inner_cv = StratifiedKFold(
-        n_splits=5, shuffle=True, random_state=100 + repeat_seed,
+        n_splits=inner_folds, shuffle=True, random_state=100 + repeat_seed,
     )
 
     grid_search = GridSearchCV(
         estimator=pipeline,
         param_grid=param_grid,
         cv=inner_cv,
-        scoring="balanced_accuracy",
+        scoring=scoring,
         n_jobs=1,
         refit=True,
     )
 
     outer_cv = StratifiedKFold(
-        n_splits=5, shuffle=True, random_state=repeat_seed,
+        n_splits=outer_folds, shuffle=True, random_state=repeat_seed,
     )
 
     fold_results = []
 
     for fold_idx, (train_idx, test_idx) in track(
         enumerate(outer_cv.split(X, y), start=1),
-        total=5,
+        total=outer_folds,
         description=f"  {pipeline_name} repeat {repeat_seed} outer folds",
     ):
         fold_start = time.perf_counter()
@@ -225,7 +230,7 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description=(
             "Nested CV runner for one (pipeline, repeat) job. "
-            "Produces 5 outer-fold balanced accuracy scores."
+            "Produces outer-fold balanced accuracy scores."
         ),
     )
     parser.add_argument(
@@ -244,16 +249,26 @@ def parse_args():
     parser.add_argument(
         "--config",
         type=str,
-        default="trial",
-        choices=("trial", "production"),
-        help="Hyperparameter grid size (default: trial).",
+        default="local",
+        help=(
+            "Config file path or bare name. Bare names resolve to "
+            "config_files/<name>.yaml. Legacy names 'trial' and "
+            "'production' map to 'local' and 'server'. "
+            "(default: local)."
+        ),
+    )
+    parser.add_argument(
+        "--name",
+        type=str,
+        default="default_run",
+        help="Run name for the results directory (default: default_run).",
     )
     parser.add_argument(
         "--input",
         type=Path,
-        default=PROJECT_DIR / "results" / "data" / "preprocessing_phase"
-        / "train_merged.tsv",
-        help="Path to merged training TSV.",
+        default=None,
+        help="Path to merged training TSV. Defaults to preprocessing "
+             "handoff inside the run directory, then legacy path.",
     )
     parser.add_argument(
         "--clinical",
@@ -267,20 +282,56 @@ def parse_args():
 """Main Execution"""
 
 
+def _resolve_input(args):
+    """Resolve the input merged TSV path with fallback logic.
+
+    Checks the run directory's preprocessing handoff first, then falls
+    back to the legacy results/data/preprocessing_phase/ path.
+
+    Args:
+        args (argparse.Namespace): Parsed arguments with name and input.
+
+    Returns:
+        Path: Resolved input path.
+    """
+    if args.input is not None:
+        return args.input
+
+    # Try to find it inside the run directory.
+    from utils.paths import _find_or_create_run_dir
+    run_dir = _find_or_create_run_dir(args.name)
+    run_path = run_dir / "preprocessing" / "data" / "train_merged.tsv"
+    if run_path.exists():
+        return run_path
+
+    # Legacy fallback.
+    return PROJECT_DIR / "results" / "data" / "preprocessing_phase" / "train_merged.tsv"
+
+
 def main():
-    """Entry point: load data, run nested CV, save results."""
+    """Entry point: load config, load data, run nested CV, save results."""
     args = parse_args()
 
-    # Construct a tag for logging and output directories.
-    tag = f"{args.pipeline}_r{args.repeat}"
-    log, console = setup_logging("nested_cv_2x2_runner", tag=tag)
+    # Load experiment configuration.
+    config = load_config(args.config)
 
+    # Set up run directory and logging.
+    tag = f"{args.pipeline}_r{args.repeat}"
+    fig_dir, data_dir, log_dir, run_dir = get_run_dirs(
+        args.name, "nested_cv_2x2",
+    )
+    log, console = setup_logging("nested_cv_2x2_runner", tag=tag, log_dir=log_dir)
+
+    log.info("Run: %s", run_dir.name)
+    log.info("Config: %s", config["_config_path"])
     log.info("Pipeline: %s", args.pipeline)
     log.info("Repeat seed: %d", args.repeat)
-    log.info("Config: %s", args.config)
 
-    # Select the appropriate hyperparameter grid.
-    grids = TRIAL_GRIDS if args.config == "trial" else PRODUCTION_GRIDS
+    # Resolve input path.
+    args.input = _resolve_input(args)
+
+    # Select the hyperparameter grid for this pipeline.
+    grids = get_grids(config)
     param_grid = grids[args.pipeline]
 
     # Compute grid size for logging.
@@ -299,7 +350,8 @@ def main():
     job_start = time.perf_counter()
 
     fold_results = run_single_repeat(
-        X, y, feature_names, args.pipeline, args.repeat, param_grid, log,
+        X, y, feature_names, args.pipeline, args.repeat, param_grid,
+        config, log,
     )
 
     job_elapsed = time.perf_counter() - job_start
@@ -316,13 +368,22 @@ def main():
     log.info("  Total time: %.1fs", job_elapsed)
 
     # Save fold results CSV.
-    _, out_dir = get_phase_dirs("nested_cv_2x2_runner")
     csv_name = f"fold_results_{args.pipeline}_r{args.repeat}.csv"
-    csv_path = out_dir / csv_name
+    csv_path = data_dir / csv_name
 
     results_df = pd.DataFrame(fold_results)
     results_df.to_csv(csv_path, index=False)
     log.info("Fold results saved to %s", csv_path)
+
+    # Save run config snapshot.
+    save_config(
+        run_dir, "nested_cv_2x2_runner",
+        pipeline=args.pipeline,
+        repeat=args.repeat,
+        config_file=config["_config_path"],
+        input_path=str(args.input),
+        mean_balanced_accuracy=mean_score,
+    )
 
 
 if __name__ == "__main__":

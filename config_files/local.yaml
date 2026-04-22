@@ -1,0 +1,41 @@
+# Local development configuration.
+# Small grids and few repeats for quick feedback on a laptop.
+
+cv:
+  n_repeats: 3
+  outer_folds: 5
+  inner_folds: 5
+  scoring: balanced_accuracy
+
+pipelines:
+  names: [kw_nmc, kw_rf, en_nmc, en_rf]
+  rf_n_estimators: 500
+  rf_class_weight: balanced
+
+grids:
+  kw_nmc:
+    selector__k: [5, 20]
+  kw_rf:
+    selector__k: [5, 20]
+    clf__max_features: ["sqrt", "log2"]
+    clf__min_samples_leaf: [1, 2]
+  en_nmc:
+    selector__C: [0.01, 0.1, 1.0, 10.0]
+    selector__l1_ratio: [0.1, 0.5, 0.9]
+    selector__top_k: [5, 20]
+  en_rf:
+    selector__C: [0.01, 0.1, 1.0, 10.0]
+    selector__l1_ratio: [0.1, 0.5, 0.9]
+    selector__top_k: [5, 20]
+    clf__max_features: ["sqrt", "log2"]
+    clf__min_samples_leaf: [1, 2]
+
+preprocessing:
+  merge_threshold: 0.8
+
+slurm:
+  mem: "4G"
+  time: "0-02:00:00"
+  cpus_per_task: 1
+  max_concurrent_jobs: 4
+  mail_user: "hcty03@gmail.com"

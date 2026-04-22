@@ -1,0 +1,45 @@
+# Server production configuration.
+# Dense grids and 50 repeats for the final nested CV run.
+# Designed for 50 CPU cores, targeting under 10 hours wall time.
+# Total jobs: 4 pipelines x 50 repeats = 200 jobs, 50 concurrent.
+
+cv:
+  n_repeats: 50
+  outer_folds: 5
+  inner_folds: 5
+  scoring: balanced_accuracy
+
+pipelines:
+  names: [kw_nmc, kw_rf, en_nmc, en_rf]
+  rf_n_estimators: 500
+  rf_class_weight: balanced
+
+# Production grids with dense search.
+# EN selector__C values are np.logspace(-3, 2, 10).
+grids:
+  kw_nmc:
+    selector__k: [5, 10, 15, 20, 30, 50, 75, 100]
+  kw_rf:
+    selector__k: [5, 10, 15, 20, 30, 50, 75, 100]
+    clf__max_features: ["sqrt", 0.3]
+    clf__min_samples_leaf: [1, 5]
+  en_nmc:
+    selector__C: [0.001, 0.00359381, 0.0129155, 0.0464159, 0.16681, 0.599484, 2.15443, 7.74264, 27.8256, 100.0]
+    selector__l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+    selector__top_k: [5, 10, 20, 50]
+  en_rf:
+    selector__C: [0.001, 0.00359381, 0.0129155, 0.0464159, 0.16681, 0.599484, 2.15443, 7.74264, 27.8256, 100.0]
+    selector__l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+    selector__top_k: [5, 10, 20, 50]
+    clf__max_features: ["sqrt", 0.3]
+    clf__min_samples_leaf: [1, 5]
+
+preprocessing:
+  merge_threshold: 0.8
+
+slurm:
+  mem: "32G"
+  time: "2-00:00:00"
+  cpus_per_task: 1
+  max_concurrent_jobs: 50
+  mail_user: "hcty03@gmail.com"
