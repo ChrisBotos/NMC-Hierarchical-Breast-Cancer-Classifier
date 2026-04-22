@@ -48,11 +48,12 @@ from utils import (
     SUBTYPE_ORDER,
     apply_plot_style,
     bonferroni_threshold,
-    get_phase_dirs,
+    get_run_dirs,
     get_sample_columns,
     get_sample_matrix,
     kruskal_wallis_per_region,
     load_gene_map,
+    save_config,
     setup_logging,
 )
 
@@ -64,22 +65,27 @@ OUT_DIR = None
 log = None
 
 
-def setup(tag=""):
-    """Initialise output directories and logging for a given run tag.
+def setup(run_name="default_run", tag=""):
+    """Initialise output directories and logging for a given run.
 
-    When tag is empty, outputs go to the default locations
-    (data_exploration_phase/). When tag is non-empty (e.g. "merged"),
-    outputs go to data_exploration_phase_merged/ so that raw and merged
-    runs do not overwrite each other.
+    Phase name is "eda" by default, or "eda_merged" when tag is "merged".
 
     Args:
-        tag (str): Optional suffix appended to directory and log names.
+        run_name (str): Run name for the results directory.
+        tag (str): Optional suffix (e.g. "merged") that changes the phase name.
     """
     global FIG_DIR, OUT_DIR, log
 
-    FIG_DIR, OUT_DIR = get_phase_dirs("data_exploration_phase", tag=tag)
-    log, _console = setup_logging("data_exploration_phase", tag=tag)
+    phase_name = "eda_merged" if tag == "merged" else "eda"
+    FIG_DIR, OUT_DIR, log_dir, run_dir = get_run_dirs(run_name, phase_name)
+    log, _console = setup_logging("data_exploration_phase", tag=tag, log_dir=log_dir)
     apply_plot_style()
+
+    save_config(
+        run_dir, f"data_exploration_phase{'_' + tag if tag else ''}",
+        phase_name=phase_name,
+        tag=tag,
+    )
 
 
 """Data Loading."""
@@ -935,9 +941,13 @@ def main():
         "--tag", type=str, default="",
         help="Suffix for output directories and log file (e.g. 'merged').",
     )
+    parser.add_argument(
+        "--name", type=str, default="default_run",
+        help="Run name for the results directory (default: default_run).",
+    )
     args = parser.parse_args()
 
-    setup(tag=args.tag)
+    setup(run_name=args.name, tag=args.tag)
 
     cn_df, clinical_df, gene_map_df = load_data(input_path=args.input)
 
@@ -968,9 +978,6 @@ def main():
     log.info("PHASE 0 EXPLORATION COMPLETE.")
     log.info("  Figures: %s", FIG_DIR)
     log.info("  Data:    %s", OUT_DIR)
-    suffix = f"_{args.tag}" if args.tag else ""
-    log.info("  Log:     %s",
-             PROJECT_DIR / "results" / "logs" / f"data_exploration_phase{suffix}.log")
     log.info("=" * 60)
 
 

@@ -14,7 +14,15 @@ from utils.constants import (
 )
 from utils.data_helpers import get_sample_columns, get_sample_matrix, load_gene_map
 from utils.logging_setup import setup_logging
-from utils.paths import CODE_DIR, DATA_DIR, PROJECT_DIR, get_phase_dirs
+from utils.paths import (
+    CODE_DIR,
+    DATA_DIR,
+    PROJECT_DIR,
+    RESULTS_DIR,
+    get_phase_dirs,
+    get_run_dirs,
+    save_config,
+)
 from utils.plotting import apply_plot_style
 from utils.statistics import bonferroni_threshold, kruskal_wallis_per_region
 from utils.cv_components import (
@@ -24,8 +32,6 @@ from utils.cv_components import (
 )
 from utils.cv_config import (
     PIPELINE_NAMES,
-    PRODUCTION_GRIDS,
-    TRIAL_GRIDS,
     build_pipeline,
 )
 
@@ -38,19 +44,20 @@ __all__ = [
     "KruskalWallisSelector",
     "NearestCentroidWithProba",
     "PIPELINE_NAMES",
-    "PRODUCTION_GRIDS",
     "PROJECT_DIR",
     "RANDOM_SEED",
+    "RESULTS_DIR",
     "SUBTYPE_COLORS",
     "SUBTYPE_ORDER",
-    "TRIAL_GRIDS",
     "apply_plot_style",
     "bonferroni_threshold",
     "build_pipeline",
     "get_phase_dirs",
+    "get_run_dirs",
     "get_sample_columns",
     "get_sample_matrix",
     "kruskal_wallis_per_region",
     "load_gene_map",
+    "save_config",
     "setup_logging",
 ]

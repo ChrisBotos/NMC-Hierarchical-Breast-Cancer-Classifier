@@ -38,14 +38,16 @@ from utils import (
     SUBTYPE_COLORS,
     SUBTYPE_ORDER,
     apply_plot_style,
+    get_run_dirs,
+    save_config,
     setup_logging,
 )
+from utils.paths import _find_or_create_run_dir
 
 rich.traceback.install()
 
-# Initialise logging.
-log, console = setup_logging("compare_explorations")
-apply_plot_style(scale="compact")
+# Set by main() before use.
+log = None
 
 # Files that must exist in each exploration output directory.
 REQUIRED_FILES = [
@@ -259,20 +261,40 @@ def make_comparison_figure(data_a, data_b, label_a, label_b, clinical_df, fig_pa
 """Main."""
 
 
+def _resolve_eda_data_dir(run_name, phase_name):
+    """Resolve the data directory for an EDA phase inside a run.
+
+    Args:
+        run_name (str): Run name.
+        phase_name (str): Phase name (e.g. "eda" or "eda_merged").
+
+    Returns:
+        Path: The data directory path (may not exist yet).
+    """
+    run_dir = _find_or_create_run_dir(run_name)
+    return run_dir / phase_name / "data"
+
+
 def main():
     """Run exploration comparison between two datasets."""
+    global log
+
     parser = argparse.ArgumentParser(
         description="Compare two data exploration runs side-by-side.",
     )
     parser.add_argument(
-        "--dir-a", type=Path,
-        default=PROJECT_DIR / "results" / "data" / "data_exploration_phase",
-        help="Path to first exploration output directory.",
+        "--name", type=str, default="default_run",
+        help="Run name for the results directory (default: default_run).",
     )
     parser.add_argument(
-        "--dir-b", type=Path,
-        default=PROJECT_DIR / "results" / "data" / "data_exploration_phase_merged",
-        help="Path to second exploration output directory.",
+        "--dir-a", type=Path, default=None,
+        help="Path to first exploration output directory. "
+             "Defaults to <run>/eda/data/.",
+    )
+    parser.add_argument(
+        "--dir-b", type=Path, default=None,
+        help="Path to second exploration output directory. "
+             "Defaults to <run>/eda_merged/data/.",
     )
     parser.add_argument(
         "--label-a", type=str, default=None,
@@ -287,11 +309,22 @@ def main():
         default=DATA_DIR / "Train_clinical.tsv",
         help="Path to clinical labels TSV.",
     )
-    parser.add_argument(
-        "--tag", type=str, default="",
-        help="Output tag. Figure saved to compare_explorations_{tag}/.",
-    )
     args = parser.parse_args()
+
+    # Set up run directory and logging.
+    fig_dir, data_dir, log_dir, run_dir = get_run_dirs(
+        args.name, "compare_explorations",
+    )
+    log, console = setup_logging("compare_explorations", log_dir=log_dir)
+    apply_plot_style(scale="compact")
+
+    save_config(run_dir, "compare_explorations")
+
+    # Resolve default data directories from the same run.
+    if args.dir_a is None:
+        args.dir_a = _resolve_eda_data_dir(args.name, "eda")
+    if args.dir_b is None:
+        args.dir_b = _resolve_eda_data_dir(args.name, "eda_merged")
 
     log.info("=" * 60)
     log.info("COMPARE EXPLORATIONS")
@@ -317,17 +350,12 @@ def main():
     data_b = load_exploration(args.dir_b)
     clinical_df = pd.read_csv(args.clinical, sep="\t")
 
-    label_a = args.label_a or args.dir_a.name
-    label_b = args.label_b or args.dir_b.name
+    label_a = args.label_a or args.dir_a.parent.name
+    label_b = args.label_b or args.dir_b.parent.name
 
     log.info("A: %s (%d features)", label_a, len(data_a["kw"]))
     log.info("B: %s (%d features)", label_b, len(data_b["kw"]))
     log.info("")
-
-    # Output directory.
-    suffix = f"_{args.tag}" if args.tag else ""
-    fig_dir = PROJECT_DIR / "results" / "figures" / f"compare_explorations{suffix}"
-    fig_dir.mkdir(parents=True, exist_ok=True)
 
     make_comparison_figure(
         data_a, data_b, label_a, label_b, clinical_df,
@@ -338,8 +366,6 @@ def main():
     log.info("=" * 60)
     log.info("COMPARISON COMPLETE.")
     log.info("  Figure: %s", fig_dir)
-    log.info("  Log:    %s",
-             PROJECT_DIR / "results" / "logs" / "compare_explorations.log")
     log.info("=" * 60)
 
 

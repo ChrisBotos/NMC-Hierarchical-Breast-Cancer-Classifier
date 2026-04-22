@@ -9,7 +9,7 @@ from rich.logging import RichHandler
 from utils.paths import PROJECT_DIR
 
 
-def setup_logging(script_name, tag=""):
+def setup_logging(script_name, tag="", log_dir=None):
     """Configure root logger with a rich console handler and a file handler.
 
     Clears any pre-existing handlers so the function can be called more
@@ -20,11 +20,16 @@ def setup_logging(script_name, tag=""):
         script_name (str): Base name used for the log file, e.g.
             "data_exploration_phase".
         tag (str): Optional suffix appended to the log file name.
+        log_dir (Path | None): Directory for the log file. When None,
+            falls back to the default results/logs/ location.
 
     Returns:
         tuple[logging.Logger, Console]: (logger, rich console).
     """
-    log_dir = PROJECT_DIR / "results" / "logs"
+    if log_dir is None:
+        log_dir = PROJECT_DIR / "results" / "logs"
+    else:
+        log_dir = Path(log_dir)
     log_dir.mkdir(parents=True, exist_ok=True)
 
     suffix = f"_{tag}" if tag else ""

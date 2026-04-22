@@ -22,6 +22,7 @@ Dependencies:
     scikit-learn, pandas, numpy, scipy, matplotlib, rich.
 """
 
+import argparse
 import json
 
 import matplotlib.pyplot as plt
@@ -35,9 +36,10 @@ from utils import (
     SUBTYPE_COLORS,
     SUBTYPE_ORDER,
     apply_plot_style,
-    get_phase_dirs,
+    get_run_dirs,
     get_sample_columns,
     kruskal_wallis_per_region,
+    save_config,
     setup_logging,
 )
 from utils.statistics import bonferroni_threshold
@@ -49,10 +51,10 @@ rich.traceback.install()
 # ---------------------------------------------------------------------------
 MERGE_THRESHOLD = 0.8
 
-# Initialise output directories and logging.
-FIG_DIR, OUT_DIR = get_phase_dirs("preprocessing_phase")
-log, console = setup_logging("preprocessing_phase")
-apply_plot_style()
+# Set by main() before any analysis runs.
+FIG_DIR = None
+OUT_DIR = None
+log = None
 
 
 """Data Loading."""
@@ -402,6 +404,26 @@ def save_handoff_files(train_merged, val_merged, merge_map, pvals, h_stats,
 
 def main():
     """Run Phase 1: label-free region merging and handoff file generation."""
+    global FIG_DIR, OUT_DIR, log
+
+    parser = argparse.ArgumentParser(
+        description="Phase 1: label-free region merging.",
+    )
+    parser.add_argument(
+        "--name", type=str, default="default_run",
+        help="Run name for the results directory (default: default_run).",
+    )
+    args = parser.parse_args()
+
+    FIG_DIR, OUT_DIR, log_dir, run_dir = get_run_dirs(args.name, "preprocessing")
+    log, console = setup_logging("preprocessing_phase", log_dir=log_dir)
+    apply_plot_style()
+
+    save_config(
+        run_dir, "preprocessing_phase",
+        merge_threshold=MERGE_THRESHOLD,
+    )
+
     train_df, val_df, clinical_df = load_data()
     train_sample_cols = get_sample_columns(train_df)
     val_sample_cols = get_sample_columns(val_df)
@@ -449,8 +471,6 @@ def main():
     log.info("PHASE 1 PREPROCESSING COMPLETE.")
     log.info("  Figures: %s", FIG_DIR)
     log.info("  Data:    %s", OUT_DIR)
-    log.info("  Log:     %s",
-             FIG_DIR.parent.parent / "logs" / "preprocessing_phase.log")
     log.info("=" * 60)
 
 
