@@ -1,0 +1,214 @@
+================================================================================
+TEMP_CHANGES.TXT - Pre-Merge Audit and Fix Summary
+Date: 2026-04-22
+================================================================================
+
+This file documents all issues found, decisions changed, and fixes applied to the
+three teammate scripts before merging them into a unified nested CV runner.
+
+================================================================================
+1. DESIGN DECISION CHANGES
+================================================================================
+
+1.1 AUROC -> Balanced Accuracy (GLOBAL CHANGE)
+    - The project metric was changed from weighted one-vs-rest AUROC to balanced
+      accuracy throughout.
+    - Balanced accuracy is the macro-averaged recall across the 3 classes,
+      giving equal weight to each subtype regardless of class size.
+    - This removes the need for predict_proba on NearestCentroid (which lacks
+      it natively), eliminating the NMC probability wrapper problem entirely.
+    - Files updated:
+        * CLAUDE.md line 25 (competition metric description).
+        * docs/research_plan.md (17 AUROC references replaced throughout).
+    - Inner CV scoring changed from accuracy to balanced_accuracy in all scripts.
+    - Outer CV evaluation changed from accuracy_score to balanced_accuracy_score.
+
+1.2 Number of repeats kept at 3 (configurable)
+    - The spec calls for 10 repeats (50 outer folds). The scripts currently use 3
+      repeats (15 outer folds) for faster iteration during development.
+    - All scripts now accept --n-repeats as a command-line argument.
+    - Default is 3. Set to 10 for final runs.
+
+1.3 Hyperparameter grids kept small (configurable)
+    - The spec calls for wider grids (8 KW values, 10x5 EN grid).
+    - Current grids are smaller for development speed. They are defined as
+      module-level constants (Script A) or local variables (Scripts B) and are
+      easy to expand before final runs.
+
+================================================================================
+2. BUG FIXES APPLIED
+================================================================================
+
+2.1 Scoring metric (ALL SCRIPTS) [CRITICAL]
+    BEFORE: accuracy_score / scoring="accuracy"
+    AFTER:  balanced_accuracy_score / scoring="balanced_accuracy"
+    - Script A (KW_pipelines.py): GridSearchCV scoring param + outer eval.
+    - Script B1 (EN_RF/script.py): Inner fold scoring + outer fold evaluation.
+    - Script B2 (EN_NMC/script.py): Inner fold scoring + outer fold evaluation.
+
+2.2 n_jobs discipline (Scripts A and B1) [IMPORTANT]
+    BEFORE: n_jobs=-1 in GridSearchCV (Script A) and RandomForestClassifier (B1)
+    AFTER:  n_jobs=1 everywhere
+    - Parallelism will be handled externally via shell.
+
+2.3 RF random_state not linked to repeat (Script A) [SUSPECTED BUG]
+    BEFORE: RandomForestClassifier(random_state=42) hardcoded across all repeats.
+    AFTER:  Pipeline recreated per repeat with random_state=seed.
+    - make_kw_pipeline_and_grid() now accepts a random_state parameter.
+    - run_repeated_nested_cv() builds a fresh pipeline each repeat.
+
+2.4 Inner/outer seed collision (Scripts B1 and B2) [SUSPECTED BUG]
+    BEFORE: Both inner and outer StratifiedKFold used random_state=outter_seed.
+    AFTER:  Inner CV uses random_state=100 + outer_seed.
+    - Decorrelates inner and outer split generation (Script A already had this).
+
+2.5 Convergence warnings not surfaced (Scripts B1 and B2) [IMPORTANT]
+    BEFORE: SAGA convergence warnings silently swallowed by default.
+    AFTER:  warnings.catch_warnings(record=True) wraps every ElasticNet fit.
+            ConvergenceWarning instances are logged via log.warning().
+    - Applied in both run_inner_cv() and refit_and_evaluate() functions.
+
+2.6 Feature naming convention divergence (Scripts B1 and B2) [IMPORTANT]
+    BEFORE: Script A used chr1_100000_200000 (underscores).
+            Scripts B used chr1:100000-200000 (colon + dash).
+    AFTER:  All three scripts use chr{Chrom}_{Start}_{End} (underscores).
+    - Feature importance results are now comparable across all four pipelines.
+
+================================================================================
+3. STYLE AND INFRASTRUCTURE FIXES
+================================================================================
+
+3.1 Path resolution (ALL SCRIPTS)
+    BEFORE: Bare relative paths (../data, train_merged.tsv, etc.).
+    AFTER:  All paths derived from Path(__file__).resolve().parent.
+    - Scripts now work from any working directory.
+
+3.2 Logging (ALL SCRIPTS)
+    BEFORE: print() statements throughout.
+    AFTER:  rich.console.Console + logging module with dual handlers:
+            - RichHandler for styled console output.
+            - FileHandler writing to results/logs/<script_name>.log.
+    - rich.traceback.install() for readable error traces.
+
+3.3 Progress bars (ALL SCRIPTS)
+    BEFORE: No progress indication.
+    AFTER:  rich.progress.track() on repeat loops and outer fold loops.
+    - Script B1 also wraps the param grid loop (960 combinations).
+
+3.4 Configurable parameters (ALL SCRIPTS)
+    BEFORE: Hardcoded constants.
+    AFTER:  argparse with --n-repeats, --input, --clinical, --output-dir.
+    - Default values match current behavior.
+
+3.5 Function decomposition (Scripts B1 and B2)
+    BEFORE: Monolithic top-level scripts with zero functions (~300 lines each).
+    AFTER:  Decomposed into:
+            - load_data(input_path, clinical_path)
+            - run_inner_cv(x_outer_train, y_outer_train, param_grid, inner_cv, seed)
+            - refit_and_evaluate(x_outer_train, x_outer_test, ..., best_params, ...)
+            - main()
+    - Script A already had good function structure; preserved with docstrings added.
+
+3.6 Structured output (ALL SCRIPTS)
+    BEFORE: Script A returned dict to stdout only. Scripts B dumped CSVs to cwd.
+    AFTER:  All scripts save nested_cv_results.csv to --output-dir with columns:
+            pipeline, repeat, outer_fold, balanced_accuracy, best_params/columns,
+            n_features_selected.
+    - Scripts B also save per-fold CSVs into output_dir (not cwd).
+
+3.7 Author header blocks (ALL SCRIPTS)
+    BEFORE: No headers.
+    AFTER:  Group 9 header with all 4 members, script name, usage, dependencies.
+
+3.8 Google-style docstrings (ALL SCRIPTS)
+    BEFORE: No docstrings.
+    AFTER:  All functions and the KruskalWallisSelector class have Google-style
+            docstrings with Args, Returns, and Raises sections.
+
+3.9 Section headers (ALL SCRIPTS)
+    BEFORE: #--- TITLE ---# comments.
+    AFTER:  """Title""" for section titles, '''Subtitle''' for subtitles.
+
+3.10 if __name__ == "__main__" guard (ALL SCRIPTS)
+    BEFORE: Top-level execution code.
+    AFTER:  Wrapped in guard block.
+
+================================================================================
+4. ISSUES NOT YET FIXED (TO ADDRESS DURING MERGE)
+================================================================================
+
+4.1 RF hyperparameters wrong set being tuned
+    - Current: n_estimators, max_depth, min_samples_split
+    - Spec: max_features in {sqrt, log2, 0.3}, min_samples_leaf in {1, 2, 5},
+      n_estimators=500 fixed.
+    - Will be corrected in the unified merged script.
+
+4.2 Statistical comparison between pipelines
+    - No statistical test is implemented between the 4 pipelines.
+    - A corrected resampled t-test (Nadeau-Bengio) should be added in the merge
+      to avoid inflated Type I error from naive paired t-tests on CV folds.
+
+4.3 Small outer test fold caveat
+    - With n=100 and 5-fold outer CV, each test fold has ~20 samples (~6-7 per
+      class). Per-fold balanced accuracy estimates have substantial variance.
+    - Pipeline differences below ~5% balanced accuracy are likely noise.
+
+4.4 EN_RF grid is enormous (960 combinations)
+    - The joint grid tunes EN params + RF params simultaneously.
+    - EN model is redundantly re-fitted 48x for each unique (C, l1_ratio) pair.
+    - Merge should restructure: fit EN once per (C, l1_ratio), then sweep top_k
+      and RF params on the selected features.
+
+4.5 Directory name encoding issue
+    - EN_NMC_final directory uses Greek letters (U+0395 + U+039D) not ASCII "EN".
+    - Will not be propagated into the merge (unified script goes in code/).
+
+4.6 Duplicate data files in EN_RF_final/
+    - train_merged.tsv and Train_clinical.tsv are local copies in the EN_RF
+      directory. These are now unused (scripts load from canonical paths) but
+      the stale copies remain. Should be cleaned up.
+
+4.7 Class imbalance handling
+    - No class_weight set in any classifier. With ~32/36/32 distribution this is
+      defensible, but balanced_accuracy already accounts for class imbalance in
+      the metric. Consistent across all pipelines.
+
+4.8 Expand grids for final runs
+    - KW: k in {5, 10, 15, 20, 30, 50, 75, 100} (currently [5, 20]).
+    - EN: C as np.logspace(-3, 2, 10) (currently [0.01, 0.1, 1, 10]).
+    - Repeats: 10 (currently 3).
+
+================================================================================
+5. FILES MODIFIED
+================================================================================
+
+Modified:
+    CLAUDE.md                              - AUROC -> balanced accuracy (line 25)
+    docs/research_plan.md                  - 17 AUROC references -> balanced accuracy
+    feature selection phase/KW_pipelines.py - Full rewrite with all fixes
+    EN_RF_final/script.py                  - Full rewrite with all fixes
+    (Greek)EN_NMC_final/script.py          - Full rewrite with all fixes
+
+Created:
+    temp_changes.txt                       - This file
+
+Not modified (to be created during merge):
+    code/model_training_phase.py           - The unified merged script (Phase 2)
+    figures/model_training_phase/          - Figures directory
+    docs/model_training_phase.md           - Phase documentation
+
+================================================================================
+6. VERIFICATION
+================================================================================
+
+All three rewritten scripts pass Python syntax validation (ast.parse).
+Key fixes confirmed via grep:
+    - balanced_accuracy: present in all three scripts (7, 15+, 15+ occurrences)
+    - n_jobs=1: confirmed in KW (1 site), EN_RF (2 sites)
+    - random_state=100 + outer_seed: confirmed in EN_RF and EN_NMC
+    - ConvergenceWarning: 3 references each in EN_RF and EN_NMC (import + 2 sites)
+    - Feature naming chr{}_{}_{}: confirmed in all three scripts
+
+================================================================================
+END
+================================================================================

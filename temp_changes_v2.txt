@@ -1,0 +1,150 @@
+================================================================================
+TEMP_CHANGES_V2.TXT - Merge Script Summary
+Date: 2026-04-22
+================================================================================
+
+This file documents the merged unified nested CV runner and its design decisions.
+It supersedes the per-script fixes in temp_changes.txt.
+
+================================================================================
+1. NEW FILES CREATED
+================================================================================
+
+1.1 code/utils/cv_components.py
+    - KruskalWallisSelector(BaseEstimator, TransformerMixin)
+        Lifted from KW_pipelines.py. Computes KW H-statistic per feature,
+        selects top-k. Stores scores_, ranking_, indices_.
+    - ElasticNetSelector(BaseEstimator, TransformerMixin)
+        New. Wraps LogisticRegression(penalty='elasticnet', solver='saga',
+        multi_class='multinomial') as a feature selector. Fits the model in
+        fit(), selects top_k features by sum of |coef_| across classes in
+        transform(). Convergence warnings are surfaced via logging.
+        Uses class_weight='balanced' on the internal LogisticRegression.
+
+1.2 code/utils/cv_config.py
+    - PIPELINE_NAMES: ("kw_nmc", "kw_rf", "en_nmc", "en_rf")
+    - TRIAL_GRIDS: Small grids for development.
+        KW: k in [5, 20]
+        EN: C in [0.01, 0.1, 1.0, 10.0], l1_ratio in [0.1, 0.5, 0.9],
+            top_k in [5, 20] -> 24 combinations
+    - PRODUCTION_GRIDS: Full grids per research plan.
+        KW: k in [5, 10, 15, 20, 30, 50, 75, 100] -> 8 combinations
+        EN: C = logspace(-3, 2, 10), l1_ratio in [0.1, 0.3, 0.5, 0.7, 0.9],
+            top_k in [5, 10, 20, 50] -> 200 combinations
+    - TRIAL_REPEATS = 3, PRODUCTION_REPEATS = 10
+    - build_pipeline(pipeline_name, random_state) factory function:
+        Constructs sklearn Pipelines for each of the 4 cells.
+
+1.3 code/model_training_phase.py
+    - Unified runner. One invocation = one (pipeline, repeat) job = 5 outer folds.
+    - CLI: --pipeline {kw_nmc,kw_rf,en_nmc,en_rf} --repeat <int>
+           --config {trial,production} --input <path> --clinical <path>
+    - Uses sklearn Pipeline + GridSearchCV for ALL four pipelines.
+    - Output: fold_results CSV per job with columns:
+        pipeline, repeat, outer_fold, balanced_accuracy, best_inner_score,
+        best_params, n_features_selected, selected_features, fold_seconds
+
+1.4 Updated code/utils/__init__.py
+    - Added re-exports for cv_components and cv_config.
+
+================================================================================
+2. KEY DESIGN DECISIONS
+================================================================================
+
+2.1 Balanced accuracy remains primary metric (no AUROC).
+    Carried forward from temp_changes.txt section 1.1.
+
+2.2 RF hyperparameters are FIXED (not tuned).
+    Per research plan: 500 trees, min_samples_leaf=2, no max_depth limit.
+    The teammate scripts incorrectly tuned n_estimators/max_depth/min_samples_split.
+    This is now corrected: RF has zero tunable hyperparameters.
+
+2.3 class_weight='balanced' on ElasticNet only.
+    Applied to the LogisticRegression inside ElasticNetSelector. Not applied to
+    RF (fixed config per research plan, and the ~32/36/32 distribution is
+    nearly uniform).
+
+2.4 No NearestCentroidWithProba wrapper.
+    Since balanced accuracy (not AUROC) is the metric, NMC's predict() suffices.
+    No probability outputs needed.
+
+2.5 EN pipeline uses Pipeline + GridSearchCV (not manual loops).
+    The teammate EN scripts had 80+ lines of manual inner CV code per script.
+    ElasticNetSelector as a transformer enables GridSearchCV to handle all
+    inner loop machinery, eliminating manual fold iteration bugs.
+
+2.6 Single (pipeline, repeat) per invocation.
+    Enables trivial shell parallelism: run 4 pipelines x N repeats as
+    independent jobs.
+
+2.7 Trial vs production configs.
+    Trial: small grids for fast iteration (2 KW, 24 EN combinations).
+    Production: full grids per research plan (8 KW, 200 EN combinations).
+
+================================================================================
+3. CHANGES FROM TEAMMATE SCRIPTS
+================================================================================
+
+3.1 RF grid (KW_pipelines.py, EN_RF_final/script.py) [CORRECTED]
+    BEFORE: Tuned n_estimators, max_depth, min_samples_split.
+    AFTER:  Fixed at 500 trees, min_samples_leaf=2. Not tuned.
+    REASON: Research plan explicitly says not to tune RF to avoid overfitting
+            the inner loop at this sample size.
+
+3.2 EN_RF joint grid eliminated [CORRECTED]
+    BEFORE: 960 combinations (C x l1_ratio x top_k x RF params).
+    AFTER:  Only EN params tuned (C x l1_ratio x top_k). RF is fixed.
+
+3.3 All four pipelines use Pipeline + GridSearchCV [UNIFIED]
+    BEFORE: KW used Pipeline+GridSearchCV; EN used manual loops.
+    AFTER:  All four use Pipeline+GridSearchCV.
+
+3.4 class_weight='balanced' added to EN [NEW]
+    BEFORE: No class_weight anywhere.
+    AFTER:  LogisticRegression inside ElasticNetSelector uses class_weight='balanced'.
+
+3.5 Seed handling preserved [UNCHANGED]
+    outer_cv: random_state=repeat_seed
+    inner_cv: random_state=100+repeat_seed
+    RF/EN solver: random_state=repeat_seed
+
+3.6 n_jobs=1 preserved [UNCHANGED]
+    No internal parallelism. External parallelism via shell.
+
+================================================================================
+4. VERIFICATION
+================================================================================
+
+All files pass Python syntax validation (ast.parse).
+All module imports resolve correctly.
+All four pipelines pass end-to-end smoke test (trial config, repeat 1):
+    kw_nmc: mean balanced accuracy 0.6361 (7.9s)
+    kw_rf:  mean balanced accuracy 0.7619 (31.9s)
+    en_nmc: mean balanced accuracy 0.7679 (223.3s)
+    en_rf:  mean balanced accuracy 0.7980 (516.7s)
+
+Output CSVs verified: correct columns, correct number of rows (5 per job).
+Log files verified: written to results/logs/model_training_phase_<tag>.log.
+
+================================================================================
+5. ITEMS NOT YET ADDRESSED
+================================================================================
+
+5.1 Statistical comparison between pipelines.
+    No corrected resampled t-test (Nadeau-Bengio) implemented yet.
+    Will be needed after running all pipelines to compare the 4 cells.
+
+5.2 Figures for model_training_phase.
+    No plotting code yet. Will need box plots or similar comparing the
+    4 pipelines. Directory: results/figures/model_training_phase/.
+
+5.3 Documentation file.
+    docs/model_training_phase.md not yet written.
+
+5.4 Phase 4 (final prediction).
+    After selecting the best pipeline, retrain on all 100 samples and
+    predict 57 validation samples.
+
+================================================================================
+END
+================================================================================
