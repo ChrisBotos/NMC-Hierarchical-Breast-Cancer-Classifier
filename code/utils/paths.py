@@ -99,6 +99,33 @@ def get_run_dirs(run_name, phase_name):
     return fig_dir, data_dir, log_dir, run_dir
 
 
+def get_run_dirs_no_replace(run_name, phase_name):
+    """Like get_run_dirs but without phase replacement.
+
+    Creates the phase subdirectories if they do not exist, but never
+    deletes existing content. Safe for parallel jobs that write to the
+    same phase directory concurrently (e.g. nested CV array tasks).
+
+    Args:
+        run_name (str): The run name (e.g. "default_run").
+        phase_name (str): The phase directory name (e.g. "nested_cv_2x2").
+
+    Returns:
+        tuple[Path, Path, Path, Path]: (fig_dir, data_dir, log_dir, run_dir).
+    """
+    run_dir = _find_or_create_run_dir(run_name)
+    phase_dir = run_dir / phase_name
+
+    fig_dir = phase_dir / "figures"
+    data_dir = phase_dir / "data"
+    log_dir = phase_dir / "logs"
+    fig_dir.mkdir(parents=True, exist_ok=True)
+    data_dir.mkdir(parents=True, exist_ok=True)
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    return fig_dir, data_dir, log_dir, run_dir
+
+
 def save_config(run_dir, script_name, **kwargs):
     """Save or update a config.json snapshot in the run root directory.
 

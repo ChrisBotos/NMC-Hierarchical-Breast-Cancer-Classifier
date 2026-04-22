@@ -14,6 +14,10 @@ Description:
     one repeat (a single seed), producing outer-fold balanced accuracy
     scores. Jobs can be parallelized trivially via shell.
 
+    Supports fold-level checkpointing for crash recovery (--force-restart,
+    --skip-if-complete). If a job is killed mid-run, re-launching it will
+    resume from the last completed fold.
+
 Usage:
     python3 code/nested_cv_2x2_runner.py --pipeline kw_nmc --repeat 1 --config config_files/local.yaml
     python3 code/nested_cv_2x2_runner.py --pipeline en_rf --repeat 3 --config config_files/server.yaml
@@ -51,7 +55,7 @@ from utils.cv_config import (
     build_pipeline,
 )
 from utils.logging_setup import setup_logging
-from utils.paths import DATA_DIR, PROJECT_DIR, get_run_dirs, save_config
+from utils.paths import DATA_DIR, PROJECT_DIR, get_run_dirs_no_replace, save_config
 
 rich.traceback.install()
 
@@ -106,11 +110,81 @@ def load_data(input_path, clinical_path):
     return X, y, le, feature_names
 
 
+"""Checkpoint Helpers"""
+
+
+def _checkpoint_path(data_dir, pipeline_name, repeat_seed):
+    """Return the path for a fold-level checkpoint file.
+
+    Args:
+        data_dir (Path): The phase data directory.
+        pipeline_name (str): Pipeline identifier.
+        repeat_seed (int): Repeat seed number.
+
+    Returns:
+        Path: Checkpoint JSON path.
+    """
+    return data_dir / f"checkpoint_{pipeline_name}_r{repeat_seed}.json"
+
+
+def _csv_path(data_dir, pipeline_name, repeat_seed):
+    """Return the path for the final fold results CSV.
+
+    Args:
+        data_dir (Path): The phase data directory.
+        pipeline_name (str): Pipeline identifier.
+        repeat_seed (int): Repeat seed number.
+
+    Returns:
+        Path: Final CSV path.
+    """
+    return data_dir / f"fold_results_{pipeline_name}_r{repeat_seed}.csv"
+
+
+def _load_checkpoint(ckpt_path, log):
+    """Load an existing checkpoint if present.
+
+    Args:
+        ckpt_path (Path): Path to checkpoint JSON.
+        log (logging.Logger): Logger instance.
+
+    Returns:
+        list[dict]: Previously completed fold results, or empty list.
+    """
+    if not ckpt_path.exists():
+        return []
+    with open(ckpt_path) as f:
+        data = json.load(f)
+    n_folds = len(data["fold_results"])
+    log.info("Resuming from checkpoint: %d folds already completed.", n_folds)
+    return data["fold_results"]
+
+
+def _save_checkpoint(ckpt_path, fold_results, pipeline_name, repeat_seed):
+    """Write fold results to a checkpoint file.
+
+    Args:
+        ckpt_path (Path): Path to checkpoint JSON.
+        fold_results (list[dict]): Completed fold results so far.
+        pipeline_name (str): Pipeline identifier.
+        repeat_seed (int): Repeat seed number.
+    """
+    payload = {
+        "pipeline": pipeline_name,
+        "repeat": repeat_seed,
+        "n_completed": len(fold_results),
+        "fold_results": fold_results,
+    }
+    with open(ckpt_path, "w") as f:
+        json.dump(payload, f, indent=2, default=str)
+
+
 """Single-Repeat Nested CV Runner"""
 
 
-def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
-                      param_grid, config, log):
+def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
+                      param_grid, config, log, ckpt_path=None,
+                      prior_folds=None):
     """Run outer CV for one pipeline and one repeat seed.
 
     Constructs a fresh pipeline per repeat so stochastic components
@@ -119,15 +193,24 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
     computed as a secondary metric using predict_proba on the outer
     test fold. CV fold counts and scoring metric are read from config.
 
+    Supports resuming from a checkpoint: if prior_folds is provided,
+    folds that have already been completed are skipped. After each new
+    fold, the checkpoint is updated on disk.
+
     Args:
         X (np.ndarray): Feature matrix of shape (n_samples, n_features).
         y (np.ndarray): Integer-encoded labels of shape (n_samples,).
+        le (LabelEncoder): Fitted label encoder for decoding class names.
         feature_names (list[str]): Region name strings for the columns of X.
         pipeline_name (str): One of the four pipeline identifiers.
         repeat_seed (int): Random seed for this repeat.
         param_grid (dict): Hyperparameter grid for GridSearchCV.
         config (dict): Loaded configuration dictionary.
         log (logging.Logger): Logger instance.
+        ckpt_path (Path or None): Path to checkpoint file for incremental
+            saving. If None, no checkpoint is written.
+        prior_folds (list[dict] or None): Previously completed fold results
+            loaded from a checkpoint. These folds are skipped.
 
     Returns:
         list[dict]: One dict per outer fold with evaluation results.
@@ -136,6 +219,7 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
     outer_folds = cv_cfg.get("outer_folds", 5)
     inner_folds = cv_cfg.get("inner_folds", 5)
     scoring = cv_cfg.get("scoring", "balanced_accuracy")
+    n_completed = len(prior_folds) if prior_folds else 0
 
     pipeline = build_pipeline(
         pipeline_name, random_state=repeat_seed, config=config,
@@ -158,13 +242,18 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
         n_splits=outer_folds, shuffle=True, random_state=repeat_seed,
     )
 
-    fold_results = []
+    # Start from checkpoint if available.
+    fold_results = list(prior_folds) if prior_folds else []
 
     for fold_idx, (train_idx, test_idx) in track(
         enumerate(outer_cv.split(X, y), start=1),
         total=outer_folds,
         description=f"  {pipeline_name} repeat {repeat_seed} outer folds",
     ):
+        # Skip folds already completed in the checkpoint.
+        if fold_idx <= n_completed:
+            continue
+
         fold_start = time.perf_counter()
 
         X_train, X_test = X[train_idx], X[test_idx]
@@ -194,6 +283,10 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
         # Identify which features were selected by name.
         selected_feature_names = [feature_names[i] for i in selector.indices_]
 
+        # Decode integer labels back to class names for downstream analysis.
+        y_true_labels = le.inverse_transform(y_test)
+        y_pred_labels = le.inverse_transform(y_pred)
+
         fold_row = {
             "pipeline": pipeline_name,
             "repeat": repeat_seed,
@@ -204,9 +297,15 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
             "best_params": json.dumps(best_params, default=str),
             "n_features_selected": n_features,
             "selected_features": ",".join(selected_feature_names),
+            "y_true": ",".join(y_true_labels),
+            "y_pred": ",".join(y_pred_labels),
             "fold_seconds": round(fold_elapsed, 1),
         }
         fold_results.append(fold_row)
+
+        # Save checkpoint after each fold so progress survives crashes.
+        if ckpt_path is not None:
+            _save_checkpoint(ckpt_path, fold_results, pipeline_name, repeat_seed)
 
         log.info(
             "  Fold %d: bal_acc=%.4f  auroc=%.4f  inner_best=%.4f  "
@@ -276,6 +375,16 @@ def parse_args():
         default=DATA_DIR / "Train_clinical.tsv",
         help="Path to clinical labels TSV.",
     )
+    parser.add_argument(
+        "--force-restart",
+        action="store_true",
+        help="Discard any existing checkpoint and start from fold 1.",
+    )
+    parser.add_argument(
+        "--skip-if-complete",
+        action="store_true",
+        help="Exit immediately (code 0) if the final CSV already exists.",
+    )
     return parser.parse_args()
 
 
@@ -309,15 +418,24 @@ def _resolve_input(args):
 
 
 def main():
-    """Entry point: load config, load data, run nested CV, save results."""
+    """Entry point: load config, load data, run nested CV, save results.
+
+    Supports fold-level checkpointing for crash recovery:
+    - If --skip-if-complete is set and the final CSV exists, exits immediately.
+    - If a checkpoint file exists (and --force-restart is not set), resumes
+      from the last completed fold.
+    - After each fold, the checkpoint is updated on disk.
+    - On successful completion, the checkpoint is removed (the CSV is
+      the authoritative record).
+    """
     args = parse_args()
 
     # Load experiment configuration.
     config = load_config(args.config)
 
-    # Set up run directory and logging.
+    # Set up run directory and logging (non-destructive for parallel jobs).
     tag = f"{args.pipeline}_r{args.repeat}"
-    fig_dir, data_dir, log_dir, run_dir = get_run_dirs(
+    fig_dir, data_dir, log_dir, run_dir = get_run_dirs_no_replace(
         args.name, "nested_cv_2x2",
     )
     log, console = setup_logging("nested_cv_2x2_runner", tag=tag, log_dir=log_dir)
@@ -326,6 +444,23 @@ def main():
     log.info("Config: %s", config["_config_path"])
     log.info("Pipeline: %s", args.pipeline)
     log.info("Repeat seed: %d", args.repeat)
+
+    # Early exit if this job is already complete.
+    csv_path = _csv_path(data_dir, args.pipeline, args.repeat)
+    if args.skip_if_complete and csv_path.exists():
+        log.info("Final CSV already exists: %s. Skipping (--skip-if-complete).", csv_path)
+        return
+
+    # Checkpoint handling.
+    ckpt_path = _checkpoint_path(data_dir, args.pipeline, args.repeat)
+    prior_folds = []
+
+    if args.force_restart:
+        if ckpt_path.exists():
+            ckpt_path.unlink()
+            log.info("Removed existing checkpoint (--force-restart).")
+    else:
+        prior_folds = _load_checkpoint(ckpt_path, log)
 
     # Resolve input path.
     args.input = _resolve_input(args)
@@ -350,8 +485,8 @@ def main():
     job_start = time.perf_counter()
 
     fold_results = run_single_repeat(
-        X, y, feature_names, args.pipeline, args.repeat, param_grid,
-        config, log,
+        X, y, le, feature_names, args.pipeline, args.repeat, param_grid,
+        config, log, ckpt_path=ckpt_path, prior_folds=prior_folds,
     )
 
     job_elapsed = time.perf_counter() - job_start
@@ -367,13 +502,15 @@ def main():
     log.info("  Mean balanced accuracy: %.4f (+/- %.4f)", mean_score, std_score)
     log.info("  Total time: %.1fs", job_elapsed)
 
-    # Save fold results CSV.
-    csv_name = f"fold_results_{args.pipeline}_r{args.repeat}.csv"
-    csv_path = data_dir / csv_name
-
+    # Save fold results CSV (the authoritative record).
     results_df = pd.DataFrame(fold_results)
     results_df.to_csv(csv_path, index=False)
     log.info("Fold results saved to %s", csv_path)
+
+    # Remove checkpoint now that the final CSV is written.
+    if ckpt_path.exists():
+        ckpt_path.unlink()
+        log.info("Checkpoint removed (job complete).")
 
     # Save run config snapshot.
     save_config(

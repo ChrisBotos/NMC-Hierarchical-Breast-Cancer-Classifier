@@ -11,8 +11,8 @@ Script Name: analyse_nested_cv.py.
 Description:
     Aggregates per-fold nested CV results from the 2x2 experimental design,
     computes summary statistics, performs statistical comparisons (Friedman +
-    pairwise Wilcoxon signed-rank tests), identifies the winning pipeline,
-    and produces publication-quality figures.
+    Wilcoxon + Nadeau-Bengio corrected t-test), identifies the winning
+    pipeline, and produces five publication-quality figures.
 
 Usage:
     python3 code/analyse_nested_cv.py --name default_run --config local
@@ -26,6 +26,7 @@ Dependencies:
 
 import argparse
 import sys
+from collections import Counter
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -33,6 +34,7 @@ import numpy as np
 import pandas as pd
 import rich.traceback
 from scipy import stats
+from sklearn.metrics import confusion_matrix as sklearn_confusion_matrix
 
 # Ensure the code/ directory is on sys.path so utils is importable.
 CODE_DIR = Path(__file__).resolve().parent
@@ -223,6 +225,97 @@ def run_statistical_tests(per_repeat, log):
     return friedman_stat, friedman_p, pairwise_df
 
 
+def run_nadeau_bengio_tests(all_results, config, log):
+    """Pairwise Nadeau-Bengio corrected resampled t-tests.
+
+    The Nadeau-Bengio correction accounts for the non-independence
+    of test sets in repeated k-fold CV, preventing inflation of the
+    test statistic that occurs with naive paired t-tests on
+    overlapping folds.
+
+    Reference: Nadeau & Bengio (2003), "Inference for the
+    Generalization Error", Machine Learning 52(3):239-281.
+
+    Args:
+        all_results (pd.DataFrame): Fold-level results with columns
+            pipeline, repeat, outer_fold, balanced_accuracy.
+        config (dict): Configuration with cv.outer_folds.
+        log (logging.Logger): Logger instance.
+
+    Returns:
+        pd.DataFrame or None: Pairwise test results with columns:
+            pipeline_a, pipeline_b, mean_diff, t_statistic, df,
+            p_value, p_corrected, significant. None if fewer than
+            2 pipelines.
+    """
+    cv_cfg = config["cv"]
+    k = cv_cfg.get("outer_folds", 5)
+    n_samples = 100  # Fixed for this dataset.
+    n_test = n_samples // k
+    n_train = n_samples - n_test
+
+    # Pivot to get scores indexed by (repeat, fold) for each pipeline.
+    pivot = all_results.pivot_table(
+        index=["repeat", "outer_fold"],
+        columns="pipeline",
+        values="balanced_accuracy",
+    )
+
+    present = [p for p in PIPELINE_NAMES if p in pivot.columns]
+    if len(present) < 2:
+        log.warning("Fewer than 2 pipelines; skipping Nadeau-Bengio tests.")
+        return None
+
+    n_comparisons = len(present) * (len(present) - 1) // 2
+    r = pivot.index.get_level_values("repeat").nunique()
+    kr = k * r
+    correction = 1.0 / kr + n_test / n_train
+
+    log.info(
+        "Nadeau-Bengio tests: k=%d folds, r=%d repeats, "
+        "n_test=%d, n_train=%d, correction_factor=%.4f",
+        k, r, n_test, n_train, correction,
+    )
+
+    rows = []
+    for i in range(len(present)):
+        for j in range(i + 1, len(present)):
+            a, b = present[i], present[j]
+            # Compute pairwise differences at the fold level.
+            d = (pivot[a] - pivot[b]).dropna().values
+            d_bar = np.mean(d)
+            s2 = np.var(d, ddof=1)
+
+            # Corrected variance (Nadeau-Bengio equation 8).
+            sigma2 = correction * s2
+            if sigma2 == 0:
+                t_stat = 0.0
+                p_val = 1.0
+            else:
+                t_stat = d_bar / np.sqrt(sigma2)
+                p_val = 2.0 * (1.0 - stats.t.cdf(abs(t_stat), df=kr - 1))
+
+            p_corrected = min(p_val * n_comparisons, 1.0)
+            rows.append({
+                "pipeline_a": a,
+                "pipeline_b": b,
+                "mean_diff": round(d_bar, 6),
+                "t_statistic": round(t_stat, 4),
+                "df": kr - 1,
+                "p_value": p_val,
+                "p_corrected": p_corrected,
+                "significant": p_corrected < 0.05,
+            })
+            log.info(
+                "  %s vs %s: diff=%.4f, t=%.3f, df=%d, p=%.6f, "
+                "p_corrected=%.6f %s",
+                a, b, d_bar, t_stat, kr - 1, p_val, p_corrected,
+                "*" if p_corrected < 0.05 else "",
+            )
+
+    return pd.DataFrame(rows)
+
+
 """Plotting"""
 
 
@@ -404,6 +497,212 @@ def plot_interaction(per_repeat, fig_dir, log):
     log.info("Saved figure: %s", out_path)
 
 
+def plot_repeat_convergence(per_repeat, fig_dir, log):
+    """Cumulative mean balanced accuracy across repeats.
+
+    Shows how the per-pipeline mean stabilises as more repeats are
+    added. Useful for verifying that the number of repeats is
+    sufficient for stable estimates.
+
+    Args:
+        per_repeat (pd.DataFrame): Per-repeat mean scores.
+        fig_dir (Path): Directory to save the figure.
+        log (logging.Logger): Logger instance.
+    """
+    apply_plot_style()
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    pipelines = [p for p in PIPELINE_NAMES if p in per_repeat["pipeline"].unique()]
+
+    for p in pipelines:
+        subset = per_repeat.loc[per_repeat["pipeline"] == p].sort_values("repeat")
+        scores = subset["mean_balanced_accuracy"].values
+        cumulative_mean = np.cumsum(scores) / np.arange(1, len(scores) + 1)
+        ax.plot(
+            range(1, len(scores) + 1), cumulative_mean,
+            color=PIPELINE_COLORS.get(p, "#888888"),
+            label=PIPELINE_LABELS.get(p, p),
+            linewidth=1.5,
+        )
+
+    ax.set_xlabel("Number of repeats included")
+    ax.set_ylabel("Cumulative mean balanced accuracy")
+    ax.legend(loc="best", frameon=True, edgecolor="grey")
+
+    fig.tight_layout()
+    out_path = fig_dir / "03_repeat_convergence.png"
+    fig.savefig(out_path, dpi=300)
+    plt.close(fig)
+    log.info("Saved figure: %s", out_path)
+
+
+def plot_feature_importance(all_results, fig_dir, log):
+    """Horizontal bar chart of the most frequently selected features.
+
+    Counts how often each feature is selected across all outer folds
+    and repeats, separately for each pipeline. Shows the top 20
+    features ranked by total selection count.
+
+    Args:
+        all_results (pd.DataFrame): Fold-level results with
+            selected_features column.
+        fig_dir (Path): Directory to save the figure.
+        log (logging.Logger): Logger instance.
+    """
+    if "selected_features" not in all_results.columns:
+        log.warning("No selected_features column; skipping feature importance plot.")
+        return
+
+    apply_plot_style()
+
+    # Count feature frequencies per pipeline.
+    pipelines = [p for p in PIPELINE_NAMES if p in all_results["pipeline"].unique()]
+    freq_by_pipeline = {}
+    for p in pipelines:
+        subset = all_results.loc[all_results["pipeline"] == p, "selected_features"]
+        counter = Counter()
+        for features_str in subset.dropna():
+            counter.update(features_str.split(","))
+        freq_by_pipeline[p] = counter
+
+    # Find top 20 features by total count across all pipelines.
+    total_counter = Counter()
+    for c in freq_by_pipeline.values():
+        total_counter.update(c)
+    top_features = [f for f, _ in total_counter.most_common(20)]
+
+    if not top_features:
+        log.warning("No features found; skipping feature importance plot.")
+        return
+
+    # Grouped horizontal bar chart.
+    fig, ax = plt.subplots(figsize=(7, 5))
+    y_pos = np.arange(len(top_features))
+    bar_height = 0.8 / len(pipelines)
+
+    for i, p in enumerate(pipelines):
+        counts = [freq_by_pipeline[p].get(f, 0) for f in top_features]
+        ax.barh(
+            y_pos + i * bar_height, counts, bar_height,
+            color=PIPELINE_COLORS.get(p, "#888888"),
+            label=PIPELINE_LABELS.get(p, p),
+            alpha=0.8,
+        )
+
+    ax.set_yticks(y_pos + bar_height * (len(pipelines) - 1) / 2)
+    ax.set_yticklabels(top_features, fontsize=7)
+    ax.set_xlabel("Selection count (across all outer folds and repeats)")
+    ax.set_ylabel("Genomic region")
+    ax.legend(loc="lower right", frameon=True, edgecolor="grey", fontsize=7)
+    ax.invert_yaxis()
+
+    fig.tight_layout()
+    out_path = fig_dir / "04_feature_importance.png"
+    fig.savefig(out_path, dpi=300)
+    plt.close(fig)
+    log.info("Saved figure: %s", out_path)
+
+
+def plot_confusion_matrices(all_results, fig_dir, log):
+    """2x2 grid of normalised confusion matrices (one per pipeline).
+
+    Aggregates y_true/y_pred across all outer folds and repeats for
+    each pipeline and plots row-normalised confusion matrices showing
+    per-class recall.
+
+    Args:
+        all_results (pd.DataFrame): Fold-level results with y_true
+            and y_pred columns (comma-separated class labels).
+        fig_dir (Path): Directory to save the figure.
+        log (logging.Logger): Logger instance.
+    """
+    if "y_true" not in all_results.columns or "y_pred" not in all_results.columns:
+        log.warning("No y_true/y_pred columns; skipping confusion matrix plot.")
+        return
+
+    apply_plot_style(scale="compact")
+
+    pipelines = [p for p in PIPELINE_NAMES if p in all_results["pipeline"].unique()]
+    n_pipes = len(pipelines)
+    if n_pipes == 0:
+        return
+
+    # Determine subplot grid (2x2 for 4 pipelines).
+    ncols = 2
+    nrows = (n_pipes + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols, figsize=(6, 5))
+    axes = np.atleast_2d(axes)
+
+    # Collect all unique class labels in sorted order.
+    all_true = []
+    for s in all_results["y_true"].dropna():
+        all_true.extend(s.split(","))
+    class_labels = sorted(set(all_true))
+
+    im = None
+    for idx, p in enumerate(pipelines):
+        ax = axes[idx // ncols, idx % ncols]
+        subset = all_results.loc[all_results["pipeline"] == p]
+
+        y_true_all = []
+        y_pred_all = []
+        for _, row in subset.iterrows():
+            if pd.isna(row.get("y_true")) or pd.isna(row.get("y_pred")):
+                continue
+            y_true_all.extend(row["y_true"].split(","))
+            y_pred_all.extend(row["y_pred"].split(","))
+
+        if not y_true_all:
+            ax.set_visible(False)
+            continue
+
+        cm = sklearn_confusion_matrix(y_true_all, y_pred_all, labels=class_labels)
+        # Row-normalise to get recall per class.
+        row_sums = cm.sum(axis=1, keepdims=True)
+        cm_norm = np.divide(
+            cm.astype(float), row_sums,
+            out=np.zeros_like(cm, dtype=float), where=row_sums != 0,
+        )
+
+        im = ax.imshow(cm_norm, cmap="Blues", vmin=0, vmax=1, aspect="auto")
+
+        # Annotate cells with both normalised and raw counts.
+        for i in range(len(class_labels)):
+            for j in range(len(class_labels)):
+                text_color = "white" if cm_norm[i, j] > 0.6 else "black"
+                ax.text(
+                    j, i, f"{cm_norm[i, j]:.2f}\n({cm[i, j]})",
+                    ha="center", va="center", fontsize=7, color=text_color,
+                )
+
+        ax.set_xticks(range(len(class_labels)))
+        ax.set_yticks(range(len(class_labels)))
+        ax.set_xticklabels(class_labels, fontsize=7)
+        ax.set_yticklabels(class_labels, fontsize=7)
+        ax.set_xlabel("Predicted", fontsize=8)
+        ax.set_ylabel("True", fontsize=8)
+        # Pipeline label as subplot annotation (not matplotlib title).
+        ax.text(
+            0.5, 1.05, PIPELINE_LABELS.get(p, p),
+            transform=ax.transAxes, ha="center", fontsize=9, fontweight="bold",
+        )
+
+    # Hide unused axes.
+    for idx in range(n_pipes, nrows * ncols):
+        axes[idx // ncols, idx % ncols].set_visible(False)
+
+    fig.tight_layout(rect=[0, 0, 0.92, 1])
+    # Add colourbar.
+    if im is not None:
+        cbar_ax = fig.add_axes([0.93, 0.15, 0.02, 0.7])
+        fig.colorbar(im, cax=cbar_ax, label="Recall (row-normalised)")
+
+    out_path = fig_dir / "05_confusion_matrices.png"
+    fig.savefig(out_path, dpi=300)
+    plt.close(fig)
+    log.info("Saved figure: %s", out_path)
+
+
 """Argument Parsing"""
 
 
@@ -492,24 +791,51 @@ def main():
         )
     log.info("Saved summary statistics: %s", summary_path)
 
-    """Step 4: Statistical Testing"""
+    """Step 4: Data Completeness Check"""
+
+    # Warn about incomplete runs.
+    expected_pipelines = set(config.get("pipelines", {}).get("names", PIPELINE_NAMES))
+    actual_pipelines = set(all_results["pipeline"].unique())
+    missing_pipelines = expected_pipelines - actual_pipelines
+    if missing_pipelines:
+        log.warning(
+            "Missing pipelines (incomplete run?): %s", sorted(missing_pipelines),
+        )
+
+    expected_repeats = config.get("cv", {}).get("n_repeats", None)
+    if expected_repeats is not None:
+        for p in actual_pipelines:
+            actual = all_results.loc[all_results["pipeline"] == p, "repeat"].nunique()
+            if actual < expected_repeats:
+                log.warning(
+                    "Pipeline %s has %d/%d repeats.", p, actual, expected_repeats,
+                )
+
+    """Step 5: Statistical Testing (Friedman + Wilcoxon)"""
 
     friedman_stat, friedman_p, pairwise_df = run_statistical_tests(per_repeat, log)
 
     if pairwise_df is not None:
-        pairwise_path = data_dir / "pairwise_tests.csv"
+        pairwise_path = data_dir / "pairwise_wilcoxon.csv"
         pairwise_df.to_csv(pairwise_path, index=False)
-        log.info("Saved pairwise tests: %s", pairwise_path)
+        log.info("Saved pairwise Wilcoxon tests: %s", pairwise_path)
     elif friedman_p is not None:
-        # Save an empty pairwise file noting the Friedman result.
-        pairwise_path = data_dir / "pairwise_tests.csv"
+        pairwise_path = data_dir / "pairwise_wilcoxon.csv"
         pd.DataFrame({
             "note": [f"Friedman test not significant (p={friedman_p:.6f}); "
                      "no pairwise tests performed."]
         }).to_csv(pairwise_path, index=False)
         log.info("Saved pairwise tests (no significant differences): %s", pairwise_path)
 
-    """Step 5: Identify Winner"""
+    """Step 6: Statistical Testing (Nadeau-Bengio Corrected t-test)"""
+
+    nb_df = run_nadeau_bengio_tests(all_results, config, log)
+    if nb_df is not None:
+        nb_path = data_dir / "pairwise_nadeau_bengio.csv"
+        nb_df.to_csv(nb_path, index=False)
+        log.info("Saved Nadeau-Bengio tests: %s", nb_path)
+
+    """Step 7: Identify Winner"""
 
     winner = summary.index[0]
     log.info(
@@ -518,12 +844,15 @@ def main():
         summary.loc[winner, "mean_bal_acc"],
     )
 
-    """Step 6: Generate Figures"""
+    """Step 8: Generate Figures"""
 
     plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log)
     plot_interaction(per_repeat, fig_dir, log)
+    plot_repeat_convergence(per_repeat, fig_dir, log)
+    plot_feature_importance(all_results, fig_dir, log)
+    plot_confusion_matrices(all_results, fig_dir, log)
 
-    """Step 7: Save Config Snapshot"""
+    """Step 9: Save Config Snapshot"""
 
     save_config(
         run_dir, "analyse_nested_cv",
