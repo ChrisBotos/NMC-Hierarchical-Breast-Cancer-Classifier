@@ -142,7 +142,8 @@ config_path.write_text(json.dumps(config, indent=2))
         MAIL_ARGS="--mail-type=BEGIN,END,FAIL,ARRAY_TASKS --mail-user=$SLURM_MAIL_USER"
     fi
 
-    sbatch \
+    # Capture the array job ID so the analysis job can depend on it.
+    ARRAY_JOB_ID=$(sbatch \
         --job-name="ncv_${RUN_NAME}" \
         --array="0-$(( TOTAL_JOBS - 1 ))%${SLURM_MAX_CONCURRENT}" \
         --ntasks=1 \
@@ -153,7 +154,26 @@ config_path.write_text(json.dumps(config, indent=2))
         --error="$SLURM_LOG_DIR/nested_cv_%A_%a.err" \
         $MAIL_ARGS \
         --export=ALL,RUN_NAME="$RUN_NAME",CONFIG_FILE="$CONFIG_FILE",REPEATS_PER_PIPELINE="$REPEATS_PER_PIPELINE" \
-        "${BASH_SOURCE[0]}"
+        --parsable \
+        "${BASH_SOURCE[0]}")
+
+    echo "Array job submitted: $ARRAY_JOB_ID"
+
+    # Submit a dependent analysis job that runs after all array tasks complete.
+    ANALYSIS_JOB_ID=$(sbatch \
+        --dependency="afterok:${ARRAY_JOB_ID}" \
+        --job-name="ncv_analysis_${RUN_NAME}" \
+        --ntasks=1 \
+        --cpus-per-task=1 \
+        --mem=4G \
+        --time="0-00:30:00" \
+        --output="$SLURM_LOG_DIR/nested_cv_analysis_%j.out" \
+        --error="$SLURM_LOG_DIR/nested_cv_analysis_%j.err" \
+        $MAIL_ARGS \
+        --parsable \
+        --wrap="source ~/miniconda3/bin/activate tb_310 && python3 $PROJECT_DIR/code/analyse_nested_cv.py --name $RUN_NAME --config $CONFIG_FILE")
+
+    echo "Analysis job submitted: $ANALYSIS_JOB_ID (depends on $ARRAY_JOB_ID)"
 
     exit 0
 fi
