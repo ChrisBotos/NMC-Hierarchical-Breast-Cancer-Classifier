@@ -7,17 +7,17 @@ Authors:
     Yan Qiao (2874296).
 Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
-Script Name: run_full_pipeline.py.
+Script Name: run_full_workflow.py.
 Description:
-    Orchestrator that runs the full analysis pipeline sequentially:
+    Orchestrator that runs the full analysis workflow sequentially:
         1. Phase 0 - Data exploration on raw data.
         2. Phase 1 - Preprocessing (label-free region merging).
         3. Phase 0 - Data exploration on merged data (--tag merged).
         4. Comparison figure (raw vs merged).
 
 Usage:
-    python3 code/run_full_pipeline.py
-    python3 code/run_full_pipeline.py --name my_experiment
+    python3 code/run_full_workflow.py
+    python3 code/run_full_workflow.py --name my_experiment
 
 Dependencies:
     Python >= 3.10.
@@ -31,7 +31,7 @@ from utils.paths import CODE_DIR, PROJECT_DIR, _find_or_create_run_dir
 
 
 def build_steps(run_name):
-    """Build the pipeline step list for a given run name.
+    """Build the workflow step list for a given run name.
 
     The merged data input path is resolved from the run directory's
     preprocessing handoff after Phase 1 completes.
@@ -83,9 +83,9 @@ def build_steps(run_name):
 
 
 def main():
-    """Run all pipeline steps sequentially, stopping on first failure."""
+    """Run all workflow steps sequentially, stopping on first failure."""
     parser = argparse.ArgumentParser(
-        description="Orchestrator: run the full analysis pipeline.",
+        description="Orchestrator: run the full analysis workflow.",
     )
     parser.add_argument(
         "--name", type=str, default="default_run",
@@ -96,7 +96,7 @@ def main():
     steps = build_steps(args.name)
 
     print("=" * 60)
-    print(f"FULL PIPELINE  (run: {args.name})")
+    print(f"FULL WORKFLOW  (run: {args.name})")
     print("=" * 60)
 
     for i, (description, cmd) in enumerate(steps, 1):
@@ -113,7 +113,7 @@ def main():
         print(f"\nStep {i} complete.")
 
     print(f"\n{'=' * 60}")
-    print("ALL PIPELINE STEPS COMPLETE.")
+    print("ALL WORKFLOW STEPS COMPLETE.")
     print(f"{'=' * 60}")
 
 

@@ -33,7 +33,7 @@ htmlcov/
 # ===== Claude Code =====
 .claude/
 CLAUDE.md
-results/.claudeignore
+.claudeignore
 
 # ===== Internal planning =====
 docs/research_plan.md
@@ -59,3 +59,4 @@ Thumbs.db
 *.zip
 *.tar.gz
 *.rar
+/.claudeignore
