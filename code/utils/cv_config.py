@@ -69,7 +69,7 @@ PRODUCTION_GRIDS = {
 """Default Repeat Count Per Config"""
 
 TRIAL_REPEATS = 3
-PRODUCTION_REPEATS = 10
+PRODUCTION_REPEATS = 50
 
 
 def build_pipeline(pipeline_name, random_state=42):
