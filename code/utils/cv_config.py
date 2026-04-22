@@ -7,11 +7,14 @@ sklearn Pipelines ready for GridSearchCV.
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import NearestCentroid
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-from utils.cv_components import ElasticNetSelector, KruskalWallisSelector
+from utils.cv_components import (
+    ElasticNetSelector,
+    KruskalWallisSelector,
+    NearestCentroidWithProba,
+)
 
 """Pipeline Names"""
 
@@ -21,7 +24,11 @@ PIPELINE_NAMES = ("kw_nmc", "kw_rf", "en_nmc", "en_rf")
 
 TRIAL_GRIDS = {
     "kw_nmc": {"selector__k": [5, 20]},
-    "kw_rf": {"selector__k": [5, 20]},
+    "kw_rf": {
+        "selector__k": [5, 20],
+        "clf__max_features": ["sqrt", "log2"],
+        "clf__min_samples_leaf": [1, 2],
+    },
     "en_nmc": {
         "selector__C": [0.01, 0.1, 1.0, 10.0],
         "selector__l1_ratio": [0.1, 0.5, 0.9],
@@ -31,6 +38,8 @@ TRIAL_GRIDS = {
         "selector__C": [0.01, 0.1, 1.0, 10.0],
         "selector__l1_ratio": [0.1, 0.5, 0.9],
         "selector__top_k": [5, 20],
+        "clf__max_features": ["sqrt", "log2"],
+        "clf__min_samples_leaf": [1, 2],
     },
 }
 
@@ -38,7 +47,11 @@ TRIAL_GRIDS = {
 
 PRODUCTION_GRIDS = {
     "kw_nmc": {"selector__k": [5, 10, 15, 20, 30, 50, 75, 100]},
-    "kw_rf": {"selector__k": [5, 10, 15, 20, 30, 50, 75, 100]},
+    "kw_rf": {
+        "selector__k": [5, 10, 15, 20, 30, 50, 75, 100],
+        "clf__max_features": ["sqrt", 0.3],
+        "clf__min_samples_leaf": [1, 5],
+    },
     "en_nmc": {
         "selector__C": np.logspace(-3, 2, 10).tolist(),
         "selector__l1_ratio": [0.1, 0.3, 0.5, 0.7, 0.9],
@@ -48,6 +61,8 @@ PRODUCTION_GRIDS = {
         "selector__C": np.logspace(-3, 2, 10).tolist(),
         "selector__l1_ratio": [0.1, 0.3, 0.5, 0.7, 0.9],
         "selector__top_k": [5, 10, 20, 50],
+        "clf__max_features": ["sqrt", 0.3],
+        "clf__min_samples_leaf": [1, 5],
     },
 }
 
@@ -63,10 +78,11 @@ def build_pipeline(pipeline_name, random_state=42):
     Pipelines follow the project's 2x2 design:
     - KW pipelines: KruskalWallisSelector -> classifier.
     - EN pipelines: StandardScaler -> ElasticNetSelector -> classifier.
-    - NMC pipelines include StandardScaler before the selector (NMC uses
-      Euclidean distance and needs scaled features).
-    - RF pipelines use fixed hyperparameters (500 trees, min_samples_leaf=2)
-      per the research plan.
+    - NMC pipelines use NearestCentroidWithProba (adds predict_proba for
+      AUROC) and include StandardScaler before the selector.
+    - RF pipelines fix n_estimators=500 but tune max_features and
+      min_samples_leaf via the param grid. class_weight='balanced' is set
+      for consistency with the Elastic Net selector.
 
     Args:
         pipeline_name (str): One of 'kw_nmc', 'kw_rf', 'en_nmc', 'en_rf'.
@@ -84,16 +100,17 @@ def build_pipeline(pipeline_name, random_state=42):
         return Pipeline([
             ("scaler", StandardScaler()),
             ("selector", KruskalWallisSelector()),
-            ("clf", NearestCentroid()),
+            ("clf", NearestCentroidWithProba()),
         ])
 
     if pipeline_name == "kw_rf":
         # RF is scale-invariant; no scaler needed.
+        # n_estimators=500 fixed; max_features and min_samples_leaf tuned.
         return Pipeline([
             ("selector", KruskalWallisSelector()),
             ("clf", RandomForestClassifier(
                 n_estimators=500,
-                min_samples_leaf=2,
+                class_weight="balanced",
                 random_state=random_state,
                 n_jobs=1,
             )),
@@ -104,17 +121,18 @@ def build_pipeline(pipeline_name, random_state=42):
         return Pipeline([
             ("scaler", StandardScaler()),
             ("selector", ElasticNetSelector(random_state=random_state)),
-            ("clf", NearestCentroid()),
+            ("clf", NearestCentroidWithProba()),
         ])
 
     if pipeline_name == "en_rf":
         # EN needs scaled input; RF is scale-invariant but it does not hurt.
+        # n_estimators=500 fixed; max_features and min_samples_leaf tuned.
         return Pipeline([
             ("scaler", StandardScaler()),
             ("selector", ElasticNetSelector(random_state=random_state)),
             ("clf", RandomForestClassifier(
                 n_estimators=500,
-                min_samples_leaf=2,
+                class_weight="balanced",
                 random_state=random_state,
                 n_jobs=1,
             )),

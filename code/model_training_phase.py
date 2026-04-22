@@ -35,7 +35,7 @@ import numpy as np
 import pandas as pd
 import rich.traceback
 from rich.progress import track
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import balanced_accuracy_score, roc_auc_score
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 
@@ -119,6 +119,8 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
     Constructs a fresh pipeline per repeat so stochastic components
     (RF, ElasticNet solver) use the repeat seed. The inner CV loop is
     handled entirely by GridSearchCV with balanced accuracy scoring.
+    AUROC (weighted one-vs-rest) is computed as a secondary metric using
+    predict_proba on the outer test fold.
 
     Args:
         X (np.ndarray): Feature matrix of shape (n_samples, n_features).
@@ -172,6 +174,12 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
         y_pred = best_pipeline.predict(X_test)
         bal_acc = balanced_accuracy_score(y_test, y_pred)
 
+        # Secondary metric: macro-averaged one-vs-rest AUROC from predict_proba.
+        y_proba = best_pipeline.predict_proba(X_test)
+        auroc = roc_auc_score(
+            y_test, y_proba, multi_class="ovr", average="macro",
+        )
+
         fold_elapsed = time.perf_counter() - fold_start
 
         # Determine the number of features selected.
@@ -186,6 +194,7 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
             "repeat": repeat_seed,
             "outer_fold": fold_idx,
             "balanced_accuracy": round(bal_acc, 6),
+            "auroc_macro": round(auroc, 6),
             "best_inner_score": round(best_inner_score, 6),
             "best_params": json.dumps(best_params, default=str),
             "n_features_selected": n_features,
@@ -195,9 +204,10 @@ def run_single_repeat(X, y, feature_names, pipeline_name, repeat_seed,
         fold_results.append(fold_row)
 
         log.info(
-            "  Fold %d: balanced_accuracy=%.4f  inner_best=%.4f  "
+            "  Fold %d: bal_acc=%.4f  auroc=%.4f  inner_best=%.4f  "
             "n_features=%d  (%.1fs)",
-            fold_idx, bal_acc, best_inner_score, n_features, fold_elapsed,
+            fold_idx, bal_acc, auroc, best_inner_score, n_features,
+            fold_elapsed,
         )
 
     return fold_results

@@ -1,7 +1,8 @@
 """Reusable sklearn-compatible transformers for the nested CV pipeline.
 
 Provides feature selection transformers that can be embedded inside
-sklearn Pipelines and tuned via GridSearchCV.
+sklearn Pipelines and tuned via GridSearchCV, and a NearestCentroid
+subclass with predict_proba for AUROC computation.
 """
 
 import logging
@@ -12,6 +13,8 @@ from scipy.stats import kruskal
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import pairwise_distances
+from sklearn.neighbors import NearestCentroid
 
 log = logging.getLogger(__name__)
 
@@ -171,3 +174,29 @@ class ElasticNetSelector(BaseEstimator, TransformerMixin):
         """
         X = np.asarray(X, dtype=float)
         return X[:, self.indices_]
+
+
+class NearestCentroidWithProba(NearestCentroid):
+    """NearestCentroid extended with predict_proba via softmax of distances.
+
+    Computes pairwise Euclidean distances from each sample to every class
+    centroid, then converts to probabilities using a softmax over negative
+    distances. This enables AUROC computation for NMC pipelines.
+    """
+
+    def predict_proba(self, X):
+        """Estimate class probabilities via softmax of negative distances.
+
+        Args:
+            X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+
+        Returns:
+            np.ndarray: Probability matrix of shape (n_samples, n_classes).
+        """
+        distances = pairwise_distances(X, self.centroids_)
+        # Softmax with numerical stability (subtract row max).
+        neg_dist = -distances
+        neg_dist -= neg_dist.max(axis=1, keepdims=True)
+        exp_vals = np.exp(neg_dist)
+        proba = exp_vals / exp_vals.sum(axis=1, keepdims=True)
+        return proba

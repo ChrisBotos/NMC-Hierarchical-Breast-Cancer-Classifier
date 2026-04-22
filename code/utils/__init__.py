@@ -17,7 +17,11 @@ from utils.logging_setup import setup_logging
 from utils.paths import CODE_DIR, DATA_DIR, PROJECT_DIR, get_phase_dirs
 from utils.plotting import apply_plot_style
 from utils.statistics import bonferroni_threshold, kruskal_wallis_per_region
-from utils.cv_components import ElasticNetSelector, KruskalWallisSelector
+from utils.cv_components import (
+    ElasticNetSelector,
+    KruskalWallisSelector,
+    NearestCentroidWithProba,
+)
 from utils.cv_config import (
     PIPELINE_NAMES,
     PRODUCTION_GRIDS,
@@ -32,6 +36,7 @@ __all__ = [
     "ElasticNetSelector",
     "GENOMIC_COLUMNS",
     "KruskalWallisSelector",
+    "NearestCentroidWithProba",
     "PIPELINE_NAMES",
     "PRODUCTION_GRIDS",
     "PROJECT_DIR",
