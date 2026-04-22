@@ -18,16 +18,23 @@
 
 set -euo pipefail
 
-# Resolve project root relative to this script.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+# Resolve project root relative to this script (only meaningful outside SLURM).
+# Inside SLURM, PROJECT_DIR arrives as an exported env var because BASH_SOURCE
+# points to the spool copy, not the original project tree.
+if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+fi
 
 # ---------------------------------------------------------------------------
 # Robust conda activation with error handling.
+# CONDA_PREFIX_DIR and CONDA_ENV_NAME are set from the YAML config.
 # ---------------------------------------------------------------------------
 activate_conda() {
-    source ~/miniconda3/etc/profile.d/conda.sh || { echo "ERROR: conda.sh not found"; exit 1; }
-    conda activate tb_310 || { echo "ERROR: failed to activate tb_310"; exit 1; }
+    local prefix="${CONDA_PREFIX_DIR:-$HOME/miniconda3}"
+    local env="${CONDA_ENV_NAME:-tb_310}"
+    source "$prefix/etc/profile.d/conda.sh" || { echo "ERROR: conda.sh not found at $prefix"; exit 1; }
+    conda activate "$env" || { echo "ERROR: failed to activate $env"; exit 1; }
 }
 
 # ===========================================================================
@@ -128,13 +135,18 @@ fi
 # Read all job parameters from YAML config in a single Python invocation.
 # ---------------------------------------------------------------------------
 eval "$(python3 -c "
-import yaml
+import yaml, os
 with open('$CONFIG_FILE') as f:
     cfg = yaml.safe_load(f)
 cv = cfg['cv']
 sl = cfg['slurm']
+env = cfg.get('environment', {})
 pipes = cfg['pipelines']['names']
+conda_prefix = os.path.expanduser(env.get('conda_prefix', '~/miniconda3'))
+conda_env = env.get('conda_env', 'tb_310')
 print(f'REPEATS_PER_PIPELINE={cv[\"n_repeats\"]}')
+print(f'CONDA_PREFIX_DIR=\"{conda_prefix}\"')
+print(f'CONDA_ENV_NAME=\"{conda_env}\"')
 print(f'SLURM_MEM=\"{sl[\"mem\"]}\"')
 print(f'SLURM_TIME=\"{sl[\"time\"]}\"')
 print(f'SLURM_CPUS={sl[\"cpus_per_task\"]}')
@@ -238,7 +250,7 @@ ARRAY_JOB_ID=$(sbatch \
     --output="$SLURM_LOG_DIR/nested_cv_%A_%a.out" \
     --error="$SLURM_LOG_DIR/nested_cv_%A_%a.err" \
     $MAIL_ARGS \
-    --export=ALL,RUN_NAME="$RUN_NAME",CONFIG_FILE="$FROZEN_CONFIG",REPEATS_PER_PIPELINE="$REPEATS_PER_PIPELINE",PIPELINES_STR="${PIPELINES[*]}" \
+    --export=ALL,PROJECT_DIR="$PROJECT_DIR",RUN_NAME="$RUN_NAME",CONFIG_FILE="$FROZEN_CONFIG",REPEATS_PER_PIPELINE="$REPEATS_PER_PIPELINE",PIPELINES_STR="${PIPELINES[*]}",CONDA_PREFIX_DIR="$CONDA_PREFIX_DIR",CONDA_ENV_NAME="$CONDA_ENV_NAME" \
     --parsable \
     "${BASH_SOURCE[0]}")
 
@@ -256,7 +268,7 @@ ANALYSIS_JOB_ID=$(sbatch \
     --error="$SLURM_LOG_DIR/nested_cv_analysis_%j.err" \
     $MAIL_ARGS \
     --parsable \
-    --wrap="export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && source ~/miniconda3/etc/profile.d/conda.sh && conda activate tb_310 && python3 $PROJECT_DIR/code/analyse_nested_cv.py --name $RUN_NAME --config $FROZEN_CONFIG")
+    --wrap="export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && source $CONDA_PREFIX_DIR/etc/profile.d/conda.sh && conda activate $CONDA_ENV_NAME && python3 $PROJECT_DIR/code/analyse_nested_cv.py --name $RUN_NAME --config $FROZEN_CONFIG")
 
 echo "Analysis job submitted: $ANALYSIS_JOB_ID (depends on $ARRAY_JOB_ID)"
 

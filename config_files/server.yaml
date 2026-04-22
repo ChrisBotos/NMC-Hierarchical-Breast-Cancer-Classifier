@@ -37,8 +37,12 @@ grids:
 preprocessing:
   merge_threshold: 0.8
 
+environment:
+  conda_prefix: "/data/cbotos/miniconda3"
+  conda_env: "tb_310"
+
 slurm:
-  mem: "32G"
+  mem: "4G"
   time: "2-00:00:00"
   cpus_per_task: 1
   max_concurrent_jobs: 50

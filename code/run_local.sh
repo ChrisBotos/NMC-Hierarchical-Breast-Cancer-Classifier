@@ -27,27 +27,32 @@ if [[ "$CONFIG_FILE" != /* ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Read pipeline names, repeat count, and conda path from the config.
+# ---------------------------------------------------------------------------
+eval "$(python3 -c "
+import yaml, os
+with open('$CONFIG_FILE') as f:
+    cfg = yaml.safe_load(f)
+env = cfg.get('environment', {})
+pipes = cfg['pipelines']['names']
+conda_prefix = os.path.expanduser(env.get('conda_prefix', '~/miniconda3'))
+conda_env = env.get('conda_env', 'tb_310')
+print(f'N_REPEATS={cfg[\"cv\"][\"n_repeats\"]}')
+print(f'CONDA_PREFIX_DIR=\"{conda_prefix}\"')
+print(f'CONDA_ENV_NAME=\"{conda_env}\"')
+print(f'PIPELINES=({\" \".join(repr(p) for p in pipes)})')
+")"
+
+# ---------------------------------------------------------------------------
 # Robust conda activation with error handling.
 # ---------------------------------------------------------------------------
-source ~/miniconda3/etc/profile.d/conda.sh || { echo "ERROR: conda.sh not found"; exit 1; }
-conda activate tb_310 || { echo "ERROR: failed to activate tb_310"; exit 1; }
+source "$CONDA_PREFIX_DIR/etc/profile.d/conda.sh" || { echo "ERROR: conda.sh not found at $CONDA_PREFIX_DIR"; exit 1; }
+conda activate "$CONDA_ENV_NAME" || { echo "ERROR: failed to activate $CONDA_ENV_NAME"; exit 1; }
 
 # Cap BLAS/OpenMP threads (laptop has limited cores).
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
 export OPENBLAS_NUM_THREADS=1
-
-# ---------------------------------------------------------------------------
-# Read pipeline names and repeat count from the config.
-# ---------------------------------------------------------------------------
-eval "$(python3 -c "
-import yaml
-with open('$CONFIG_FILE') as f:
-    cfg = yaml.safe_load(f)
-pipes = cfg['pipelines']['names']
-print(f'N_REPEATS={cfg[\"cv\"][\"n_repeats\"]}')
-print(f'PIPELINES=({\" \".join(repr(p) for p in pipes)})')
-")"
 
 N_PIPELINES=${#PIPELINES[@]}
 TOTAL_JOBS=$(( N_PIPELINES * N_REPEATS ))

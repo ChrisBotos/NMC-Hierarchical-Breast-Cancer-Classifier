@@ -33,6 +33,10 @@ grids:
 preprocessing:
   merge_threshold: 0.8
 
+environment:
+  conda_prefix: "~/miniconda3"
+  conda_env: "tb_310"
+
 slurm:
   mem: "4G"
   time: "0-02:00:00"
