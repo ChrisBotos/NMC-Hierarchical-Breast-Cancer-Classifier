@@ -3,7 +3,7 @@
 # Roel Glas
 # 26-03-2018
 # Fixes by Olga on 13-05-2019
-# A script to check whether your uploaded predictions file is in the right format. It check the amount of lines, the amount of columns and the header of the file.
+# A script to check whether your uploaded predictions file is in the right format. It checks the amount of lines, the amount of columns and the header of the file.
 
 # Import sys module
 import sys

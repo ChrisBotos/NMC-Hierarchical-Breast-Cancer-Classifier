@@ -49,3 +49,63 @@
 - Merging removed ~90% of features while preserving all major biological signals (HER2 amplicon, subtype separation in PCA/t-SNE, top KW hits).
 - The only casualty is unsupervised clustering quality, which was poor to begin with (silhouette 0.09) and is not the goal of this project.
 - The merged data is a better starting point for supervised classification: fewer features, less redundancy, same discriminative signal.
+
+---
+
+# Findings: Nested CV 2x2 Experiment (50 repeats, server run)
+
+## Pipeline performance
+
+| Pipeline | Mean BA | Std | Median | Mean features selected |
+|----------|---------|-----|--------|----------------------|
+| KW + RF | 0.791 | 0.025 | 0.793 | 64.8 |
+| EN + RF | 0.770 | 0.029 | 0.774 | 31.9 |
+| EN + NMC | 0.746 | 0.032 | 0.750 | 15.6 |
+| KW + NMC | 0.631 | 0.031 | 0.633 | 25.6 |
+
+## Statistical testing
+
+- Friedman test: chi2=117.24, p < 0.000001 - significant differences exist.
+- Wilcoxon signed-rank (Bonferroni): all 6 pairs significant. But this test is anti-conservative for repeated CV because it treats overlapping folds as independent.
+- Nadeau-Bengio corrected t-test (the appropriate test): only KW+NMC vs KW+RF is significant (p=0.018). The top 3 pipelines (KW+RF, EN+RF, EN+NMC) are not statistically distinguishable after correction.
+- The violin plot uses Nadeau-Bengio p-values, not Wilcoxon, to avoid misleading significance brackets.
+
+## Classifier matters more than feature selector
+
+- Swapping NMC for RF improves KW from 0.631 to 0.791 (+16 points).
+- Swapping KW for EN only moves RF from 0.791 to 0.770 (-2 points).
+- RF benefits from large feature sets (median k=75); NMC needs aggressive filtering (median k=15).
+
+## The HR+ vs Triple Negative problem
+
+- All pipelines classify HER2+ easily (high recall). The accuracy bottleneck is HR+ vs TN confusion.
+- TN recall is 0.62-0.64 across all pipelines - substantial room to improve.
+- The confusion matrices show this is a shared structural failure, not pipeline-specific.
+
+## Error agreement analysis
+
+- Pairwise error overlap (Jaccard index) is highest between pipelines sharing the same classifier: KW+RF vs EN+RF = 0.542.
+- Cross-classifier pairs are more complementary: KW+NMC vs EN+RF = 0.357 (lowest).
+- Error diversity is driven by the classifier, not the feature selector.
+- When KW+RF is wrong, EN+NMC is also wrong 65.4% of the time - still high overlap.
+- Flat majority-vote ensemble ceiling is modest: ~2-4 BA points recovery. The shared HR+/TN errors are correlated across all pipelines.
+
+## Flat ensembling ruled out
+
+- The error correlation data shows that the HR+/TN confusion is systematic and shared.
+- Flat ensembling cannot solve a structural failure mode - it only helps with random disagreements.
+- The most complementary competitive pair (KW+RF + EN+NMC, Jaccard 0.420) still shares most errors.
+
+## HR+ vs TN-specific KW ranking reveals hidden signal
+
+- A KW ranking computed on only HR+ and TN samples (excluding HER2+) surfaces completely different features.
+- 3-class ranking top 30: dominated by chr17 (11/30 features, all near ERBB2).
+- HR+ vs TN ranking top 30: zero chr17 features. Instead dominated by chr12q (23/30) and chr5q (7/30).
+- Only 13/30 features overlap between the two rankings.
+- 17 features surfaced by the 2-class ranking were ranked 31st-78th in the 3-class ranking - buried by the HER2 signal.
+- This confirms the hierarchical classifier hypothesis: a Stage 2 classifier using a dedicated HR+/TN feature ranking should access discriminative signal that the 3-class approach misses.
+
+## Strategic conclusion
+
+- The 2x2 experiment answered the Wessels et al. research question: univariate filtering works (KW >= EN), but the complex classifier wins (RF >> NMC) on discrete aCGH data.
+- The path forward is a hierarchical classifier: Stage 1 (HER2+ vs rest, trivial) then Stage 2 (HR+ vs TN, with dedicated feature ranking on chr12q/chr5q signal).
