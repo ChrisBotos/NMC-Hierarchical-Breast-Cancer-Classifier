@@ -90,11 +90,11 @@
 - When KW+RF is wrong, EN+NMC is also wrong 65.4% of the time - still high overlap.
 - Flat majority-vote ensemble ceiling is modest: ~2-4 BA points recovery. The shared HR+/TN errors are correlated across all pipelines.
 
-## Flat ensembling ruled out
+## Flat ensembling analysis (flat pipelines only)
 
-- The error correlation data shows that the HR+/TN confusion is systematic and shared.
-- Flat ensembling cannot solve a structural failure mode - it only helps with random disagreements.
+- Error correlation across the four flat 2x2 pipelines shows that HR+/TN confusion is systematic and shared.
 - The most complementary competitive pair (KW+RF + EN+NMC, Jaccard 0.420) still shares most errors.
+- However, ensembling is NOT ruled out. The hierarchical pipelines may have different error profiles, and same-pipeline ensembles with different hyperparameters or seeds could still add value. Revisit after hierarchical results are in.
 
 ## HR+ vs TN-specific KW ranking reveals hidden signal
 
@@ -109,3 +109,27 @@
 
 - The 2x2 experiment answered the Wessels et al. research question: univariate filtering works (KW >= EN), but the complex classifier wins (RF >> NMC) on discrete aCGH data.
 - The path forward is a hierarchical classifier: Stage 1 (HER2+ vs rest, trivial) then Stage 2 (HR+ vs TN, with dedicated feature ranking on chr12q/chr5q signal).
+
+---
+
+# Findings: Hierarchical Classifier Design
+
+## Stage 1 is fixed: KW+RF, k=5, no tuning
+
+- Binary KW+RF (HER2+ vs rest) achieved balanced accuracy = 1.0000 in all 15 outer folds tested (3 repeats x 5 folds, local grid, binary KW ranking).
+- Inner CV unanimously selected k=5 over k=20 in every fold. The HER2 amplicon signal is so strong that 5 features suffice for perfect binary separation.
+- Stage 1 is therefore hardcoded to KW+RF with k=5. No inner GridSearchCV is run for Stage 1 - it would be 40 unnecessary RF fits per outer fold (8 grid combos x 5 inner folds) with the same result every time.
+- Note: k=5 was validated using binary KW (HER2+ vs rest), not the 3-class KW from the flat 2x2 experiment. The rankings differ, but the top features are the same chr17q ERBB2 amplicon regions in both cases.
+
+## Preliminary hierarchical results (local grid, 1 repeat)
+
+| Stage 2 Pipeline | Stage 2 BA (HR+/TN) | Combined 3-class BA | AUROC |
+|------------------|---------------------|---------------------|-------|
+| KW + RF          | 0.788               | 0.859               | 0.950 |
+| KW + NMC         | 0.764               | 0.843               | 0.949 |
+| EN + NMC         | 0.742               | 0.828               | 0.930 |
+| EN + RF          | (not completed)     | -                   | -     |
+
+- Stage 1 was perfect (1.0) in all runs. The bottleneck is entirely Stage 2.
+- The hierarchical combined BA of 0.859 (kw_rf Stage 2) already exceeds the flat kw_rf BA of 0.791 from the 50-repeat server run.
+- These are preliminary (1 repeat, local grid). Server run with 50 repeats and dense grids needed for final comparison.
