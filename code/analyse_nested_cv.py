@@ -207,6 +207,19 @@ def run_statistical_tests(per_repeat, log):
         log.warning("Fewer than 2 pipelines found; skipping statistical tests.")
         return None, None, None
 
+    # Drop repeats where any pipeline has missing data (e.g. incomplete runs).
+    n_before = len(wide)
+    wide = wide[present].dropna()
+    n_after = len(wide)
+    if n_after < n_before:
+        log.info(
+            "Dropped %d incomplete repeats (%d -> %d) for paired tests.",
+            n_before - n_after, n_before, n_after,
+        )
+    if n_after < 3:
+        log.warning("Fewer than 3 complete repeats; skipping statistical tests.")
+        return None, None, None
+
     # Friedman test.
     samples = [wide[p].values for p in present]
     friedman_stat, friedman_p = stats.friedmanchisquare(*samples)
@@ -241,6 +254,74 @@ def run_statistical_tests(per_repeat, log):
 
     pairwise_df = pd.DataFrame(pairwise_rows)
     return friedman_stat, friedman_p, pairwise_df
+
+
+def run_grouped_classifier_test(per_repeat, log):
+    """Paired Wilcoxon test comparing NMC vs RF, pooling over feature selectors.
+
+    For each repeat, the mean balanced accuracy of the two NMC pipelines
+    (kw_nmc, en_nmc) and the two RF pipelines (kw_rf, en_rf) are computed.
+    A Wilcoxon signed-rank test then compares these paired observations.
+
+    Args:
+        per_repeat (pd.DataFrame): Per-repeat mean scores with columns
+            pipeline, repeat, mean_balanced_accuracy.
+        log (logging.Logger): Logger instance.
+
+    Returns:
+        dict or None: Test results with keys: nmc_mean, rf_mean, mean_diff,
+            statistic, p_value, n_repeats. None if insufficient data.
+    """
+    nmc_pipes = [p for p in ["kw_nmc", "en_nmc"] if p in per_repeat["pipeline"].values]
+    rf_pipes = [p for p in ["kw_rf", "en_rf"] if p in per_repeat["pipeline"].values]
+
+    if not nmc_pipes or not rf_pipes:
+        log.warning("Cannot run grouped classifier test: need at least one NMC and one RF pipeline.")
+        return None
+
+    # Compute per-repeat mean across NMC pipelines and across RF pipelines.
+    nmc_scores = (
+        per_repeat[per_repeat["pipeline"].isin(nmc_pipes)]
+        .groupby("repeat")["mean_balanced_accuracy"]
+        .mean()
+    )
+    rf_scores = (
+        per_repeat[per_repeat["pipeline"].isin(rf_pipes)]
+        .groupby("repeat")["mean_balanced_accuracy"]
+        .mean()
+    )
+
+    # Align on common repeats.
+    common = nmc_scores.index.intersection(rf_scores.index)
+    if len(common) < 3:
+        log.warning("Fewer than 3 common repeats for grouped test; skipping.")
+        return None
+
+    nmc_vals = nmc_scores.loc[common].values
+    rf_vals = rf_scores.loc[common].values
+
+    stat_val, p_val = stats.wilcoxon(nmc_vals, rf_vals)
+    mean_diff = np.mean(nmc_vals - rf_vals)
+
+    result = {
+        "nmc_mean": np.mean(nmc_vals),
+        "rf_mean": np.mean(rf_vals),
+        "mean_diff": round(mean_diff, 6),
+        "statistic": round(stat_val, 4),
+        "p_value": p_val,
+        "n_repeats": len(common),
+    }
+
+    log.info(
+        "Grouped classifier test (NMC vs RF, pooled over feature selectors):"
+    )
+    log.info(
+        "  NMC mean=%.4f, RF mean=%.4f, diff=%.4f, W=%.1f, p=%.6f %s",
+        result["nmc_mean"], result["rf_mean"], mean_diff,
+        stat_val, p_val, "*" if p_val < 0.05 else "",
+    )
+
+    return result
 
 
 def run_nadeau_bengio_tests(all_results, config, log):
@@ -337,16 +418,17 @@ def run_nadeau_bengio_tests(all_results, config, log):
 """Plotting"""
 
 
-def plot_pipeline_comparison(per_repeat, nb_df, fig_dir, log):
+def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log):
     """Violin plot comparing balanced accuracy across pipelines.
 
     Shows per-repeat mean balanced accuracy as violin plots with overlaid
     strip points and box plot quartile indicators. Significance brackets
-    from Nadeau-Bengio corrected t-tests are annotated above the violins.
+    from pairwise Wilcoxon signed-rank tests (Bonferroni-corrected) are
+    annotated above the violins.
 
     Args:
         per_repeat (pd.DataFrame): Per-repeat mean scores.
-        nb_df (pd.DataFrame or None): Nadeau-Bengio pairwise test results
+        pairwise_df (pd.DataFrame or None): Pairwise Wilcoxon test results
             with columns: pipeline_a, pipeline_b, p_corrected, significant.
         fig_dir (Path): Directory to save the figure.
         log (logging.Logger): Logger instance.
@@ -401,25 +483,25 @@ def plot_pipeline_comparison(per_repeat, nb_df, fig_dir, log):
             s=15, zorder=3, alpha=0.7,
         )
 
-    # Add significance brackets from Nadeau-Bengio corrected t-tests.
-    if nb_df is not None and not nb_df.empty:
+    # Add significance brackets from pairwise Wilcoxon tests.
+    if pairwise_df is not None and not pairwise_df.empty:
         y_max = max(v.max() for v in data_by_pipeline if len(v) > 0)
         y_range = y_max - min(v.min() for v in data_by_pipeline if len(v) > 0)
         bracket_height = y_range * 0.05
         y_offset = y_max + y_range * 0.08
 
         # Sort by span width so narrower brackets are drawn lower.
-        nb_sorted = nb_df.copy()
-        nb_sorted["span"] = nb_sorted.apply(
+        pw_sorted = pairwise_df.copy()
+        pw_sorted["span"] = pw_sorted.apply(
             lambda r: abs(
                 pipelines.index(r["pipeline_a"])
                 - pipelines.index(r["pipeline_b"])
             ),
             axis=1,
         )
-        nb_sorted = nb_sorted.sort_values("span").reset_index(drop=True)
+        pw_sorted = pw_sorted.sort_values("span").reset_index(drop=True)
 
-        for i, row in nb_sorted.iterrows():
+        for i, row in pw_sorted.iterrows():
             x1 = pipelines.index(row["pipeline_a"])
             x2 = pipelines.index(row["pipeline_b"])
             y_bar = y_offset + i * bracket_height * 2.5
@@ -1076,6 +1158,14 @@ def main():
         }).to_csv(pairwise_path, index=False)
         log.info("Saved pairwise tests (no significant differences): %s", pairwise_path)
 
+    """Step 5b: Grouped Classifier Test (NMC vs RF)"""
+
+    grouped_result = run_grouped_classifier_test(per_repeat, log)
+    if grouped_result is not None:
+        grouped_path = data_dir / "grouped_nmc_vs_rf.csv"
+        pd.DataFrame([grouped_result]).to_csv(grouped_path, index=False)
+        log.info("Saved grouped NMC vs RF test: %s", grouped_path)
+
     """Step 6: Statistical Testing (Nadeau-Bengio Corrected t-test)"""
 
     nb_df = run_nadeau_bengio_tests(all_results, config, log)
@@ -1112,7 +1202,7 @@ def main():
 
     """Step 9: Generate Figures"""
 
-    plot_pipeline_comparison(per_repeat, nb_df, fig_dir, log)
+    plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log)
     plot_interaction(per_repeat, fig_dir, log)
     plot_repeat_convergence(per_repeat, fig_dir, log)
     plot_feature_importance(all_results, fig_dir, log)

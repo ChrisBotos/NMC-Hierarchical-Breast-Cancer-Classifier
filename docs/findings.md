@@ -133,3 +133,82 @@
 - Stage 1 was perfect (1.0) in all runs. The bottleneck is entirely Stage 2.
 - The hierarchical combined BA of 0.859 (kw_rf Stage 2) already exceeds the flat kw_rf BA of 0.791 from the 50-repeat server run.
 - These are preliminary (1 repeat, local grid). Server run with 50 repeats and dense grids needed for final comparison.
+
+---
+
+# Findings: Hierarchical Nested CV (50 repeats, server run)
+
+## Pipeline performance (hierarchical, Stage 2 varies)
+
+| Pipeline (Stage 2) | Mean BA | Std | Median | Mean features (S2) |
+|---------------------|---------|-------|--------|---------------------|
+| EN + NMC            | 0.812   | 0.025 | 0.816  | 28.5                |
+| KW + NMC            | 0.811   | 0.032 | 0.815  | 32.3                |
+| KW + RF             | 0.800   | 0.027 | 0.807  | 44.8                |
+| EN + RF             | 0.791   | 0.030 | 0.794  | 32.0                |
+
+Stage 1 (KW+RF, k=5, HER2+ vs rest) is fixed and identical across all 4 pipelines. It achieved BA=1.0 in all 245 folds (49 complete repeats x 5 folds). Repeat 47 is missing for both KW pipelines (checkpoint exists but fold results were not written).
+
+## Hierarchical vs flat comparison
+
+- Best hierarchical (EN+NMC): 0.812 vs best flat (KW+RF): 0.791 - a +2.1 point improvement.
+- Crucially, the winner flipped: flat experiment was won by RF, hierarchical is won by NMC. The hierarchical decomposition removed the trivial HER2+ class that inflated RF's advantage, exposing that NMC is better at the harder HR+ vs TN problem.
+
+## Statistical testing
+
+### Bug fix applied
+- The original analysis had NaN Friedman/Wilcoxon results because kw_nmc and kw_rf had 49/50 repeats (repeat 47 missing). The pivot table had NaN for that repeat, which propagated through scipy. Fixed by dropping incomplete repeats before paired tests.
+
+### Friedman test
+- chi2=12.34, p=0.006 - significant differences exist among the 4 pipelines.
+
+### Pairwise Wilcoxon (Bonferroni-corrected, 49 complete repeats)
+- KW+NMC vs EN+RF: p=0.014 (significant)
+- EN+NMC vs EN+RF: p=0.017 (significant)
+- KW+NMC vs KW+RF: p=0.097 (borderline)
+- KW+RF vs EN+NMC: p=0.101 (borderline)
+- KW+NMC vs EN+NMC: p=1.000 (n.s. - same classifier, different selector)
+- KW+RF vs EN+RF: p=0.870 (n.s. - same classifier, different selector)
+
+### Grouped NMC vs RF test (Wilcoxon, pooled over feature selectors)
+- NMC mean=0.812, RF mean=0.795, diff=+0.017, W=231, **p=0.000148**.
+- NMC significantly outperforms RF when the classifier effect is tested directly.
+
+### Nadeau-Bengio corrected t-test
+- All pairwise comparisons n.s. (all p_corrected=1.0). This is the most conservative test because it penalizes for fold overlap in repeated CV. Worth noting in the paper as a methodological point: the correction may be overly conservative for 50x5 repeated CV.
+
+## Classifier effect dominates, feature selector does not matter
+
+- NMC beats RF regardless of feature selector (interaction plot: NMC line flat and above RF).
+- Feature selector has no effect: KW+NMC vs EN+NMC is n.s. (p=1.0), KW+RF vs EN+RF is n.s. (p=0.87).
+- This directly supports Wessels et al. (2005): simple classifiers with univariate filtering match or beat complex pipelines.
+
+## KW has higher variance than EN
+
+- KW+NMC std=0.032 vs EN+NMC std=0.025. KW uses univariate ranking with a tuned threshold - small perturbations in training data can flip borderline features in/out, leading to less stable feature sets. EN is multivariate and regularized, producing more consistent subsets. They average to the same mean.
+
+## Stage 1 is trivially separable
+
+- KW+RF Stage 1 (HER2+ vs rest) is perfect in all 245 folds across all repeats, using only 5 features from the chr17 ERBB2 amplicon.
+- 30 unique features were ever selected for Stage 1 across all folds, all on chr17 or known HER2-correlated loci.
+- Any classifier would achieve the same result. KW+RF is kept as the Stage 1 classifier for simplicity since it was already validated and hardcoded.
+
+## Confusion matrix patterns
+
+- HER2+: 1.00 recall across all 4 pipelines (perfect, from Stage 1).
+- HR+: 0.72-0.77 recall (NMC pipelines slightly better).
+- TN: 0.65-0.67 recall (NMC pipelines slightly better).
+- The HR+ vs TN confusion remains the bottleneck, but hierarchical decomposition improved it vs flat.
+
+## Error agreement
+
+- Highest Jaccard overlap between same-classifier pairs: KW+RF vs EN+RF = 0.59.
+- Lowest overlap between cross-classifier pairs: EN+NMC vs KW+RF = 0.50.
+- When one pipeline is wrong, ~65-75% chance the other is also wrong - errors are correlated.
+
+## Strategic conclusion (updated from flat experiment)
+
+- The flat experiment suggested RF >> NMC. The hierarchical experiment reverses this: NMC >= RF (p < 0.001 pooled).
+- The flat result was an artefact of the 3-class structure: HER2+ is trivially separable and inflated RF's advantage. Once decomposed, the harder HR+ vs TN binary problem favours simpler classifiers.
+- This is exactly the Wessels et al. finding: simple classifiers with univariate filtering outperform complex pipelines, especially on small-sample high-dimensional data.
+- For the final model: use KW+NMC (or EN+NMC, they are equivalent) for Stage 2. Stage 1 remains KW+RF with k=5.

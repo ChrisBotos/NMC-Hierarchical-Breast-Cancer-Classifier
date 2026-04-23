@@ -1,7 +1,7 @@
 pipeline_a,pipeline_b,statistic,p_value,p_corrected,significant
-kw_nmc,kw_rf,,,,False
-kw_nmc,en_nmc,,,,False
-kw_nmc,en_rf,,,,False
-kw_rf,en_nmc,,,,False
-kw_rf,en_rf,,,,False
-en_nmc,en_rf,317.0,0.0015962870115284744,0.009577722069170846,True
+kw_nmc,kw_rf,353.5,0.016163994866358364,0.0969839691981502,False
+kw_nmc,en_nmc,597.0,0.8774646415361804,1.0,False
+kw_nmc,en_rf,307.0,0.0023743002061013337,0.014245801236608003,True
+kw_rf,en_nmc,355.0,0.01685725441323354,0.10114352647940124,False
+kw_rf,en_rf,466.0,0.14502704053797277,0.8701622432278366,False
+en_nmc,en_rf,317.0,0.002789570318793011,0.016737421912758066,True
