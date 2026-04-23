@@ -1,0 +1,96 @@
+{
+  "data_exploration_phase": {
+    "timestamp": "2026-04-23T07:11:14.933970",
+    "command": "/data/cbotos/TB-Project/code/data_exploration_phase.py --name server_run_flat_nested_CV",
+    "phase_name": "eda",
+    "tag": ""
+  },
+  "preprocessing_phase": {
+    "timestamp": "2026-04-23T07:11:37.568045",
+    "command": "/data/cbotos/TB-Project/code/preprocessing_phase.py --name server_run_flat_nested_CV",
+    "merge_threshold": 0.8
+  },
+  "data_exploration_phase_merged": {
+    "timestamp": "2026-04-23T07:11:40.375130",
+    "command": "/data/cbotos/TB-Project/code/data_exploration_phase.py --input /data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/preprocessing/data/train_merged.tsv --tag merged --name server_run_flat_nested_CV",
+    "phase_name": "eda_merged",
+    "tag": "merged"
+  },
+  "compare_explorations": {
+    "timestamp": "2026-04-23T07:11:48.122026",
+    "command": "/data/cbotos/TB-Project/code/compare_explorations.py --name server_run_flat_nested_CV --label-a Raw (2834 regions) --label-b Merged (273 segments)"
+  },
+  "submit_nested_cv": {
+    "timestamp": "2026-04-22T20:52:11+03:00",
+    "run_name": "default_run",
+    "config_file": "/data/cbotos/TB-Project-Server/config_files/server.yaml",
+    "frozen_config": "/data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml",
+    "repeats_per_pipeline": 50,
+    "pipelines": [
+      "kw_nmc",
+      "kw_rf",
+      "en_nmc",
+      "en_rf"
+    ],
+    "total_jobs": 200,
+    "slurm": {
+      "mem": "4G",
+      "time": "2-00:00:00",
+      "cpus_per_task": 1,
+      "max_concurrent_jobs": 50
+    }
+  },
+  "nested_cv_2x2_runner": {
+    "timestamp": "2026-04-23T03:35:39.358444",
+    "command": "/data/cbotos/TB-Project-Server/code/nested_cv_2x2_runner.py --pipeline en_rf --repeat 49 --config /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml --name default_run",
+    "pipeline": "en_rf",
+    "repeat": 49,
+    "config_file": "/data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml",
+    "input_path": "/data/cbotos/TB-Project-Server/results/2026-04-22_default_run/preprocessing/data/train_merged.tsv",
+    "mean_balanced_accuracy": 0.7257938
+  },
+  "analyse_nested_cv": {
+    "timestamp": "2026-04-23T20:31:25.647375",
+    "command": "code/analyse_nested_cv.py --name server_run_hierarchical_nested_CV --config /data/cbotos/TB-Project/results/2026-04-22_server_run_hierarchical_nested_CV/config_snapshot_hierarchical.yaml --phase hierarchical_nested_cv_2x2",
+    "config_file": "/data/cbotos/TB-Project/results/2026-04-22_server_run_hierarchical_nested_CV/config_snapshot_hierarchical.yaml",
+    "n_fold_files": 198,
+    "n_total_folds": 990,
+    "n_pipelines": 4,
+    "n_repeats": 50,
+    "winning_pipeline": "en_nmc",
+    "winning_mean_bal_acc": 0.812158772,
+    "friedman_p": NaN
+  },
+  "hierarchical_nested_cv_2x2_runner": {
+    "timestamp": "2026-04-23T11:39:02.283279",
+    "command": "/data/cbotos/TB-Project/code/hierarchical_nested_cv_2x2_runner.py --pipeline en_rf --repeat 27 --config /data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/config_snapshot_hierarchical.yaml --name server_run_flat_nested_CV",
+    "stage2_pipeline": "en_rf",
+    "repeat": 27,
+    "config_file": "/data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/config_snapshot_hierarchical.yaml",
+    "input_path": "/data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/preprocessing/data/train_merged.tsv",
+    "mean_combined_balanced_accuracy": 0.7626986,
+    "mean_stage1_balanced_accuracy": 1.0,
+    "mean_stage2_balanced_accuracy": 0.6440476
+  },
+  "submit_hierarchical_nested_cv": {
+    "timestamp": "2026-04-23T07:13:01+03:00",
+    "run_name": "server_run_flat_nested_CV",
+    "config_file": "/data/cbotos/TB-Project/config_files/server.yaml",
+    "frozen_config": "/data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/config_snapshot_hierarchical.yaml",
+    "repeats_per_pipeline": 50,
+    "stage1": "kw_rf k=5 (fixed)",
+    "stage2_pipelines": [
+      "kw_nmc",
+      "kw_rf",
+      "en_nmc",
+      "en_rf"
+    ],
+    "total_jobs": 200,
+    "slurm": {
+      "mem": "4G",
+      "time": "2-00:00:00",
+      "cpus_per_task": 1,
+      "max_concurrent_jobs": 50
+    }
+  }
+}

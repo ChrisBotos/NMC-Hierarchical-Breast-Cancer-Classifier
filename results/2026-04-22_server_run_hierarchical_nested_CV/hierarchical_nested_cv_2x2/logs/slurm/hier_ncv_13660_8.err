@@ -1,0 +1,72 @@
+/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/model_selection/_validation.py:516: FitFailedWarning: 
+8 fits failed out of a total of 40.
+The score on these train-test partitions for these parameters will be set to nan.
+If these failures are not expected, you can try to debug them by setting error_score='raise'.
+
+Below are more details about the failures:
+--------------------------------------------------------------------------------
+8 fits failed with the following error:
+Traceback (most recent call last):
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/model_selection/_validation.py", line 859, in _fit_and_score
+    estimator.fit(X_train, y_train, **fit_params)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/base.py", line 1365, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/pipeline.py", line 655, in fit
+    Xt = self._fit(X, y, routed_params, raw_params=params)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/pipeline.py", line 589, in _fit
+    X, fitted_transformer = fit_transform_one_cached(
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/joblib/memory.py", line 326, in __call__
+    return self.func(*args, **kwargs)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/pipeline.py", line 1540, in _fit_transform_one
+    res = transformer.fit_transform(X, y, **params.get("fit_transform", {}))
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/utils/_set_output.py", line 316, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/base.py", line 897, in fit_transform
+    return self.fit(X, y, **fit_params).transform(X)
+  File "/data/cbotos/TB-Project/code/utils/cv_components.py", line 62, in fit
+    stat, _ = kruskal(*groups)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/scipy/stats/_axis_nan_policy.py", line 586, in axis_nan_policy_wrapper
+    res = hypotest_fun_out(*samples, **kwds)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/scipy/stats/_stats_py.py", line 8608, in kruskal
+    raise ValueError('All numbers are identical in kruskal')
+ValueError: All numbers are identical in kruskal
+
+  warnings.warn(some_fits_failed_message, FitFailedWarning)
+/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/model_selection/_search.py:1135: UserWarning: One or more of the test scores are non-finite: [nan nan nan nan nan nan nan nan]
+  warnings.warn(
+/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/model_selection/_validation.py:516: FitFailedWarning: 
+8 fits failed out of a total of 40.
+The score on these train-test partitions for these parameters will be set to nan.
+If these failures are not expected, you can try to debug them by setting error_score='raise'.
+
+Below are more details about the failures:
+--------------------------------------------------------------------------------
+8 fits failed with the following error:
+Traceback (most recent call last):
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/model_selection/_validation.py", line 859, in _fit_and_score
+    estimator.fit(X_train, y_train, **fit_params)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/base.py", line 1365, in wrapper
+    return fit_method(estimator, *args, **kwargs)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/pipeline.py", line 655, in fit
+    Xt = self._fit(X, y, routed_params, raw_params=params)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/pipeline.py", line 589, in _fit
+    X, fitted_transformer = fit_transform_one_cached(
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/joblib/memory.py", line 326, in __call__
+    return self.func(*args, **kwargs)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/pipeline.py", line 1540, in _fit_transform_one
+    res = transformer.fit_transform(X, y, **params.get("fit_transform", {}))
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/utils/_set_output.py", line 316, in wrapped
+    data_to_wrap = f(self, X, *args, **kwargs)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/base.py", line 897, in fit_transform
+    return self.fit(X, y, **fit_params).transform(X)
+  File "/data/cbotos/TB-Project/code/utils/cv_components.py", line 62, in fit
+    stat, _ = kruskal(*groups)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/scipy/stats/_axis_nan_policy.py", line 586, in axis_nan_policy_wrapper
+    res = hypotest_fun_out(*samples, **kwds)
+  File "/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/scipy/stats/_stats_py.py", line 8608, in kruskal
+    raise ValueError('All numbers are identical in kruskal')
+ValueError: All numbers are identical in kruskal
+
+  warnings.warn(some_fits_failed_message, FitFailedWarning)
+/data/cbotos/miniconda3/envs/tb_310/lib/python3.10/site-packages/sklearn/model_selection/_search.py:1135: UserWarning: One or more of the test scores are non-finite: [nan nan nan nan nan nan nan nan]
+  warnings.warn(

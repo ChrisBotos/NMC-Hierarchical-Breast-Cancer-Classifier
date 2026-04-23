@@ -1,0 +1,7 @@
+pipeline_a,pipeline_b,statistic,p_value,p_corrected,significant
+kw_nmc,kw_rf,,,,False
+kw_nmc,en_nmc,,,,False
+kw_nmc,en_rf,,,,False
+kw_rf,en_nmc,,,,False
+kw_rf,en_rf,,,,False
+en_nmc,en_rf,317.0,0.0015962870115284744,0.009577722069170846,True

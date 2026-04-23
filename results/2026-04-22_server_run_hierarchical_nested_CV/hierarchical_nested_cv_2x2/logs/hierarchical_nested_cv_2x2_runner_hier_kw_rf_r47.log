@@ -1,0 +1,14 @@
+Run: 2026-04-22_server_run_flat_nested_CV
+Config: /data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/config_snapshot_hierarchical.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest)
+Stage 2: kw_rf (HR+ vs Triple Neg)
+Repeat seed: 47
+Stage 1: fixed KW+RF k=5 (no grid search)
+Stage 2 grid size: 32 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+  Fold 1: s1=1.0000  s2=0.7619  combined=0.8413  auroc=0.9771  s1_k=5  s2_k=75  routed=13/20  (105.3s)

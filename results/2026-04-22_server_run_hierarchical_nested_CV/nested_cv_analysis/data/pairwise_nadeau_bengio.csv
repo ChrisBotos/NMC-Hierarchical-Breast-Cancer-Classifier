@@ -1,0 +1,7 @@
+pipeline_a,pipeline_b,mean_diff,t_statistic,df,p_value,p_corrected,significant
+kw_nmc,kw_rf,0.011314,0.2908,249,0.7714728511137126,1.0,False
+kw_nmc,en_nmc,-0.000867,-0.0206,249,0.9836153769792617,1.0,False
+kw_nmc,en_rf,0.018408,0.3928,249,0.6948284300601948,1.0,False
+kw_rf,en_nmc,-0.01218,-0.2939,249,0.7690757733825642,1.0,False
+kw_rf,en_rf,0.007094,0.1668,249,0.8677004196795108,1.0,False
+en_nmc,en_rf,0.020738,0.4948,249,0.6211837302796113,1.0,False

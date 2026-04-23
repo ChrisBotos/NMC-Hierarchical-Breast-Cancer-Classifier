@@ -1,0 +1,27 @@
+Run: 2026-04-22_server_run_flat_nested_CV
+Config: /data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/config_snapshot_hierarchical.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest)
+Stage 2: kw_rf (HR+ vs Triple Neg)
+Repeat seed: 27
+Stage 1: fixed KW+RF k=5 (no grid search)
+Stage 2 grid size: 32 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+  Fold 1: s1=1.0000  s2=0.6071  combined=0.7381  auroc=0.8898  s1_k=5  s2_k=30  routed=13/20  (101.7s)
+  Fold 2: s1=1.0000  s2=0.8571  combined=0.9048  auroc=1.0000  s1_k=5  s2_k=75  routed=13/20  (101.6s)
+  Fold 3: s1=1.0000  s2=0.7708  combined=0.8472  auroc=0.9554  s1_k=5  s2_k=75  routed=14/20  (101.7s)
+  Fold 4: s1=1.0000  s2=0.5000  combined=0.6667  auroc=0.8681  s1_k=5  s2_k=50  routed=14/20  (101.5s)
+  Fold 5: s1=1.0000  s2=0.8571  combined=0.9048  auroc=0.9158  s1_k=5  s2_k=30  routed=14/20  (101.8s)
+
+Summary for hier_kw_rf repeat 27:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.7185 (+/- 0.1424)
+  Combined (3-class):       0.8123 (+/- 0.0949)
+  Combined fold scores: [0.7381, 0.9048, 0.8472, 0.6667, 0.9048]
+  Total time: 508.2s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/hierarchical_nested_cv_2x2/data/fold_results_kw_rf_r27.csv
+Checkpoint removed (job complete).

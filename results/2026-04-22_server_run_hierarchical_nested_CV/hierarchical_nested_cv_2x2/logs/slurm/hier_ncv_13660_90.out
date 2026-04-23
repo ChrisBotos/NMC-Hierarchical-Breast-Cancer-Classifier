@@ -1,0 +1,57 @@
+========================================
+Hierarchical CV - Job 91 of 200
+Stage 1:  kw_rf k=5 (fixed)
+Stage 2:  kw_rf
+Repeat:   41 / 50
+Config:   /data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/config_snapshot_hierarchical.yaml
+Run:      server_run_flat_nested_CV
+Node:     node3
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-23 07:13:42
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_2x2_runner.py --pipeline kw_rf --repeat 41 --config /data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/config_snapshot_hierarchical.yaml --name server_run_flat_nested_CV
+INFO     Run: 2026-04-22_server_run_flat_nested_CV                              
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/co
+         nfig_snapshot_hierarchical.yaml                                        
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest)                           
+INFO     Stage 2: kw_rf (HR+ vs Triple Neg)                                     
+INFO     Repeat seed: 41                                                        
+INFO     Stage 1: fixed KW+RF k=5 (no grid search)                              
+INFO     Stage 2 grid size: 32 combinations                                     
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO       Fold 1: s1=1.0000  s2=0.6905  combined=0.7937  auroc=0.8816  s1_k=5  
+         s2_k=20  routed=13/20  (102.5s)                                        
+INFO       Fold 2: s1=1.0000  s2=0.8571  combined=0.9048  auroc=0.9695  s1_k=5  
+         s2_k=50  routed=13/20  (102.0s)                                        
+INFO       Fold 3: s1=1.0000  s2=0.9375  combined=0.9583  auroc=0.9926  s1_k=5  
+         s2_k=75  routed=14/20  (102.3s)                                        
+INFO       Fold 4: s1=1.0000  s2=0.5714  combined=0.7143  auroc=0.8828  s1_k=5  
+         s2_k=75  routed=14/20  (102.0s)                                        
+INFO       Fold 5: s1=1.0000  s2=0.7143  combined=0.8095  auroc=0.9560  s1_k=5  
+         s2_k=100  routed=14/20  (102.3s)                                       
+  hier_kw_rf r41 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:08:31
+INFO                                                                            
+INFO     Summary for hier_kw_rf repeat 41:                                      
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.7542 (+/- 0.1290)                        
+INFO       Combined (3-class):       0.8361 (+/- 0.0860)                        
+INFO       Combined fold scores: [0.7937, 0.9048, 0.9583, 0.7143, 0.8095]       
+INFO       Total time: 511.1s                                                   
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/hi
+         erarchical_nested_cv_2x2/data/fold_results_kw_rf_r41.csv               
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-23 07:22:15
+Elapsed:  0h 8m 33s
+Exit:     0
+========================================
+[HIER-NCV-TASK-DONE] array=13660 task=90 stage2_pipeline=kw_rf repeat=41 exit=0 elapsed=513s

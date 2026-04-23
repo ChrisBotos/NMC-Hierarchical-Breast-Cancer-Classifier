@@ -17,6 +17,7 @@ Description:
 
 Usage:
     python3 code/analyse_nested_cv.py --name default_run --config local
+    python3 code/analyse_nested_cv.py --name my_run --config path/to/config.yaml --phase hierarchical_nested_cv_2x2
 
 Dependencies:
     Python >= 3.10.
@@ -98,6 +99,22 @@ def load_fold_results(nested_cv_data_dir, log):
     log.info("Found %d fold result files.", len(csv_files))
     dfs = [pd.read_csv(f) for f in csv_files]
     all_results = pd.concat(dfs, ignore_index=True)
+
+    # Harmonise column names from hierarchical runner to match flat runner.
+    if "stage2_pipeline" in all_results.columns and "pipeline" not in all_results.columns:
+        rename_map = {
+            "stage2_pipeline": "pipeline",
+            "combined_bal_acc": "balanced_accuracy",
+            "stage2_best_inner": "best_inner_score",
+            "stage2_best_params": "best_params",
+            "stage2_n_features": "n_features_selected",
+            "stage2_features": "selected_features",
+        }
+        all_results = all_results.rename(
+            columns={k: v for k, v in rename_map.items() if k in all_results.columns},
+        )
+        log.info("Renamed hierarchical columns to standard analysis names.")
+
     log.info(
         "Aggregated %d fold rows across %d pipelines and %d repeats.",
         len(all_results),
@@ -952,6 +969,16 @@ def parse_args():
             "config_files/<name>.yaml. (default: local)."
         ),
     )
+    parser.add_argument(
+        "--phase",
+        type=str,
+        default="nested_cv_2x2",
+        help=(
+            "Phase directory name inside the run directory that contains "
+            "the fold result CSVs. Use 'hierarchical_nested_cv_2x2' for "
+            "hierarchical runs. (default: nested_cv_2x2)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -967,11 +994,11 @@ def main():
 
     # Locate the existing run directory (do not create a new one).
     run_dir = _find_or_create_run_dir(args.name)
-    nested_cv_data_dir = run_dir / "nested_cv_2x2" / "data"
+    nested_cv_data_dir = run_dir / args.phase / "data"
 
     if not nested_cv_data_dir.exists():
         print(
-            f"ERROR: nested_cv_2x2/data/ not found in {run_dir}. "
+            f"ERROR: {args.phase}/data/ not found in {run_dir}. "
             "Run the nested CV phase first."
         )
         sys.exit(1)
