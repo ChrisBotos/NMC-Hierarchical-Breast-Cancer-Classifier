@@ -60,7 +60,7 @@ if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     # Cap BLAS/OpenMP threads to prevent thrashing with concurrent jobs.
     export OMP_NUM_THREADS=1
     export MKL_NUM_THREADS=1
-    export OPENBLAS_NUM_THREADS=1
+    export OPENBLAS_NUM_THREADS=1claude
 
     # Read pipeline names from exported PIPELINES_STR (space-delimited, no per-task Python).
     read -ra PIPELINES <<< "$PIPELINES_STR"
