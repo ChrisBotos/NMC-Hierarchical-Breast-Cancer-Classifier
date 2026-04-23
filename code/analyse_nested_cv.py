@@ -17,6 +17,7 @@ Description:
 
 Usage:
     python3 code/analyse_nested_cv.py --name default_run --config local
+    python3 code/analyse_nested_cv.py --name my_run --config path/to/config.yaml --phase hierarchical_nested_cv_2x2
 
 Dependencies:
     Python >= 3.10.
@@ -952,6 +953,16 @@ def parse_args():
             "config_files/<name>.yaml. (default: local)."
         ),
     )
+    parser.add_argument(
+        "--phase",
+        type=str,
+        default="nested_cv_2x2",
+        help=(
+            "Phase directory name inside the run directory that contains "
+            "the fold result CSVs. Use 'hierarchical_nested_cv_2x2' for "
+            "hierarchical runs. (default: nested_cv_2x2)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -967,11 +978,11 @@ def main():
 
     # Locate the existing run directory (do not create a new one).
     run_dir = _find_or_create_run_dir(args.name)
-    nested_cv_data_dir = run_dir / "nested_cv_2x2" / "data"
+    nested_cv_data_dir = run_dir / args.phase / "data"
 
     if not nested_cv_data_dir.exists():
         print(
-            f"ERROR: nested_cv_2x2/data/ not found in {run_dir}. "
+            f"ERROR: {args.phase}/data/ not found in {run_dir}. "
             "Run the nested CV phase first."
         )
         sys.exit(1)
