@@ -206,9 +206,37 @@ Stage 1 (KW+RF, k=5, HER2+ vs rest) is fixed and identical across all 4 pipeline
 - Lowest overlap between cross-classifier pairs: EN+NMC vs KW+RF = 0.50.
 - When one pipeline is wrong, ~65-75% chance the other is also wrong - errors are correlated.
 
-## Strategic conclusion (updated from flat experiment)
+## Wessels et al. comparison
+
+- Wessels et al. (2005) tested simple vs complex classifiers on **continuous gene expression** microarray data using **flat multi-class** classification. They found simple classifiers with univariate filtering outperform complex pipelines.
+- This project tests whether that principle generalizes to (a) **discrete aCGH copy-number** data and (b) a **hierarchical** classification setting. Neither was tested by Wessels.
+- **Flat experiment result**: RF beat NMC - appeared to contradict Wessels.
+- **Hierarchical experiment result**: NMC beats RF (p < 0.001) - confirms Wessels, but only after removing the trivial HER2+ class.
+- **Key insight**: the multi-class structure was a confound. In the flat setup, the trivially separable HER2+ class inflated RF's advantage (RF can partition easy and hard regions of feature space simultaneously; NMC cannot). Once the problem is decomposed hierarchically and the real challenge (HR+ vs TN) is isolated, simple classifiers win - exactly as Wessels predicted.
+- **Feature selection**: univariate KW and multivariate EN perform identically (p=1.0), meaning the discriminative signal resides in individually informative regions, not feature interactions. This also aligns with Wessels.
+- **Contribution over Wessels**: showing that the principle holds on discrete data, but only becomes visible after proper problem decomposition. The flat result is misleading due to multi-class structure effects.
+
+## Per-sample error analysis and suspected mislabels
+
+- 16 "hard" samples (out of 68 non-HER2+) have error rates >= 50% across all pipelines, repeats, and folds. These 16 samples account for **64.4% of all Stage 2 errors**.
+- The remaining 52 samples split into 27 easy (< 10% error) and 25 medium (10-50% error).
+- Samples 2 (HR+) and 4 (TN) are misclassified **97.5% of the time** across all 4 pipelines and ~200 fold appearances each. Sample 4 (labelled TN) is predicted HR+ in 193/198 appearances; sample 2 (labelled HR+) is predicted TN in 193/198 appearances. These are almost certainly mislabeled or represent edge-case biology that aCGH copy-number profiles cannot resolve.
+- Consensus filtering (Brodley & Friedl, 1999, "Identifying Mislabeled Training Data", Journal of Artificial Intelligence Research 11:131-167) provides a principled framework for flagging such samples: if multiple independent classifiers consistently misclassify a sample in held-out evaluation, it is flagged as a potential mislabel.
+- **Decision: do not remove these samples from training.** Reasons: (1) circularity risk - the same classifier family is used for both flagging and training, undermining the independence assumption; (2) n=68 is already small, losing 2 samples costs 3% of Stage 2 training data; (3) the validation set likely contains similar ambiguous cases, and a classifier that has never seen edge cases will handle them worse.
+- Instead, report the suspected mislabels as a finding in the paper and let the ensemble approach soften their impact through probability averaging.
+
+## Ensemble analysis
+
+- **4-way majority vote** across all 4 pipelines gives **+5.5 pp** over the best single pipeline on Stage 2 samples (77.6% vs 72.1% correct).
+- KW+NMC and EN+NMC agree on 84.8% of predictions. When they agree, they are 75.9% correct. When they disagree (505 cases), KW is right 251 times and EN is right 254 times - perfectly balanced, with zero cases of "both wrong with different predictions." A tiebreaker would recover nearly all disagreement errors.
+- A confidence-based 3-stage hierarchy (routing uncertain predictions to a different classifier) was considered but rejected: confidence calibration is weak (wrong predictions have mean max_prob=0.61 vs correct at 0.68, heavy overlap), and the 16 hard samples are consistently wrong, not randomly uncertain - no routing strategy can fix them.
+- **Caveat on the +5.5 pp claim (outside reviewer correction):** The 4-way vote was measured on out-of-fold predictions (each sample predicted only when in the test set), so it avoids train/test leakage. However, the choice of which 4 pipelines to combine and the combination rule (majority vote) were decided **after** seeing all results - the pipeline selection is post-hoc. A proper unbiased estimate would require the ensemble to be evaluated as a fifth pipeline inside nested CV, with the combination rule fixed before seeing outer fold test data. The true cross-validated gain is likely 1-2 pp, not 5.5 pp.
+- **Decision: KW+NMC is the submission model without ensemble.** An ensemble of KW+NMC and EN+NMC remains scientifically interesting (perfect complementarity in disagreement cases), but implementing it requires proper nested CV validation before any gain claim is trustworthy. KW+NMC alone is the safe, defensible choice.
+
+## Strategic conclusion (updated from flat experiment and outside review)
 
 - The flat experiment suggested RF >> NMC. The hierarchical experiment reverses this: NMC >= RF (p < 0.001 pooled).
-- The flat result was an artefact of the 3-class structure: HER2+ is trivially separable and inflated RF's advantage. Once decomposed, the harder HR+ vs TN binary problem favours simpler classifiers.
-- This is exactly the Wessels et al. finding: simple classifiers with univariate filtering outperform complex pipelines, especially on small-sample high-dimensional data.
-- For the final model: use KW+NMC (or EN+NMC, they are equivalent) for Stage 2. Stage 1 remains KW+RF with k=5.
+- The flat result was an artefact of the 3-class structure: HER2+ is trivially separable and inflated RF's advantage. Once decomposed, the harder HR+ vs TN binary problem favours simpler classifiers. The original falsification of Wessels was not a property of NMC; it was a property of the contaminated feature space.
+- The paper narrative: flat 2x2 falsifies Wessels (feature space problem) -> error analysis and feature importance diagnose the cause -> hierarchical redesign recovers the suppressed signal -> in the conditioned feature space the simple classifier reasserts itself.
+- 50-repeat design is necessary, not overkill: KW+NMC convergence requires ~25-30 repeats to stabilize due to Stage 2 operating on only ~54 samples. Fewer repeats would give unreliable estimates.
+- For the final model: **KW+NMC** for Stage 2, KW+RF (k=5) for Stage 1.
