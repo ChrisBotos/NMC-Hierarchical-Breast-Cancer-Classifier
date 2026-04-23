@@ -1,0 +1,20 @@
+Run: 2026-04-22_default_run
+Config: /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml
+Pipeline: en_rf
+Repeat seed: 3
+Grid size: 800 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  Fold 1: bal_acc=0.8333  auroc=0.9768  inner_best=0.8178  n_features=50  (3471.7s)
+  Fold 2: bal_acc=0.7381  auroc=0.8816  inner_best=0.8667  n_features=50  (3363.8s)
+  Fold 3: bal_acc=0.7778  auroc=0.9211  inner_best=0.8111  n_features=10  (3430.1s)
+  Fold 4: bal_acc=0.8571  auroc=0.9414  inner_best=0.8311  n_features=50  (3490.3s)
+  Fold 5: bal_acc=0.6667  auroc=0.8095  inner_best=0.8867  n_features=50  (3457.4s)
+
+Summary for en_rf repeat 3:
+  Fold scores: [0.8333, 0.7381, 0.7778, 0.8571, 0.6667]
+  Mean balanced accuracy: 0.7746 (+/- 0.0682)
+  Total time: 17213.4s
+Fold results saved to /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/nested_cv_2x2/data/fold_results_en_rf_r3.csv
+Checkpoint removed (job complete).

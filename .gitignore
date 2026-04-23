@@ -47,6 +47,7 @@ data/**/*
 results/**/*
 !results/**/
 !results/**/.gitkeep
+!results/2026-04-22_server_run_flat_nested_CV/**
 
 # ===== Model artifacts =====
 model/model.pkl

@@ -1,0 +1,49 @@
+========================================
+Job 169 of 200
+Pipeline: en_rf
+Repeat:   19 / 50
+Config:   /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml
+Run:      default_run
+Node:     node2
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project-Server
+Start:    2026-04-22 21:43:17
+========================================
+Running: python3 /data/cbotos/TB-Project-Server/code/nested_cv_2x2_runner.py --pipeline en_rf --repeat 19 --config /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml --name default_run
+INFO     Run: 2026-04-22_default_run                                            
+INFO     Config:                                                                
+         /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_sn
+         apshot.yaml                                                            
+INFO     Pipeline: en_rf                                                        
+INFO     Repeat seed: 19                                                        
+INFO     Grid size: 800 combinations                                            
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       Fold 1: bal_acc=0.7937  auroc=0.8965  inner_best=0.8200              
+         n_features=20  (4057.6s)                                               
+INFO       Fold 2: bal_acc=0.7937  auroc=0.9270  inner_best=0.8222              
+         n_features=50  (4002.4s)                                               
+INFO       Fold 3: bal_acc=0.7778  auroc=0.8626  inner_best=0.8444  n_features=5
+         (3955.8s)                                                              
+INFO       Fold 4: bal_acc=0.8571  auroc=0.9267  inner_best=0.8378              
+         n_features=50  (4046.3s)                                               
+INFO       Fold 5: bal_acc=0.7143  auroc=0.8938  inner_best=0.8578              
+         n_features=50  (3991.9s)                                               
+  en_rf repeat 19 outer folds ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 5:34:14
+INFO                                                                            
+INFO     Summary for en_rf repeat 19:                                           
+INFO       Fold scores: [0.7937, 0.7937, 0.7778, 0.8571, 0.7143]                
+INFO       Mean balanced accuracy: 0.7873 (+/- 0.0456)                          
+INFO       Total time: 20054.1s                                                 
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/nested_cv
+         _2x2/data/fold_results_en_rf_r19.csv                                   
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-23 03:17:32
+Elapsed:  5h 34m 15s
+Exit:     0
+========================================
+[NCV-TASK-DONE] array=13456 task=168 pipeline=en_rf repeat=19 exit=0 elapsed=20055s

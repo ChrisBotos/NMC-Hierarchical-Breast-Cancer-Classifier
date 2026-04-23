@@ -1,0 +1,49 @@
+========================================
+Job 98 of 200
+Pipeline: kw_rf
+Repeat:   48 / 50
+Config:   /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml
+Run:      default_run
+Node:     node1
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project-Server
+Start:    2026-04-22 20:52:56
+========================================
+Running: python3 /data/cbotos/TB-Project-Server/code/nested_cv_2x2_runner.py --pipeline kw_rf --repeat 48 --config /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml --name default_run
+INFO     Run: 2026-04-22_default_run                                            
+INFO     Config:                                                                
+         /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_sn
+         apshot.yaml                                                            
+INFO     Pipeline: kw_rf                                                        
+INFO     Repeat seed: 48                                                        
+INFO     Grid size: 32 combinations                                             
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       Fold 1: bal_acc=0.7460  auroc=0.9191  inner_best=0.8444              
+         n_features=50  (103.2s)                                                
+INFO       Fold 2: bal_acc=0.7460  auroc=0.9084  inner_best=0.8133              
+         n_features=15  (103.0s)                                                
+INFO       Fold 3: bal_acc=0.8472  auroc=0.9559  inner_best=0.8222              
+         n_features=100  (110.0s)                                               
+INFO       Fold 4: bal_acc=0.7619  auroc=0.8791  inner_best=0.8000              
+         n_features=20  (109.9s)                                                
+INFO       Fold 5: bal_acc=0.7143  auroc=0.9029  inner_best=0.8333              
+         n_features=100  (110.2s)                                               
+  kw_rf repeat 48 outer folds ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:08:56
+INFO                                                                            
+INFO     Summary for kw_rf repeat 48:                                           
+INFO       Fold scores: [0.746, 0.746, 0.8472, 0.7619, 0.7143]                  
+INFO       Mean balanced accuracy: 0.7631 (+/- 0.0448)                          
+INFO       Total time: 536.4s                                                   
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/nested_cv
+         _2x2/data/fold_results_kw_rf_r48.csv                                   
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-22 21:01:54
+Elapsed:  0h 8m 58s
+Exit:     0
+========================================
+[NCV-TASK-DONE] array=13456 task=97 pipeline=kw_rf repeat=48 exit=0 elapsed=538s

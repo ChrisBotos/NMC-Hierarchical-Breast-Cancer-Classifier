@@ -1,0 +1,20 @@
+Run: 2026-04-22_default_run
+Config: /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml
+Pipeline: kw_nmc
+Repeat seed: 20
+Grid size: 8 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  Fold 1: bal_acc=0.5397  auroc=0.7662  inner_best=0.6644  n_features=15  (6.8s)
+  Fold 2: bal_acc=0.5873  auroc=0.8581  inner_best=0.6378  n_features=30  (5.8s)
+  Fold 3: bal_acc=0.4028  auroc=0.6518  inner_best=0.6689  n_features=75  (5.8s)
+  Fold 4: bal_acc=0.7540  auroc=0.8846  inner_best=0.6356  n_features=75  (5.7s)
+  Fold 5: bal_acc=0.6111  auroc=0.7985  inner_best=0.7222  n_features=10  (5.8s)
+
+Summary for kw_nmc repeat 20:
+  Fold scores: [0.5397, 0.5873, 0.4028, 0.754, 0.6111]
+  Mean balanced accuracy: 0.5790 (+/- 0.1134)
+  Total time: 29.9s
+Fold results saved to /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/nested_cv_2x2/data/fold_results_kw_nmc_r20.csv
+Checkpoint removed (job complete).

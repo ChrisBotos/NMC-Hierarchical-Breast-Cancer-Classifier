@@ -1,0 +1,13 @@
+Run: 2026-04-22_server_run_nested_CV
+Config: /mnt/d/Coursework/TB-Project/config_files/local.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest)
+Stage 2: en_rf (HR+ vs Triple Neg)
+Repeat seed: 1
+Stage 1 grid size: 8 combinations
+Stage 2 grid size: 96 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples

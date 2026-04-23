@@ -1,0 +1,27 @@
+Run: 2026-04-22_server_run_nested_CV
+Config: /mnt/d/Coursework/TB-Project/config_files/local.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest)
+Stage 2: kw_nmc (HR+ vs Triple Neg)
+Repeat seed: 1
+Stage 1 grid size: 8 combinations
+Stage 2 grid size: 2 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+  Fold 1: s1=1.0000  s2=0.7857  combined=0.8571  auroc=0.9655  s1_k=5  s2_k=20  routed=13/20  (38.8s)
+  Fold 2: s1=1.0000  s2=0.8452  combined=0.8968  auroc=0.9618  s1_k=5  s2_k=20  routed=13/20  (39.8s)
+  Fold 3: s1=1.0000  s2=0.6875  combined=0.7917  auroc=0.9216  s1_k=5  s2_k=20  routed=14/20  (38.5s)
+  Fold 4: s1=1.0000  s2=0.7143  combined=0.8095  auroc=0.9414  s1_k=5  s2_k=20  routed=14/20  (38.7s)
+  Fold 5: s1=1.0000  s2=0.7857  combined=0.8571  auroc=0.9560  s1_k=5  s2_k=20  routed=14/20  (38.7s)
+
+Summary for hier_kw_nmc repeat 1:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.7637 (+/- 0.0563)
+  Combined (3-class):       0.8425 (+/- 0.0376)
+  Combined fold scores: [0.8571, 0.8968, 0.7917, 0.8095, 0.8571]
+  Total time: 194.7s
+Fold results saved to /mnt/d/Coursework/TB-Project/results/2026-04-22_server_run_nested_CV/hierarchical_nested_cv_2x2/data/fold_results_kw_nmc_r1.csv
+Checkpoint removed (job complete).

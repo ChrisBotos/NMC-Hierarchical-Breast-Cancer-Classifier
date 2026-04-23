@@ -1,0 +1,49 @@
+========================================
+Job 102 of 200
+Pipeline: en_nmc
+Repeat:   2 / 50
+Config:   /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml
+Run:      default_run
+Node:     node2
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project-Server
+Start:    2026-04-22 21:01:25
+========================================
+Running: python3 /data/cbotos/TB-Project-Server/code/nested_cv_2x2_runner.py --pipeline en_nmc --repeat 2 --config /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml --name default_run
+INFO     Run: 2026-04-22_default_run                                            
+INFO     Config:                                                                
+         /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_sn
+         apshot.yaml                                                            
+INFO     Pipeline: en_nmc                                                       
+INFO     Repeat seed: 2                                                         
+INFO     Grid size: 200 combinations                                            
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       Fold 1: bal_acc=0.6429  auroc=0.8655  inner_best=0.8333  n_features=5
+         (501.1s)                                                               
+INFO       Fold 2: bal_acc=0.8492  auroc=0.9741  inner_best=0.7778              
+         n_features=50  (487.6s)                                                
+INFO       Fold 3: bal_acc=0.6528  auroc=0.8046  inner_best=0.8244              
+         n_features=20  (494.1s)                                                
+INFO       Fold 4: bal_acc=0.6508  auroc=0.8858  inner_best=0.8244              
+         n_features=20  (498.2s)                                                
+INFO       Fold 5: bal_acc=0.7540  auroc=0.9048  inner_best=0.8133              
+         n_features=10  (521.4s)                                                
+  en_nmc repeat 2 outer folds ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:41:42
+INFO                                                                            
+INFO     Summary for en_nmc repeat 2:                                           
+INFO       Fold scores: [0.6429, 0.8492, 0.6528, 0.6508, 0.754]                 
+INFO       Mean balanced accuracy: 0.7099 (+/- 0.0807)                          
+INFO       Total time: 2502.4s                                                  
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/nested_cv
+         _2x2/data/fold_results_en_nmc_r2.csv                                   
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-22 21:43:12
+Elapsed:  0h 41m 47s
+Exit:     0
+========================================
+[NCV-TASK-DONE] array=13456 task=101 pipeline=en_nmc repeat=2 exit=0 elapsed=2507s

@@ -1,0 +1,20 @@
+Run: 2026-04-22_default_run
+Config: /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml
+Pipeline: en_nmc
+Repeat seed: 16
+Grid size: 200 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  Fold 1: bal_acc=0.7460  auroc=0.9469  inner_best=0.8267  n_features=10  (425.2s)
+  Fold 2: bal_acc=0.7937  auroc=0.8707  inner_best=0.7689  n_features=5  (406.2s)
+  Fold 3: bal_acc=0.7083  auroc=0.8410  inner_best=0.8511  n_features=10  (409.9s)
+  Fold 4: bal_acc=0.6587  auroc=0.8379  inner_best=0.8267  n_features=50  (417.7s)
+  Fold 5: bal_acc=0.6111  auroc=0.8385  inner_best=0.8800  n_features=5  (432.7s)
+
+Summary for en_nmc repeat 16:
+  Fold scores: [0.746, 0.7937, 0.7083, 0.6587, 0.6111]
+  Mean balanced accuracy: 0.7036 (+/- 0.0640)
+  Total time: 2091.7s
+Fold results saved to /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/nested_cv_2x2/data/fold_results_en_nmc_r16.csv
+Checkpoint removed (job complete).

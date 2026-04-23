@@ -1,0 +1,49 @@
+========================================
+Job 24 of 200
+Pipeline: kw_nmc
+Repeat:   24 / 50
+Config:   /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml
+Run:      default_run
+Node:     node2
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project-Server
+Start:    2026-04-22 20:52:17
+========================================
+Running: python3 /data/cbotos/TB-Project-Server/code/nested_cv_2x2_runner.py --pipeline kw_nmc --repeat 24 --config /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_snapshot.yaml --name default_run
+INFO     Run: 2026-04-22_default_run                                            
+INFO     Config:                                                                
+         /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/config_sn
+         apshot.yaml                                                            
+INFO     Pipeline: kw_nmc                                                       
+INFO     Repeat seed: 24                                                        
+INFO     Grid size: 8 combinations                                              
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       Fold 1: bal_acc=0.5952  auroc=0.8318  inner_best=0.6844  n_features=5
+         (6.7s)                                                                 
+INFO       Fold 2: bal_acc=0.6587  auroc=0.8315  inner_best=0.6556              
+         n_features=30  (5.7s)                                                  
+INFO       Fold 3: bal_acc=0.6944  auroc=0.8348  inner_best=0.6400              
+         n_features=75  (5.7s)                                                  
+INFO       Fold 4: bal_acc=0.5635  auroc=0.8657  inner_best=0.6511              
+         n_features=30  (5.7s)                                                  
+INFO       Fold 5: bal_acc=0.6032  auroc=0.7518  inner_best=0.7222              
+         n_features=15  (5.7s)                                                  
+  kw_nmc repeat 24 outer folds ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:29
+INFO                                                                            
+INFO     Summary for kw_nmc repeat 24:                                          
+INFO       Fold scores: [0.5952, 0.6587, 0.6944, 0.5635, 0.6032]                
+INFO       Mean balanced accuracy: 0.6230 (+/- 0.0471)                          
+INFO       Total time: 29.7s                                                    
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project-Server/results/2026-04-22_default_run/nested_cv
+         _2x2/data/fold_results_kw_nmc_r24.csv                                  
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-22 20:52:52
+Elapsed:  0h 0m 35s
+Exit:     0
+========================================
+[NCV-TASK-DONE] array=13456 task=23 pipeline=kw_nmc repeat=24 exit=0 elapsed=35s
