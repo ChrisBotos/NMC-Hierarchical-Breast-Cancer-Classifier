@@ -266,6 +266,6 @@ ARRAY_JOB_ID=$(sbatch \
 echo "Array job submitted: $ARRAY_JOB_ID"
 echo "Monitor with: squeue -u \$USER -j $ARRAY_JOB_ID"
 echo "Run analysis after completion with:"
-echo "  python3 code/analyse_nested_cv.py --name $RUN_NAME --config $FROZEN_CONFIG"
+echo "  python3 code/analyse_nested_cv.py --name $RUN_NAME --config $FROZEN_CONFIG --phase hierarchical_nested_cv_2x2"
 
 exit 0
