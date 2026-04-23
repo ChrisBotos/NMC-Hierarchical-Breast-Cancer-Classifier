@@ -12,7 +12,8 @@ Description:
     Aggregates per-fold nested CV results from the 2x2 experimental design,
     computes summary statistics, performs statistical comparisons (Friedman +
     Wilcoxon + Nadeau-Bengio corrected t-test), identifies the winning
-    pipeline, and produces five publication-quality figures.
+    pipeline, and produces five publication-quality figures including violin
+    plots of balanced accuracy distributions.
 
 Usage:
     python3 code/analyse_nested_cv.py --name default_run --config local
@@ -319,16 +320,17 @@ def run_nadeau_bengio_tests(all_results, config, log):
 """Plotting"""
 
 
-def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log):
-    """Box plot comparing balanced accuracy across pipelines.
+def plot_pipeline_comparison(per_repeat, nb_df, fig_dir, log):
+    """Violin plot comparing balanced accuracy across pipelines.
 
-    Shows per-repeat mean balanced accuracy as box plots with overlaid
-    strip points. Significance brackets from pairwise tests are annotated
-    above the boxes.
+    Shows per-repeat mean balanced accuracy as violin plots with overlaid
+    strip points and box plot quartile indicators. Significance brackets
+    from Nadeau-Bengio corrected t-tests are annotated above the violins.
 
     Args:
         per_repeat (pd.DataFrame): Per-repeat mean scores.
-        pairwise_df (pd.DataFrame or None): Pairwise test results.
+        nb_df (pd.DataFrame or None): Nadeau-Bengio pairwise test results
+            with columns: pipeline_a, pipeline_b, p_corrected, significant.
         fig_dir (Path): Directory to save the figure.
         log (logging.Logger): Logger instance.
     """
@@ -344,58 +346,90 @@ def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log):
     labels = [PIPELINE_LABELS.get(p, p) for p in pipelines]
     colors = [PIPELINE_COLORS.get(p, "#888888") for p in pipelines]
 
-    # Box plot.
+    # Violin plot.
+    parts = ax.violinplot(
+        data_by_pipeline,
+        positions=range(len(pipelines)),
+        widths=0.6,
+        showmeans=False,
+        showmedians=False,
+        showextrema=False,
+    )
+    for body, color in zip(parts["bodies"], colors):
+        body.set_facecolor(color)
+        body.set_alpha(0.5)
+        body.set_edgecolor("black")
+        body.set_linewidth(0.8)
+
+    # Overlay box plot indicators for quartiles and median.
     bp = ax.boxplot(
         data_by_pipeline,
         positions=range(len(pipelines)),
-        widths=0.5,
+        widths=0.12,
         patch_artist=True,
         showfliers=False,
-        medianprops=dict(color="black", linewidth=1.5),
+        medianprops=dict(color="white", linewidth=1.5),
+        boxprops=dict(facecolor="black", alpha=0.6),
+        whiskerprops=dict(color="black", linewidth=1),
+        capprops=dict(color="black", linewidth=1),
     )
-    for patch, color in zip(bp["boxes"], colors):
-        patch.set_facecolor(color)
-        patch.set_alpha(0.7)
 
     # Overlay individual points with jitter.
     rng = np.random.default_rng(42)
     for i, (vals, color) in enumerate(zip(data_by_pipeline, colors)):
-        jitter = rng.uniform(-0.12, 0.12, size=len(vals))
+        jitter = rng.uniform(-0.15, 0.15, size=len(vals))
         ax.scatter(
             np.full(len(vals), i) + jitter, vals,
             color=color, edgecolors="black", linewidths=0.5,
-            s=20, zorder=3, alpha=0.8,
+            s=15, zorder=3, alpha=0.7,
         )
 
-    # Add significance brackets if pairwise tests were run.
-    if pairwise_df is not None:
-        sig_pairs = pairwise_df[pairwise_df["significant"]]
-        if not sig_pairs.empty:
-            y_max = max(v.max() for v in data_by_pipeline if len(v) > 0)
-            y_range = y_max - min(v.min() for v in data_by_pipeline if len(v) > 0)
-            bracket_height = y_range * 0.05
-            y_offset = y_max + y_range * 0.08
+    # Add significance brackets from Nadeau-Bengio corrected t-tests.
+    if nb_df is not None and not nb_df.empty:
+        y_max = max(v.max() for v in data_by_pipeline if len(v) > 0)
+        y_range = y_max - min(v.min() for v in data_by_pipeline if len(v) > 0)
+        bracket_height = y_range * 0.05
+        y_offset = y_max + y_range * 0.08
 
-            for idx, row in sig_pairs.iterrows():
-                x1 = pipelines.index(row["pipeline_a"])
-                x2 = pipelines.index(row["pipeline_b"])
-                y_bar = y_offset + idx * bracket_height * 2.5
+        # Sort by span width so narrower brackets are drawn lower.
+        nb_sorted = nb_df.copy()
+        nb_sorted["span"] = nb_sorted.apply(
+            lambda r: abs(
+                pipelines.index(r["pipeline_a"])
+                - pipelines.index(r["pipeline_b"])
+            ),
+            axis=1,
+        )
+        nb_sorted = nb_sorted.sort_values("span").reset_index(drop=True)
 
-                ax.plot(
-                    [x1, x1, x2, x2],
-                    [y_bar, y_bar + bracket_height, y_bar + bracket_height, y_bar],
-                    color="black", linewidth=0.8,
-                )
-                # Format p-value for annotation.
-                p_corr = row["p_corrected"]
-                if p_corr < 0.001:
-                    p_text = "p < 0.001"
-                else:
-                    p_text = f"p = {p_corr:.3f}"
-                ax.text(
-                    (x1 + x2) / 2, y_bar + bracket_height,
-                    p_text, ha="center", va="bottom", fontsize=7,
-                )
+        for i, row in nb_sorted.iterrows():
+            x1 = pipelines.index(row["pipeline_a"])
+            x2 = pipelines.index(row["pipeline_b"])
+            y_bar = y_offset + i * bracket_height * 2.5
+
+            is_sig = row["significant"]
+            bracket_color = "black" if is_sig else "grey"
+
+            ax.plot(
+                [x1, x1, x2, x2],
+                [y_bar, y_bar + bracket_height, y_bar + bracket_height, y_bar],
+                color=bracket_color, linewidth=0.8,
+            )
+            # Format p-value for annotation.
+            p_corr = row["p_corrected"]
+            if p_corr < 0.001:
+                p_text = "p < 0.001"
+            elif p_corr >= 1.0:
+                p_text = "n.s."
+            else:
+                p_text = f"p = {p_corr:.3f}"
+            if is_sig:
+                p_text += " *"
+            ax.text(
+                (x1 + x2) / 2, y_bar + bracket_height,
+                p_text, ha="center", va="bottom", fontsize=6.5,
+                color=bracket_color,
+            )
 
     ax.set_xticks(range(len(pipelines)))
     ax.set_xticklabels(labels)
@@ -703,6 +737,194 @@ def plot_confusion_matrices(all_results, fig_dir, log):
     log.info("Saved figure: %s", out_path)
 
 
+"""Error Agreement Analysis"""
+
+
+def compute_error_agreement(all_results, log):
+    """Compute pairwise error agreement between pipelines.
+
+    For each pair of pipelines, measures how often they make the same
+    errors on the same samples within shared (repeat, fold) splits.
+    This quantifies error correlation and indicates whether ensembling
+    the pipelines could improve accuracy.
+
+    Args:
+        all_results (pd.DataFrame): Fold-level results with columns
+            pipeline, repeat, outer_fold, y_true, y_pred.
+        log (logging.Logger): Logger instance.
+
+    Returns:
+        tuple: (agreement_matrix, conditional_matrix, pipelines) where
+            agreement_matrix is a symmetric matrix of error overlap rates
+            (fraction of all samples where both pipelines are wrong),
+            conditional_matrix[i,j] is P(j wrong | i wrong), and
+            pipelines is the list of pipeline names.
+    """
+    if "y_true" not in all_results.columns or "y_pred" not in all_results.columns:
+        log.warning("No y_true/y_pred columns; skipping error agreement.")
+        return None, None, None
+
+    pipelines = [p for p in PIPELINE_NAMES if p in all_results["pipeline"].unique()]
+    n_pipes = len(pipelines)
+
+    # Build a dict mapping (pipeline, repeat, fold) -> arrays of (true, pred).
+    pred_dict = {}
+    for _, row in all_results.iterrows():
+        if pd.isna(row.get("y_true")) or pd.isna(row.get("y_pred")):
+            continue
+        key = (row["pipeline"], row["repeat"], row["outer_fold"])
+        y_true = row["y_true"].split(",")
+        y_pred = row["y_pred"].split(",")
+        pred_dict[key] = (y_true, y_pred)
+
+    # For each (repeat, fold), compute per-sample error vectors for each pipeline.
+    # Then compare across pipeline pairs.
+    total_samples = 0
+    both_wrong = np.zeros((n_pipes, n_pipes), dtype=int)
+    either_wrong = np.zeros((n_pipes, n_pipes), dtype=int)
+    pipe_wrong_count = np.zeros(n_pipes, dtype=int)
+
+    repeats = sorted(all_results["repeat"].unique())
+    folds = sorted(all_results["outer_fold"].unique())
+
+    for r in repeats:
+        for f in folds:
+            # Collect error masks for each pipeline in this (repeat, fold).
+            error_masks = []
+            valid = True
+            for p in pipelines:
+                key = (p, r, f)
+                if key not in pred_dict:
+                    valid = False
+                    break
+                y_true, y_pred = pred_dict[key]
+                errors = np.array([t != p_ for t, p_ in zip(y_true, y_pred)])
+                error_masks.append(errors)
+
+            if not valid:
+                continue
+
+            n = len(error_masks[0])
+            total_samples += n
+
+            for i in range(n_pipes):
+                pipe_wrong_count[i] += error_masks[i].sum()
+                for j in range(n_pipes):
+                    both_wrong[i, j] += (error_masks[i] & error_masks[j]).sum()
+                    either_wrong[i, j] += (error_masks[i] | error_masks[j]).sum()
+
+    # Agreement matrix: P(both wrong) / P(either wrong) = Jaccard index of errors.
+    agreement_matrix = np.zeros((n_pipes, n_pipes))
+    for i in range(n_pipes):
+        for j in range(n_pipes):
+            if either_wrong[i, j] > 0:
+                agreement_matrix[i, j] = both_wrong[i, j] / either_wrong[i, j]
+
+    # Conditional matrix: P(j wrong | i wrong).
+    conditional_matrix = np.zeros((n_pipes, n_pipes))
+    for i in range(n_pipes):
+        if pipe_wrong_count[i] > 0:
+            for j in range(n_pipes):
+                conditional_matrix[i, j] = both_wrong[i, j] / pipe_wrong_count[i]
+
+    # Log summary.
+    log.info("Error agreement analysis (%d total sample-predictions):", total_samples)
+    for i in range(n_pipes):
+        error_rate = pipe_wrong_count[i] / total_samples if total_samples > 0 else 0
+        log.info(
+            "  %s: %d errors (%.1f%% error rate)",
+            PIPELINE_LABELS.get(pipelines[i], pipelines[i]),
+            pipe_wrong_count[i], error_rate * 100,
+        )
+
+    log.info("Pairwise error overlap (Jaccard index of error sets):")
+    for i in range(n_pipes):
+        for j in range(i + 1, n_pipes):
+            log.info(
+                "  %s vs %s: Jaccard=%.3f, P(%s wrong | %s wrong)=%.3f, "
+                "P(%s wrong | %s wrong)=%.3f",
+                PIPELINE_LABELS.get(pipelines[i], pipelines[i]),
+                PIPELINE_LABELS.get(pipelines[j], pipelines[j]),
+                agreement_matrix[i, j],
+                PIPELINE_LABELS.get(pipelines[j], pipelines[j]),
+                PIPELINE_LABELS.get(pipelines[i], pipelines[i]),
+                conditional_matrix[i, j],
+                PIPELINE_LABELS.get(pipelines[i], pipelines[i]),
+                PIPELINE_LABELS.get(pipelines[j], pipelines[j]),
+                conditional_matrix[j, i],
+            )
+
+    return agreement_matrix, conditional_matrix, pipelines
+
+
+def plot_error_agreement(agreement_matrix, conditional_matrix, pipelines, fig_dir, log):
+    """Heatmap of pairwise error agreement between pipelines.
+
+    Left panel: Jaccard index of error sets (symmetric). Shows the
+    fraction of samples where both pipelines err out of all samples
+    where at least one errs. Low values indicate complementary errors
+    suitable for ensembling.
+
+    Right panel: Conditional error probability P(col wrong | row wrong).
+    Asymmetric. Shows whether one pipeline's errors are a subset of
+    another's.
+
+    Args:
+        agreement_matrix (np.ndarray): Symmetric Jaccard matrix.
+        conditional_matrix (np.ndarray): Asymmetric conditional matrix.
+        pipelines (list): Pipeline name strings.
+        fig_dir (Path): Directory to save the figure.
+        log (logging.Logger): Logger instance.
+    """
+    if agreement_matrix is None:
+        return
+
+    apply_plot_style()
+    labels = [PIPELINE_LABELS.get(p, p) for p in pipelines]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4))
+
+    # Left panel: Jaccard index.
+    im1 = ax1.imshow(agreement_matrix, cmap="YlOrRd", vmin=0, vmax=1, aspect="equal")
+    for i in range(len(pipelines)):
+        for j in range(len(pipelines)):
+            val = agreement_matrix[i, j]
+            text_color = "white" if val > 0.6 else "black"
+            ax1.text(j, i, f"{val:.2f}", ha="center", va="center",
+                     fontsize=9, color=text_color)
+    ax1.set_xticks(range(len(pipelines)))
+    ax1.set_yticks(range(len(pipelines)))
+    ax1.set_xticklabels(labels, fontsize=8, rotation=45, ha="right")
+    ax1.set_yticklabels(labels, fontsize=8)
+    ax1.text(0.5, 1.06, "Error overlap (Jaccard index)",
+             transform=ax1.transAxes, ha="center", fontsize=9, fontweight="bold")
+    fig.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
+
+    # Right panel: conditional error probability.
+    im2 = ax2.imshow(conditional_matrix, cmap="YlOrRd", vmin=0, vmax=1, aspect="equal")
+    for i in range(len(pipelines)):
+        for j in range(len(pipelines)):
+            val = conditional_matrix[i, j]
+            text_color = "white" if val > 0.6 else "black"
+            ax2.text(j, i, f"{val:.2f}", ha="center", va="center",
+                     fontsize=9, color=text_color)
+    ax2.set_xticks(range(len(pipelines)))
+    ax2.set_yticks(range(len(pipelines)))
+    ax2.set_xticklabels(labels, fontsize=8, rotation=45, ha="right")
+    ax2.set_yticklabels(labels, fontsize=8)
+    ax2.set_xlabel("Pipeline (wrong?)", fontsize=8)
+    ax2.set_ylabel("Pipeline (given wrong)", fontsize=8)
+    ax2.text(0.5, 1.06, "P(column wrong | row wrong)",
+             transform=ax2.transAxes, ha="center", fontsize=9, fontweight="bold")
+    fig.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
+
+    fig.tight_layout()
+    out_path = fig_dir / "06_error_agreement.png"
+    fig.savefig(out_path, dpi=300)
+    plt.close(fig)
+    log.info("Saved figure: %s", out_path)
+
+
 """Argument Parsing"""
 
 
@@ -844,15 +1066,33 @@ def main():
         summary.loc[winner, "mean_bal_acc"],
     )
 
-    """Step 8: Generate Figures"""
+    """Step 8: Error Agreement Analysis"""
 
-    plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log)
+    agreement_matrix, conditional_matrix, agree_pipelines = compute_error_agreement(
+        all_results, log,
+    )
+
+    # Save error agreement data.
+    if agreement_matrix is not None:
+        agree_labels = [PIPELINE_LABELS.get(p, p) for p in agree_pipelines]
+        pd.DataFrame(
+            agreement_matrix, index=agree_labels, columns=agree_labels,
+        ).to_csv(data_dir / "error_agreement_jaccard.csv")
+        pd.DataFrame(
+            conditional_matrix, index=agree_labels, columns=agree_labels,
+        ).to_csv(data_dir / "error_agreement_conditional.csv")
+        log.info("Saved error agreement matrices.")
+
+    """Step 9: Generate Figures"""
+
+    plot_pipeline_comparison(per_repeat, nb_df, fig_dir, log)
     plot_interaction(per_repeat, fig_dir, log)
     plot_repeat_convergence(per_repeat, fig_dir, log)
     plot_feature_importance(all_results, fig_dir, log)
     plot_confusion_matrices(all_results, fig_dir, log)
+    plot_error_agreement(agreement_matrix, conditional_matrix, agree_pipelines, fig_dir, log)
 
-    """Step 9: Save Config Snapshot"""
+    """Step 10: Save Config Snapshot"""
 
     save_config(
         run_dir, "analyse_nested_cv",

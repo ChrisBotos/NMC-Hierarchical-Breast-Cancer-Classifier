@@ -255,21 +255,7 @@ ARRAY_JOB_ID=$(sbatch \
     "${BASH_SOURCE[0]}")
 
 echo "Array job submitted: $ARRAY_JOB_ID"
-
-# Submit a dependent analysis job that runs after all array tasks complete.
-ANALYSIS_JOB_ID=$(sbatch \
-    --dependency="afterok:${ARRAY_JOB_ID}" \
-    --job-name="ncv_analysis_${RUN_NAME}" \
-    --ntasks=1 \
-    --cpus-per-task=1 \
-    --mem=4G \
-    --time="0-00:30:00" \
-    --output="$SLURM_LOG_DIR/nested_cv_analysis_%j.out" \
-    --error="$SLURM_LOG_DIR/nested_cv_analysis_%j.err" \
-    $MAIL_ARGS \
-    --parsable \
-    --wrap="export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 && source $CONDA_PREFIX_DIR/etc/profile.d/conda.sh && conda activate $CONDA_ENV_NAME && python3 $PROJECT_DIR/code/analyse_nested_cv.py --name $RUN_NAME --config $FROZEN_CONFIG")
-
-echo "Analysis job submitted: $ANALYSIS_JOB_ID (depends on $ARRAY_JOB_ID)"
+echo "Run analysis locally after completion with:"
+echo "  python3 code/analyse_nested_cv.py --name $RUN_NAME --config $FROZEN_CONFIG"
 
 exit 0
