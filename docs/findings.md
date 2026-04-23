@@ -240,3 +240,29 @@ Stage 1 (KW+RF, k=5, HER2+ vs rest) is fixed and identical across all 4 pipeline
 - The paper narrative: flat 2x2 falsifies Wessels (feature space problem) -> error analysis and feature importance diagnose the cause -> hierarchical redesign recovers the suppressed signal -> in the conditioned feature space the simple classifier reasserts itself.
 - 50-repeat design is necessary, not overkill: KW+NMC convergence requires ~25-30 repeats to stabilize due to Stage 2 operating on only ~54 samples. Fewer repeats would give unreliable estimates.
 - For the final model: **KW+NMC** for Stage 2, KW+RF (k=5) for Stage 1.
+
+---
+
+# Findings: Feature Engineering Experiments
+
+## Three-state encoding on merged regions (CLOSED - negative)
+
+- Encoding: np.sign on merged region values, collapsing CN=2 (amplification) to CN=1 (gain).
+- Result: **-6.3 pp BA drop** (0.812 -> ~0.75), variance increased from 0.055 to 0.090.
+- CN=2 carries genuine discriminative signal in Stage 2 on chr12q and chr5q, not just chr17q (which Stage 1 already handles). The biological assumption that amplification is HER2-specific noise was wrong.
+- All feature representations must preserve the full ordinal scale including CN=2.
+
+## Arm-level mean CN features (CLOSED - negative)
+
+- Encoding: mean CN per chromosome arm (~44 features from 273 merged regions), using hg18 centromere positions for p/q assignment.
+- 3 repeats x 2 pipelines (KW+NMC, KW+RF), local grid.
+
+| Pipeline | Mean Stage 1 BA | Mean Stage 2 BA | Mean Combined BA |
+|----------|----------------|----------------|-----------------|
+| KW+NMC   | 0.617          | 0.764          | 0.561           |
+| KW+RF    | 0.617          | 0.727          | 0.540           |
+
+- **Stage 1 catastrophically broken:** BA collapsed from 1.00 (region-level) to 0.62. The chr17q arm has 17 merged regions; only a few carry the ERBB2 amplicon signal. Averaging dilutes the focal amplification below the decision boundary.
+- **Stage 2 also degraded:** BA dropped from 0.812 to ~0.75. The discriminative signal on chr12q (23/30 top KW features) and chr5q (7/30) is concentrated in focal regions, not spread across the arm. Arm-level averaging adds noise from non-discriminative regions on the same arm.
+- **Arm-level fractions (~80 features) not tested:** the signal dilution is fundamental to arm-level aggregation and would affect fractions equally.
+- **Conclusion:** the discriminative signal in aCGH copy-number profiles for breast cancer subtype classification is focal, not broad. Arm-level averaging destroys it. Region-level resolution after correlation-based merging (r > 0.8) is the correct granularity - coarse enough to remove probe-level redundancy, fine enough to preserve focal discriminative events.

@@ -14,3 +14,19 @@ GENOMIC_COLUMNS = ("Chromosome", "Start", "End", "Nclone")
 
 # Global random seed for reproducibility.
 RANDOM_SEED = 42
+
+# Pipeline display names for figures and tables.
+PIPELINE_LABELS = {
+    "kw_nmc": "KW + NMC",
+    "kw_rf": "KW + RF",
+    "en_nmc": "EN + NMC",
+    "en_rf": "EN + RF",
+}
+
+# Pipeline colours (consistent 4-colour palette).
+PIPELINE_COLORS = {
+    "kw_nmc": "#4DBBD5",
+    "kw_rf": "#E64B35",
+    "en_nmc": "#00A087",
+    "en_rf": "#F39B7F",
+}
