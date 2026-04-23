@@ -37,6 +37,7 @@ import pandas as pd
 import rich.traceback
 from scipy import stats
 from sklearn.metrics import confusion_matrix as sklearn_confusion_matrix
+from statsmodels.stats.multitest import multipletests
 
 # Ensure the code/ directory is on sys.path so utils is importable.
 CODE_DIR = Path(__file__).resolve().parent
@@ -818,6 +819,456 @@ def plot_error_agreement(agreement_matrix, conditional_matrix, pipelines, fig_di
     log.info("Saved figure: %s", out_path)
 
 
+"""Hard Sample Diagnostic Analysis"""
+
+
+def _load_stage2_features(run_dir, log):
+    """Load preprocessed feature matrix and clinical labels for hard sample analysis.
+
+    Reads the merged training data and clinical labels, builds a feature matrix
+    in (samples x regions) layout, and aligns subtype labels to sample order.
+
+    Args:
+        run_dir (Path): Run directory containing preprocessing/data/.
+        log (logging.Logger): Logger instance.
+
+    Returns:
+        tuple or None: (X, sample_cols, feature_names, sample_labels) where
+            X is the feature matrix (n_samples, n_features), sample_cols is
+            the list of sample column names, feature_names is a list of
+            region identifiers, and sample_labels is an array of subtype
+            labels aligned to sample_cols. Returns None if files are missing.
+    """
+    merged_path = run_dir / "preprocessing" / "data" / "train_merged.tsv"
+    clinical_path = CODE_DIR.parent / "data" / "Train_clinical.tsv"
+
+    if not merged_path.exists():
+        log.warning(
+            "Preprocessed data not found at %s; skipping hard sample analysis.",
+            merged_path,
+        )
+        return None
+    if not clinical_path.exists():
+        log.warning(
+            "Clinical data not found at %s; skipping hard sample analysis.",
+            clinical_path,
+        )
+        return None
+
+    train_df = pd.read_csv(merged_path, sep="\t")
+    clinical_df = pd.read_csv(clinical_path, sep="\t")
+
+    # Build feature matrix (samples x regions), same order as the nested CV runner.
+    genomic_cols = {"Chromosome", "Start", "End", "Nclone"}
+    sample_cols = [c for c in train_df.columns if c not in genomic_cols]
+    feature_names = [
+        f"chr{row['Chromosome']}_{row['Start']}_{row['End']}"
+        for _, row in train_df[["Chromosome", "Start", "End"]].iterrows()
+    ]
+    X = train_df[sample_cols].values.T  # (n_samples, n_features).
+
+    # Align labels to the sample column order.
+    clinical_df = clinical_df.set_index("Sample")
+    sample_labels = clinical_df.loc[sample_cols, "Subgroup"].values
+
+    return X, sample_cols, feature_names, sample_labels
+
+
+def _compute_sample_error_rates(all_results, sample_cols, sample_labels):
+    """Compute per-sample error rates across all fold-pipeline evaluations.
+
+    Iterates over fold results, counting how many times each sample appeared
+    in a test fold and how many times it was misclassified.
+
+    Args:
+        all_results (pd.DataFrame): Fold-level results with columns
+            test_indices, y_true, y_pred.
+        sample_cols (list): Sample column names (defines index mapping).
+        sample_labels (np.ndarray): Subtype labels aligned to sample_cols.
+
+    Returns:
+        pd.DataFrame: Summary with columns (sample, true_label, n_tested,
+            n_errors, error_rate).
+    """
+    n_samples = len(sample_cols)
+    n_tested = np.zeros(n_samples, dtype=int)
+    n_errors = np.zeros(n_samples, dtype=int)
+
+    for _, row in all_results.iterrows():
+        if (
+            pd.isna(row.get("test_indices"))
+            or pd.isna(row.get("y_true"))
+            or pd.isna(row.get("y_pred"))
+        ):
+            continue
+
+        indices = [int(x) for x in str(row["test_indices"]).split(",")]
+        y_true = [s.strip() for s in str(row["y_true"]).split(",")]
+        y_pred = [s.strip() for s in str(row["y_pred"]).split(",")]
+
+        if len(indices) != len(y_true) or len(indices) != len(y_pred):
+            continue
+
+        for idx, yt, yp in zip(indices, y_true, y_pred):
+            n_tested[idx] += 1
+            if yt != yp:
+                n_errors[idx] += 1
+
+    error_rate = np.where(n_tested > 0, n_errors / n_tested, 0.0)
+
+    return pd.DataFrame({
+        "sample": sample_cols,
+        "true_label": sample_labels,
+        "n_tested": n_tested,
+        "n_errors": n_errors,
+        "error_rate": error_rate,
+    })
+
+
+def _kw_hard_vs_easy(X, sample_cols, class_df, feature_names, label, log):
+    """Run Kruskal-Wallis tests comparing hard vs easy samples within one class.
+
+    Splits samples into hard (above-median error rate) and easy (at-or-below
+    median), then tests each genomic feature for differences between groups.
+    Applies Bonferroni and Benjamini-Hochberg FDR corrections.
+
+    Args:
+        X (np.ndarray): Feature matrix (n_samples, n_features).
+        sample_cols (list): Sample column names (defines index mapping).
+        class_df (pd.DataFrame): Subset of sample_summary for one class,
+            with columns (sample, true_label, n_tested, n_errors, error_rate).
+        feature_names (list): Region identifiers for logging.
+        label (str): Class label (e.g. "HR+" or "Triple Neg").
+        log (logging.Logger): Logger instance.
+
+    Returns:
+        dict or None: Summary dict with keys n_hard, n_easy, threshold,
+            n_sig_uncorrected, n_sig_bonferroni, n_sig_bh_005, n_sig_bh_010,
+            n_expected_by_chance, top_features. Returns None if group sizes
+            are too small for testing.
+    """
+    median_er = class_df["error_rate"].median()
+
+    # If median is 0, threshold becomes 0 and "hard" means any error at all.
+    threshold = median_er if median_er > 0 else 0.0
+
+    hard_mask = class_df["error_rate"] > threshold
+    easy_mask = ~hard_mask
+    n_hard = hard_mask.sum()
+    n_easy = easy_mask.sum()
+
+    log.info(
+        "  %s: median error rate=%.3f, hard (>%.3f)=%d, easy (<=%.3f)=%d",
+        label, median_er, threshold, n_hard, threshold, n_easy,
+    )
+
+    if n_hard < 2 or n_easy < 2:
+        log.info("    Insufficient group sizes for KW test; skipping.")
+        return None
+
+    # Map sample names back to row indices in X.
+    hard_names = class_df.loc[hard_mask, "sample"].tolist()
+    easy_names = class_df.loc[easy_mask, "sample"].tolist()
+    hard_idx = [sample_cols.index(s) for s in hard_names]
+    easy_idx = [sample_cols.index(s) for s in easy_names]
+
+    X_hard = X[hard_idx]
+    X_easy = X[easy_idx]
+
+    # KW test per feature: does this feature differ between hard and easy samples?
+    n_features = X.shape[1]
+    kw_h = np.zeros(n_features)
+    kw_p = np.ones(n_features)
+
+    for f in range(n_features):
+        vals_hard = X_hard[:, f]
+        vals_easy = X_easy[:, f]
+        # Skip constant features.
+        if np.std(np.concatenate([vals_hard, vals_easy])) == 0:
+            continue
+        try:
+            stat_val, p_val = stats.kruskal(vals_hard, vals_easy)
+            kw_h[f] = stat_val
+            kw_p[f] = p_val
+        except ValueError:
+            continue
+
+    # Multiple testing correction: Bonferroni and Benjamini-Hochberg FDR.
+    kw_p_bonf = np.minimum(kw_p * n_features, 1.0)
+    reject_bh, kw_p_bh, _, _ = multipletests(kw_p, alpha=0.05, method="fdr_bh")
+
+    n_sig_raw = int((kw_p < 0.05).sum())
+    n_sig_bonf = int((kw_p_bonf < 0.05).sum())
+    n_sig_bh05 = int(reject_bh.sum())
+    reject_bh10, _, _, _ = multipletests(kw_p, alpha=0.10, method="fdr_bh")
+    n_sig_bh10 = int(reject_bh10.sum())
+
+    n_expected_by_chance = n_features * 0.05
+
+    log.info("    KW test (hard vs easy within %s):", label)
+    log.info(
+        "      Features with uncorrected p < 0.05: %d / %d (%.1f expected by chance)",
+        n_sig_raw, n_features, n_expected_by_chance,
+    )
+    log.info(
+        "      Features with Bonferroni p < 0.05: %d / %d", n_sig_bonf, n_features,
+    )
+    log.info(
+        "      Features with BH-FDR q < 0.05: %d / %d", n_sig_bh05, n_features,
+    )
+    log.info(
+        "      Features with BH-FDR q < 0.10: %d / %d", n_sig_bh10, n_features,
+    )
+
+    # Report top features by raw p-value.
+    top_idx = np.argsort(kw_p)[:10]
+    log.info("      Top 10 features by raw p-value:")
+    for ti in top_idx:
+        log.info(
+            "        %s: H=%.2f, p_raw=%.4e, p_bonf=%.4e, q_BH=%.4e",
+            feature_names[ti], kw_h[ti], kw_p[ti], kw_p_bonf[ti], kw_p_bh[ti],
+        )
+
+    return {
+        "n_hard": n_hard,
+        "n_easy": n_easy,
+        "threshold": float(threshold),
+        "n_sig_uncorrected": n_sig_raw,
+        "n_sig_bonferroni": n_sig_bonf,
+        "n_sig_bh_005": n_sig_bh05,
+        "n_sig_bh_010": n_sig_bh10,
+        "n_expected_by_chance": round(n_expected_by_chance, 1),
+        "top_features": [
+            (feature_names[ti], float(kw_h[ti]), float(kw_p[ti]), float(kw_p_bh[ti]))
+            for ti in top_idx[:5]
+        ],
+    }
+
+
+def _log_hard_sample_conclusions(kw_results_by_class, log):
+    """Log interpretive conclusions from the hard-vs-easy KW analysis.
+
+    For each class, determines whether features significantly distinguish
+    hard from easy samples and logs the appropriate conclusion about
+    classifier ceiling performance.
+
+    Args:
+        kw_results_by_class (dict): Mapping from class label to KW result
+            dict (or None if skipped).
+        log (logging.Logger): Logger instance.
+    """
+    for label, res in kw_results_by_class.items():
+        if res is None:
+            continue
+
+        n_uncorr = res["n_sig_uncorrected"]
+        n_expected = res["n_expected_by_chance"]
+        n_bh05 = res["n_sig_bh_005"]
+        n_bh10 = res["n_sig_bh_010"]
+
+        if n_bh05 > 0:
+            log.info(
+                "CONCLUSION (%s): %d feature(s) significant at BH-FDR q < 0.05. "
+                "There is a reproducible biological axis distinguishing hard from "
+                "easy samples.",
+                label, n_bh05,
+            )
+        elif n_bh10 > 0:
+            log.info(
+                "CONCLUSION (%s): No features at BH-FDR q < 0.05, but %d at q < 0.10 "
+                "(%d uncorrected vs %.1f expected by chance). A weak signal exists "
+                "but is not strong enough to exploit with this sample size. "
+                "Performance is effectively at ceiling.",
+                label, n_bh10, n_uncorr, n_expected,
+            )
+        elif n_uncorr > n_expected * 2:
+            log.info(
+                "CONCLUSION (%s): No features survive multiple testing correction, "
+                "but %d uncorrected hits vs %.1f expected suggests a diffuse signal "
+                "too weak to resolve. Performance is at ceiling for this "
+                "feature representation.",
+                label, n_uncorr, n_expected,
+            )
+        else:
+            log.info(
+                "CONCLUSION (%s): %d uncorrected hits vs %.1f expected by chance - "
+                "pure noise. Hard and easy samples are indistinguishable. "
+                "Performance is at ceiling.",
+                label, n_uncorr, n_expected,
+            )
+
+
+def analyse_hard_samples(all_results, run_dir, log, fig_dir, data_dir):
+    """Diagnostic: are consistently misclassified samples distinguishable in feature space?
+
+    For each of the 100 training samples, computes the error rate across all
+    appearances in test folds (pooled across all pipelines and repeats).
+    Within the HR+ and Triple Neg classes (Stage 2 scope), splits samples
+    into "hard" (above-median error rate) vs "easy" (at-or-below-median)
+    and runs a Kruskal-Wallis test per genomic feature.
+
+    If no features discriminate hard vs easy, the misclassified samples are
+    genuinely ambiguous and classifier performance is at ceiling. If features
+    do discriminate, there is a biological axis the current features are not
+    fully capturing.
+
+    This is a diagnostic question, not a training signal. The hard/easy split
+    is never used for model fitting or feature selection.
+
+    Args:
+        all_results (pd.DataFrame): Fold-level results with columns
+            pipeline, repeat, outer_fold, test_indices, y_true, y_pred.
+        run_dir (Path): Run directory containing preprocessing/data/.
+        log (logging.Logger): Logger instance.
+        fig_dir (Path): Directory to save figures.
+        data_dir (Path): Directory to save data outputs.
+    """
+    # Check required columns.
+    required = ["test_indices", "y_true", "y_pred"]
+    missing_cols = [c for c in required if c not in all_results.columns]
+    if missing_cols:
+        log.warning(
+            "Missing columns for hard sample analysis: %s; skipping.", missing_cols,
+        )
+        return
+
+    # Load the preprocessed feature matrix and clinical labels.
+    result = _load_stage2_features(run_dir, log)
+    if result is None:
+        return
+    X, sample_cols, feature_names, sample_labels = result
+
+    # Compute per-sample error rates across all fold-pipeline evaluations.
+    sample_summary = _compute_sample_error_rates(
+        all_results, sample_cols, sample_labels,
+    )
+
+    # Log overall per-class statistics.
+    log.info("=== Hard Sample Diagnostic Analysis ===")
+    log.info(
+        "Per-sample error rates pooled across %d fold-pipeline evaluations.",
+        len(all_results),
+    )
+    for label in ["HER2+", "HR+", "Triple Neg"]:
+        mask = sample_summary["true_label"] == label
+        subset = sample_summary[mask]
+        mean_er = subset["error_rate"].mean()
+        n_never = (subset["error_rate"] == 0).sum()
+        n_any_error = (subset["error_rate"] > 0).sum()
+        log.info(
+            "  %s (n=%d): mean error rate=%.3f, never wrong=%d, wrong at least once=%d",
+            label, mask.sum(), mean_er, n_never, n_any_error,
+        )
+
+    # Focus on Stage 2 classes since Stage 1 (HER2+) is perfect.
+    s2_summary = sample_summary[
+        sample_summary["true_label"].isin(["HR+", "Triple Neg"])
+    ].copy()
+    log.info("Stage 2 samples (HR+ and Triple Neg): %d total.", len(s2_summary))
+
+    # KW analysis: hard vs easy within each class.
+    kw_results_by_class = {}
+    for label in ["HR+", "Triple Neg"]:
+        class_df = s2_summary[s2_summary["true_label"] == label].copy()
+        kw_results_by_class[label] = _kw_hard_vs_easy(
+            X, sample_cols, class_df, feature_names, label, log,
+        )
+
+    # Log every sample that has any error, sorted by error rate.
+    hard_samples = s2_summary[s2_summary["error_rate"] > 0].sort_values(
+        "error_rate", ascending=False,
+    )
+    log.info("All Stage 2 samples with error_rate > 0 (%d samples):", len(hard_samples))
+    for _, row in hard_samples.iterrows():
+        log.info(
+            "  %s (%s): error_rate=%.3f (%d / %d evaluations wrong)",
+            row["sample"], row["true_label"],
+            row["error_rate"], row["n_errors"], row["n_tested"],
+        )
+
+    # Save per-sample summary.
+    summary_path = data_dir / "hard_sample_summary.csv"
+    sample_summary.to_csv(summary_path, index=False)
+    log.info("Saved per-sample error summary: %s", summary_path)
+
+    # Generate figure.
+    plot_hard_sample_analysis(s2_summary, kw_results_by_class, fig_dir, log)
+
+    # Summary conclusions.
+    _log_hard_sample_conclusions(kw_results_by_class, log)
+
+
+def plot_hard_sample_analysis(s2_summary, kw_results_by_class, fig_dir, log):
+    """Per-sample error rate strip plot for Stage 2 classes.
+
+    Shows each HR+ and TN sample as a point, positioned by its error rate
+    across all nested CV evaluations. Hard/easy threshold is marked.
+
+    Args:
+        s2_summary (pd.DataFrame): Stage 2 sample summary with columns
+            sample, true_label, error_rate.
+        kw_results_by_class (dict): KW test results per class.
+        fig_dir (Path): Directory to save the figure.
+        log (logging.Logger): Logger instance.
+    """
+    from utils.constants import SUBTYPE_COLORS
+
+    apply_plot_style()
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharey=True)
+
+    for ax, label in zip(axes, ["HR+", "Triple Neg"]):
+        class_df = s2_summary[s2_summary["true_label"] == label].sort_values(
+            "error_rate", ascending=False,
+        )
+        n = len(class_df)
+        color = SUBTYPE_COLORS.get(label, "#888888")
+
+        ax.barh(
+            range(n), class_df["error_rate"].values,
+            color=color, alpha=0.7, edgecolor="black", linewidth=0.4,
+        )
+        ax.set_yticks(range(n))
+        ax.set_yticklabels(class_df["sample"].values, fontsize=5)
+        ax.set_xlabel("Error rate (fraction of evaluations misclassified)")
+        ax.set_xlim(0, 1)
+        ax.invert_yaxis()
+
+        # Annotate with KW result summary.
+        res = kw_results_by_class.get(label)
+        if res is not None:
+            annotation = (
+                f"Hard: {res['n_hard']}, Easy: {res['n_easy']}\n"
+                f"Uncorr. p<0.05: {res['n_sig_uncorrected']} "
+                f"(exp. {res['n_expected_by_chance']})\n"
+                f"BH-FDR q<0.10: {res['n_sig_bh_010']}"
+            )
+            ax.text(
+                0.95, 0.95, annotation,
+                transform=ax.transAxes, ha="right", va="top",
+                fontsize=7, bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8),
+            )
+
+        # Mark the threshold.
+        if res is not None and res["threshold"] > 0:
+            threshold_y_count = (class_df["error_rate"] > res["threshold"]).sum()
+            ax.axhline(
+                y=threshold_y_count - 0.5, color="grey",
+                linestyle="--", linewidth=0.8, alpha=0.7,
+            )
+
+        # Pipeline label as subplot annotation.
+        ax.text(
+            0.5, 1.04, label,
+            transform=ax.transAxes, ha="center", fontsize=10, fontweight="bold",
+        )
+
+    fig.tight_layout()
+    out_path = fig_dir / "07_hard_sample_analysis.png"
+    fig.savefig(out_path, dpi=300)
+    plt.close(fig)
+    log.info("Saved figure: %s", out_path)
+
+
 """Argument Parsing"""
 
 
@@ -1002,6 +1453,10 @@ def main():
     plot_feature_importance(all_results, fig_dir, log)
     plot_confusion_matrices(all_results, fig_dir, log)
     plot_error_agreement(agreement_matrix, conditional_matrix, agree_pipelines, fig_dir, log)
+
+    """Step 9b: Hard Sample Diagnostic Analysis"""
+
+    analyse_hard_samples(all_results, run_dir, log, fig_dir, data_dir)
 
     """Step 10: Save Config Snapshot"""
 

@@ -41,142 +41,29 @@ import rich.traceback
 from rich.progress import track
 from sklearn.metrics import balanced_accuracy_score, roc_auc_score
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
-from sklearn.preprocessing import LabelEncoder
 
 # Ensure the code/ directory is on sys.path so utils is importable.
 CODE_DIR = Path(__file__).resolve().parent
 if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
-from utils.constants import GENOMIC_COLUMNS
 from utils.config_loader import get_grids, load_config
 from utils.cv_config import (
     PIPELINE_NAMES,
     build_pipeline,
 )
+from utils.cv_io import (
+    checkpoint_path,
+    csv_path,
+    load_checkpoint,
+    load_cv_data,
+    resolve_merged_input,
+    save_checkpoint,
+)
 from utils.logging_setup import setup_logging
-from utils.paths import DATA_DIR, PROJECT_DIR, get_run_dirs_no_replace, save_config
+from utils.paths import DATA_DIR, get_run_dirs_no_replace, save_config
 
 rich.traceback.install()
-
-
-"""Data Loading"""
-
-
-def load_data(input_path, clinical_path):
-    """Load merged CN data and clinical labels, returning arrays for CV.
-
-    Reads the pre-merged training data and clinical subtype labels,
-    constructs feature names from genomic coordinates, transposes to
-    samples-as-rows format, and encodes labels as integers.
-
-    Args:
-        input_path (Path): Path to the merged training TSV file.
-        clinical_path (Path): Path to the clinical labels TSV file.
-
-    Returns:
-        tuple: (X, y, label_encoder, feature_names) where X is a numpy
-            array of shape (n_samples, n_features), y is an integer-
-            encoded label array, label_encoder is the fitted LabelEncoder,
-            and feature_names is a list of region name strings.
-    """
-    train_df = pd.read_csv(input_path, sep="\t")
-    clinical_df = pd.read_csv(clinical_path, sep="\t")
-
-    # Build region names using the underscore convention.
-    feature_names = (
-        "chr"
-        + train_df["Chromosome"].astype(str)
-        + "_"
-        + train_df["Start"].astype(str)
-        + "_"
-        + train_df["End"].astype(str)
-    ).tolist()
-
-    sample_cols = [c for c in train_df.columns if c not in GENOMIC_COLUMNS]
-
-    # Transpose: rows become samples, columns become regions.
-    X_df = train_df[sample_cols].T
-    X_df.columns = feature_names
-
-    # Align labels to the sample order.
-    clinical_df = clinical_df.set_index("Sample")
-    y_series = clinical_df.loc[X_df.index, "Subgroup"]
-
-    le = LabelEncoder()
-    y = le.fit_transform(y_series)
-    X = X_df.to_numpy(dtype=float)
-
-    return X, y, le, feature_names
-
-
-"""Checkpoint Helpers"""
-
-
-def _checkpoint_path(data_dir, pipeline_name, repeat_seed):
-    """Return the path for a fold-level checkpoint file.
-
-    Args:
-        data_dir (Path): The phase data directory.
-        pipeline_name (str): Pipeline identifier.
-        repeat_seed (int): Repeat seed number.
-
-    Returns:
-        Path: Checkpoint JSON path.
-    """
-    return data_dir / f"checkpoint_{pipeline_name}_r{repeat_seed}.json"
-
-
-def _csv_path(data_dir, pipeline_name, repeat_seed):
-    """Return the path for the final fold results CSV.
-
-    Args:
-        data_dir (Path): The phase data directory.
-        pipeline_name (str): Pipeline identifier.
-        repeat_seed (int): Repeat seed number.
-
-    Returns:
-        Path: Final CSV path.
-    """
-    return data_dir / f"fold_results_{pipeline_name}_r{repeat_seed}.csv"
-
-
-def _load_checkpoint(ckpt_path, log):
-    """Load an existing checkpoint if present.
-
-    Args:
-        ckpt_path (Path): Path to checkpoint JSON.
-        log (logging.Logger): Logger instance.
-
-    Returns:
-        list[dict]: Previously completed fold results, or empty list.
-    """
-    if not ckpt_path.exists():
-        return []
-    with open(ckpt_path) as f:
-        data = json.load(f)
-    n_folds = len(data["fold_results"])
-    log.info("Resuming from checkpoint: %d folds already completed.", n_folds)
-    return data["fold_results"]
-
-
-def _save_checkpoint(ckpt_path, fold_results, pipeline_name, repeat_seed):
-    """Write fold results to a checkpoint file.
-
-    Args:
-        ckpt_path (Path): Path to checkpoint JSON.
-        fold_results (list[dict]): Completed fold results so far.
-        pipeline_name (str): Pipeline identifier.
-        repeat_seed (int): Repeat seed number.
-    """
-    payload = {
-        "pipeline": pipeline_name,
-        "repeat": repeat_seed,
-        "n_completed": len(fold_results),
-        "fold_results": fold_results,
-    }
-    with open(ckpt_path, "w") as f:
-        json.dump(payload, f, indent=2, default=str)
 
 
 """Single-Repeat Nested CV Runner"""
@@ -305,7 +192,7 @@ def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
 
         # Save checkpoint after each fold so progress survives crashes.
         if ckpt_path is not None:
-            _save_checkpoint(ckpt_path, fold_results, pipeline_name, repeat_seed)
+            save_checkpoint(ckpt_path, fold_results, pipeline_name, repeat_seed)
 
         log.info(
             "  Fold %d: bal_acc=%.4f  auroc=%.4f  inner_best=%.4f  "
@@ -391,32 +278,6 @@ def parse_args():
 """Main Execution"""
 
 
-def _resolve_input(args):
-    """Resolve the input merged TSV path with fallback logic.
-
-    Checks the run directory's preprocessing handoff first, then falls
-    back to the legacy results/data/preprocessing_phase/ path.
-
-    Args:
-        args (argparse.Namespace): Parsed arguments with name and input.
-
-    Returns:
-        Path: Resolved input path.
-    """
-    if args.input is not None:
-        return args.input
-
-    # Try to find it inside the run directory.
-    from utils.paths import _find_or_create_run_dir
-    run_dir = _find_or_create_run_dir(args.name)
-    run_path = run_dir / "preprocessing" / "data" / "train_merged.tsv"
-    if run_path.exists():
-        return run_path
-
-    # Legacy fallback.
-    return PROJECT_DIR / "results" / "data" / "preprocessing_phase" / "train_merged.tsv"
-
-
 def main():
     """Entry point: load config, load data, run nested CV, save results.
 
@@ -446,24 +307,24 @@ def main():
     log.info("Repeat seed: %d", args.repeat)
 
     # Early exit if this job is already complete.
-    csv_path = _csv_path(data_dir, args.pipeline, args.repeat)
-    if args.skip_if_complete and csv_path.exists():
-        log.info("Final CSV already exists: %s. Skipping (--skip-if-complete).", csv_path)
+    out_csv = csv_path(data_dir, args.pipeline, args.repeat)
+    if args.skip_if_complete and out_csv.exists():
+        log.info("Final CSV already exists: %s. Skipping (--skip-if-complete).", out_csv)
         return
 
     # Checkpoint handling.
-    ckpt_path = _checkpoint_path(data_dir, args.pipeline, args.repeat)
+    ckpt = checkpoint_path(data_dir, args.pipeline, args.repeat)
     prior_folds = []
 
     if args.force_restart:
-        if ckpt_path.exists():
-            ckpt_path.unlink()
+        if ckpt.exists():
+            ckpt.unlink()
             log.info("Removed existing checkpoint (--force-restart).")
     else:
-        prior_folds = _load_checkpoint(ckpt_path, log)
+        prior_folds = load_checkpoint(ckpt, log)
 
     # Resolve input path.
-    args.input = _resolve_input(args)
+    args.input = resolve_merged_input(args.name, args.input)
 
     # Select the hyperparameter grid for this pipeline.
     grids = get_grids(config)
@@ -477,7 +338,7 @@ def main():
 
     # Load data.
     log.info("Loading data...")
-    X, y, le, feature_names = load_data(args.input, args.clinical)
+    X, y, le, feature_names = load_cv_data(args.input, args.clinical)
     log.info("Loaded %d samples, %d features.", X.shape[0], X.shape[1])
     log.info("Classes: %s", le.classes_.tolist())
 
@@ -486,7 +347,7 @@ def main():
 
     fold_results = run_single_repeat(
         X, y, le, feature_names, args.pipeline, args.repeat, param_grid,
-        config, log, ckpt_path=ckpt_path, prior_folds=prior_folds,
+        config, log, ckpt_path=ckpt, prior_folds=prior_folds,
     )
 
     job_elapsed = time.perf_counter() - job_start
@@ -504,12 +365,12 @@ def main():
 
     # Save fold results CSV (the authoritative record).
     results_df = pd.DataFrame(fold_results)
-    results_df.to_csv(csv_path, index=False)
-    log.info("Fold results saved to %s", csv_path)
+    results_df.to_csv(out_csv, index=False)
+    log.info("Fold results saved to %s", out_csv)
 
     # Remove checkpoint now that the final CSV is written.
-    if ckpt_path.exists():
-        ckpt_path.unlink()
+    if ckpt.exists():
+        ckpt.unlink()
         log.info("Checkpoint removed (job complete).")
 
     # Save run config snapshot.

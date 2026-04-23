@@ -225,6 +225,63 @@ Stage 1 (KW+RF, k=5, HER2+ vs rest) is fixed and identical across all 4 pipeline
 - **Decision: do not remove these samples from training.** Reasons: (1) circularity risk - the same classifier family is used for both flagging and training, undermining the independence assumption; (2) n=68 is already small, losing 2 samples costs 3% of Stage 2 training data; (3) the validation set likely contains similar ambiguous cases, and a classifier that has never seen edge cases will handle them worse.
 - Instead, report the suspected mislabels as a finding in the paper and let the ensemble approach soften their impact through probability averaging.
 
+## Hard vs easy sample KW diagnostic (ceiling analysis)
+
+**Question:** Is there a feature that discriminates the hard samples from the easy ones *within* each class? This is a diagnostic question, not a training one - it tells us whether the ceiling is fundamental or if there is an unexploited biological axis.
+
+**Method:** Per-sample error rates computed by pooling across all 4 pipelines, 50 repeats, and 5 folds (198 evaluations per sample). Within each Stage 2 class, samples were split at the median error rate into "hard" (above median) vs "easy" (at or below median). KW test run per genomic feature on hard vs easy groups within each class. Bonferroni correction applied across 273 features.
+
+**Results:**
+- **HER2+ (n=32):** Mean error rate 0.000. Never wrong across any evaluation. Stage 1 is perfect, confirming it is not the bottleneck.
+- **HR+ (n=36):** Median error rate 0.109 (hard=18, easy=18). 14 features with uncorrected p < 0.05, **0 features surviving Bonferroni correction**.
+- **Triple Neg (n=32):** Median error rate 0.189 (hard=16, easy=16). 36 features with uncorrected p < 0.05, **0 features surviving Bonferroni correction**. The best feature (chr22_24263116_37678070, H=11.13, p_raw=8.5e-4) has Bonferroni p=0.23 - not significant.
+
+**Interpretation:** Within neither class can hard and easy samples be distinguished by any genomic feature after multiple testing correction. The misclassified samples are genuinely ambiguous in the merged CN feature space - there is no hidden biological axis that the current representation is missing. The ~81% combined BA is at or very near the ceiling for this data representation.
+
+**Key hard samples:**
+- Array.67 (HR+) and Array.22 (TN): 97.5% error rate (193/198 wrong) - near-certain mislabels or biologically ambiguous cases.
+- Array.23 (HR+) and Array.113 (TN): ~96% error rate.
+- 63/68 Stage 2 samples have at least one misclassification somewhere across 198 evaluations.
+- Only 5 HR+ samples were *never* misclassified; 0 TN samples were never misclassified.
+
+### BH-FDR correction (less conservative than Bonferroni)
+
+- **HR+:** 0 features at BH-FDR q < 0.05, 0 at q < 0.10, 0 at q < 0.20. 14 uncorrected hits vs 13.7 expected by chance. Pure noise. Hard and easy HR+ samples are indistinguishable.
+- **Triple Neg:** 0 features at q < 0.05, but **4 features at q < 0.10**:
+  - chr22_24263116_37678070 (q=0.084)
+  - chr12_435020_9432943 (q=0.084)
+  - chr18_4316_76110964 (q=0.084)
+  - chr22_37717564_49509094 (q=0.084)
+- 13 features at q < 0.20, 36 uncorrected hits vs 13.7 expected (2.6x enrichment).
+- A weak signal exists on chr22q, chr12p, and chr18 that distinguishes hard from easy TN samples, but it is at the border of statistical significance with n=16 vs 16.
+
+### Are the discriminating features already selected by inner CV?
+
+Cross-referencing the 4 FDR q<0.10 features against inner CV Stage 2 selection frequency across all 990 folds:
+
+| Feature | Overall rank | Selection freq | KW selection | EN selection |
+|---------|-------------|----------------|--------------|--------------|
+| chr22_24263116_37678070 | **9th** | **68.7%** | ~90% | ~48% |
+| chr22_37717564_49509094 | **13th** | **62.3%** | ~79% | ~46% |
+| chr12_435020_9432943 | 89th | 10.6% | ~21% | ~0.6% |
+| chr18_4316_76110964 | 121st | 5.5% | ~0.8% | ~10% |
+
+**The two chr22 features are already top-15 features, selected in 60-90% of folds.** The classifier already sees them and still can't correctly classify the hard TN samples. Forcing them in would change nothing.
+
+**The chr12p and chr18 features are rarely selected** (~5-10% of folds) because they are not strongly discriminative for HR+ vs TN overall - they only discriminate hard-TN from easy-TN *within* the TN class. A feature that separates hard from easy TN does not necessarily help the HR+ vs TN decision boundary.
+
+### Should we manually add these features? No - it would be overfitting.
+
+Three independent reasons:
+
+1. **The strong features (chr22q) are already there and failing.** They rank 9th and 13th in selection frequency. The classifier uses them >60% of the time and still misclassifies the hard TN samples. Forcing them in 100% of the time would not fix the problem.
+
+2. **The weak features (chr12p, chr18) were identified by correlating with test-set errors.** The hard/easy split is defined by "how often this sample was misclassified when held out." Selecting features that correlate with this criterion and then using them for training is circular - it is optimising features to predict your own evaluation errors, which is textbook overfitting to the CV procedure.
+
+3. **The signal is within-class, not between-class.** These features discriminate hard-TN from easy-TN, not HR+ from TN. Even if we added them non-circularly, they carry TN-difficulty signal, not HR+/TN boundary signal. They would not improve the decision boundary.
+
+**Conclusion:** Performance is at ceiling for this feature representation. The path to improvement is not better classifiers or features from the same CN data - it would require different data modalities (expression, methylation) or fundamentally different feature engineering that the current merged-region representation cannot provide. The hard-sample diagnostic is a paper finding (confirms ceiling), not a modeling action.
+
 ## Ensemble analysis
 
 - **4-way majority vote** across all 4 pipelines gives **+5.5 pp** over the best single pipeline on Stage 2 samples (77.6% vs 72.1% correct).
@@ -266,3 +323,33 @@ Stage 1 (KW+RF, k=5, HER2+ vs rest) is fixed and identical across all 4 pipeline
 - **Stage 2 also degraded:** BA dropped from 0.812 to ~0.75. The discriminative signal on chr12q (23/30 top KW features) and chr5q (7/30) is concentrated in focal regions, not spread across the arm. Arm-level averaging adds noise from non-discriminative regions on the same arm.
 - **Arm-level fractions (~80 features) not tested:** the signal dilution is fundamental to arm-level aggregation and would affect fractions equally.
 - **Conclusion:** the discriminative signal in aCGH copy-number profiles for breast cancer subtype classification is focal, not broad. Arm-level averaging destroys it. Region-level resolution after correlation-based merging (r > 0.8) is the correct granularity - coarse enough to remove probe-level redundancy, fine enough to preserve focal discriminative events.
+
+## Merging threshold sweep for Stage 2 (PRELIMINARY - low repeats)
+
+**Motivation:** The r=0.8 merging threshold was chosen based on raw data correlation structure and validated on results that included HER2+ (which is trivially separable). Need to check whether r=0.8 is actually optimal for the harder Stage 2 (HR+ vs TN) problem specifically.
+
+**Method:** Stage 2 only (68 samples: 36 HR+, 32 TN), KW+NMC pipeline, 10 repeats x 5-fold outer CV, inner 5-fold to tune k in {3, 5, 10, 20, 50}. Four fixed merging thresholds compared. All merging done once globally (not per-fold).
+
+**Results:**
+
+| Threshold | Features | Mean BA | Std   | Median | Best k (mode) |
+|-----------|----------|---------|-------|--------|---------------|
+| r=0.7     | 147      | 0.726   | 0.131 | 0.762  | 10            |
+| r=0.8     | 284      | 0.750   | 0.133 | 0.778  | 50            |
+| r=0.9     | 860      | 0.729   | 0.158 | 0.750  | 50            |
+| raw       | 2834     | 0.681   | 0.142 | 0.667  | 50            |
+
+**Pairwise Wilcoxon vs r=0.8:**
+- r=0.7: -2.4 pp, p=0.128 (n.s.)
+- r=0.9: -2.1 pp, p=0.372 (n.s.)
+- raw: -6.9 pp, p=0.008 (significant)
+
+**Interpretation:**
+- Merging genuinely helps Stage 2 - raw is significantly worse than r=0.8 by ~7 pp. This is not a HER2+ artifact.
+- The BA curve across r is a gentle inverted-U centered on r=0.8. Both 0.7 and 0.9 are ~2 pp lower but not significantly so.
+- r=0.7 over-merges (147 features, best k=10 - the selector has fewer features to work with). r=0.9 under-merges (860 features, more noise for KW to sift through, higher variance).
+- r=0.8 at 284 features is the sweet spot: enough discriminative features for the selector without drowning it in correlated noise.
+
+**Decision:** r=0.8 stays. No tuning of r needed - the curve is flat across 0.7-0.9 and only drops at raw. The merging threshold is not a sensitive hyperparameter for this problem.
+
+**Caveat:** This is a 10-repeat preliminary result. The per-repeat breakdown shows variance (individual repeats range from 0.66 to 0.79 for r=0.8). A 50-repeat server run would tighten the confidence intervals, but the direction is clear enough to close this question. Consider rerunning with 50 repeats if the result needs to be cited in the paper with tight error bars.

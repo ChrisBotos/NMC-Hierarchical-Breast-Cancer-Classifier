@@ -44,6 +44,14 @@ from utils.cv_config import (
     PIPELINE_NAMES,
     build_pipeline,
 )
+from utils.cv_io import (
+    checkpoint_path,
+    csv_path,
+    load_checkpoint,
+    load_cv_data,
+    resolve_merged_input,
+    save_checkpoint,
+)
 
 __all__ = [
     "CN_LABELS",
@@ -66,6 +74,8 @@ __all__ = [
     "apply_plot_style",
     "bonferroni_threshold",
     "build_pipeline",
+    "checkpoint_path",
+    "csv_path",
     "draw_significance_brackets",
     "format_p_value",
     "get_phase_dirs",
@@ -74,9 +84,13 @@ __all__ = [
     "get_sample_columns",
     "get_sample_matrix",
     "kruskal_wallis_per_region",
+    "load_checkpoint",
+    "load_cv_data",
     "load_gene_map",
     "nadeau_bengio_test",
     "pairwise_wilcoxon",
+    "resolve_merged_input",
+    "save_checkpoint",
     "save_config",
     "setup_logging",
 ]
