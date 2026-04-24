@@ -15,7 +15,12 @@ from utils.cv_components import (
     KruskalWallisSelector,
     NearestCentroidWithProba,
 )
-from utils.constants import GRIDSEARCH_PIPELINES, PLATEAU_ENSEMBLE_BASE, PIPELINE_NAMES
+from utils.constants import (
+    GRIDSEARCH_PIPELINES,
+    PLATEAU_ENSEMBLE_BASE,
+    PIPELINE_NAMES,
+    POSTHOC_ENSEMBLE_COMPONENTS,
+)
 
 """Pipeline Names"""
 
@@ -155,15 +160,15 @@ def build_stage2_pipeline(pipeline_name, random_state=42, config=None):
             "nmc_class_weight", None,
         )
 
-    # Ensemble pipelines are handled by the runner, not as single Pipelines.
-    if pipeline_name in ("kw_nmc_kens", "nmc_ensemble"):
+    # Post-hoc ensemble pipelines read from pre-computed component results.
+    if pipeline_name in POSTHOC_ENSEMBLE_COMPONENTS:
         return None
 
     # Plateau ensemble pipelines delegate to their base pipeline's builder.
     if pipeline_name in PLATEAU_ENSEMBLE_BASE:
         return None
 
-    if pipeline_name in ("kw_nmc", "kw_nmc_kgrid"):
+    if pipeline_name == "kw_nmc":
         # KW + NMC with cost-sensitive weights.
         return Pipeline([
             ("scaler", StandardScaler()),

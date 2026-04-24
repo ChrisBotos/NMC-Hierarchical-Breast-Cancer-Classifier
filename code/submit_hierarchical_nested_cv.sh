@@ -9,7 +9,12 @@
 #
 # Stage 1 (HER2+ vs rest) is fixed: KW+RF, k=5, with threshold calibration.
 # Stage 2 (HR+ vs TN) uses the pipeline specified by the array task mapping.
-# Pipeline count is auto-derived from the config file (typically 8+ variants).
+# Pipeline count is auto-derived from the config file (10 variants).
+#
+# Three-phase dependency chain:
+#   Phase 1 (base):    kw_nmc, en_nmc, kw_rf, en_rf, standalone_en
+#   Phase 2 (derived): kw_nmc_pens, standalone_en_pens, en_nmc_pens, nmc_ensemble
+#   Phase 3 (meta):    nmc_pens_ensemble (needs kw_nmc_pens + en_nmc_pens)
 #
 # Usage:
 #     bash code/submit_hierarchical_nested_cv.sh                                            # default_run, server config, all pipelines
@@ -19,14 +24,9 @@
 #     bash code/submit_hierarchical_nested_cv.sh --only kw_nmc_pens,en_nmc_pens my_run      # only submit listed pipelines
 #     bash code/submit_hierarchical_nested_cv.sh --dependency 12345 --only kw_nmc_pens my_run  # wait for job 12345
 #
-# Two-phase submission for plateau ensembles (_pens):
-#   Phase 1: submit base pipelines (skip _pens)
-#     bash code/submit_hierarchical_nested_cv.sh --skip kw_nmc_pens,standalone_en_pens,en_nmc_pens my_run
-#   Phase 2: after Phase 1 completes, submit _pens with dependency
-#     bash code/submit_hierarchical_nested_cv.sh --only kw_nmc_pens,standalone_en_pens,en_nmc_pens --dependency <phase1_job_id> my_run
-#
 # Array mapping:
-#     Task ID = pipeline_index * n_repeats + (repeat - 1)
+#     Task ID = pipeline_index * n_repeats + (repeat_offset)
+#     repeat_seed = seed_start + repeat_offset
 #     pipeline_index: 0..N mapping to the N pipeline variants in the config.
 #     --pipeline controls the Stage 2 pipeline (Stage 1 is always KW+RF k=5).
 
@@ -53,8 +53,8 @@ activate_conda() {
 
 # ===========================================================================
 # Inside SLURM: activate environment and run one (pipeline, repeat) job.
-# RUN_NAME, CONFIG_FILE, and REPEATS_PER_PIPELINE are exported env vars.
-# CONFIG_FILE points to the frozen snapshot (config_snapshot_hierarchical.yaml).
+# RUN_NAME, CONFIG_FILE, REPEATS_PER_PIPELINE, and SEED_START are exported
+# env vars. CONFIG_FILE points to the frozen snapshot.
 # ===========================================================================
 if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
 
@@ -80,9 +80,10 @@ if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     N_PIPELINES=${#PIPELINES[@]}
     TOTAL_JOBS=$(( N_PIPELINES * REPEATS_PER_PIPELINE ))
 
-    # Map array task ID to (pipeline_index, repeat).
+    # Map array task ID to (pipeline_index, repeat_seed).
     PIPELINE_IDX=$(( SLURM_ARRAY_TASK_ID / REPEATS_PER_PIPELINE ))
-    REPEAT=$(( SLURM_ARRAY_TASK_ID % REPEATS_PER_PIPELINE + 1 ))
+    REPEAT_OFFSET=$(( SLURM_ARRAY_TASK_ID % REPEATS_PER_PIPELINE ))
+    REPEAT=$(( SEED_START + REPEAT_OFFSET ))
     PIPELINE="${PIPELINES[$PIPELINE_IDX]}"
 
     JOB_START=$(date +%s)
@@ -90,7 +91,7 @@ if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     echo "Hierarchical CV - Job $((SLURM_ARRAY_TASK_ID + 1)) of ${TOTAL_JOBS}"
     echo "Stage 1:  kw_rf k=5 (fixed, threshold calibrated)"
     echo "Stage 2:  ${PIPELINE}"
-    echo "Repeat:   ${REPEAT} / ${REPEATS_PER_PIPELINE}"
+    echo "Repeat:   ${REPEAT} (seed_start=${SEED_START}, offset=${REPEAT_OFFSET})"
     echo "Config:   ${CONFIG_FILE}"
     echo "Run:      ${RUN_NAME}"
     echo "Node:     $(hostname)"
@@ -195,7 +196,9 @@ if not pipes:
     raise ValueError('All pipelines were filtered out. Nothing to submit.')
 conda_prefix = os.path.expanduser(env.get('conda_prefix', '~/miniconda3'))
 conda_env = env.get('conda_env', 'tb_310')
+seed_start = cv.get('seed_start', 1)
 print(f'REPEATS_PER_PIPELINE={cv[\"n_repeats\"]}')
+print(f'SEED_START={seed_start}')
 print(f'CONDA_PREFIX_DIR=\"{conda_prefix}\"')
 print(f'CONDA_ENV_NAME=\"{conda_env}\"')
 print(f'SLURM_MEM=\"{sl[\"mem\"]}\"')
@@ -265,6 +268,8 @@ config['submit_hierarchical_nested_cv'] = {
     'config_file': '$CONFIG_FILE',
     'frozen_config': '$FROZEN_CONFIG',
     'repeats_per_pipeline': $REPEATS_PER_PIPELINE,
+    'seed_start': $SEED_START,
+    'seed_range': '$SEED_START-$(( SEED_START + REPEATS_PER_PIPELINE - 1 ))',
     'stage1': 'kw_rf k=5 (fixed, threshold calibrated)',
     'stage2_pipelines': $(printf '%s\n' "${PIPELINES[@]}" | python3 -c "import sys,json; print(json.dumps([l.strip() for l in sys.stdin]))"),
     'skipped_pipelines': '$SKIPPED_STR'.split() if '$SKIPPED_STR' else [],
@@ -280,23 +285,35 @@ config_path.write_text(json.dumps(config, indent=2))
 "
 
 # ---------------------------------------------------------------------------
-# Split pipelines into base (Phase 1) and plateau ensemble (Phase 2).
-# Plateau ensembles (_pens) need base pipeline inner_cv results to exist,
-# so they run as a dependent job that starts after the base job completes.
+# Classify pipelines into three submission phases.
+#   Phase 1 (base): base GridSearchCV pipelines.
+#   Phase 2 (derived): plateau ensembles (_pens) + post-hoc ensembles
+#                       whose components are all in Phase 1.
+#   Phase 3 (meta): post-hoc ensembles whose components are in Phase 2.
 # ---------------------------------------------------------------------------
 BASE_PIPELINES=()
-PENS_PIPELINES=()
+PHASE2_PIPELINES=()
+PHASE3_PIPELINES=()
+
 for p in "${PIPELINES[@]}"; do
     case "$p" in
-        *_pens) PENS_PIPELINES+=("$p") ;;
-        *)      BASE_PIPELINES+=("$p") ;;
+        # Plateau ensembles depend on their base pipeline (Phase 1).
+        *_pens)          PHASE2_PIPELINES+=("$p") ;;
+        # nmc_ensemble averages kw_nmc + en_nmc (both Phase 1).
+        nmc_ensemble)    PHASE2_PIPELINES+=("$p") ;;
+        # nmc_pens_ensemble averages kw_nmc_pens + en_nmc_pens (both Phase 2).
+        nmc_pens_ensemble) PHASE3_PIPELINES+=("$p") ;;
+        # Everything else is a base pipeline.
+        *)               BASE_PIPELINES+=("$p") ;;
     esac
 done
 
 N_BASE=${#BASE_PIPELINES[@]}
-N_PENS=${#PENS_PIPELINES[@]}
+N_PH2=${#PHASE2_PIPELINES[@]}
+N_PH3=${#PHASE3_PIPELINES[@]}
 BASE_JOBS=$(( N_BASE * REPEATS_PER_PIPELINE ))
-PENS_JOBS=$(( N_PENS * REPEATS_PER_PIPELINE ))
+PH2_JOBS=$(( N_PH2 * REPEATS_PER_PIPELINE ))
+PH3_JOBS=$(( N_PH3 * REPEATS_PER_PIPELINE ))
 
 echo "========================================"
 echo "Submitting hierarchical nested CV"
@@ -304,12 +321,16 @@ echo "  Run name:    $RUN_NAME"
 echo "  Run dir:     $RUN_DIR"
 echo "  Config file: $CONFIG_FILE"
 echo "  Frozen as:   $FROZEN_CONFIG"
+echo "  Seeds:       ${SEED_START}-$(( SEED_START + REPEATS_PER_PIPELINE - 1 ))"
 echo "  Stage 1:     kw_rf k=5 (fixed, threshold=0.5)"
 if [[ $N_BASE -gt 0 ]]; then
     echo "  Phase 1:     ${BASE_PIPELINES[*]} (${N_BASE} pipelines, ${BASE_JOBS} jobs)"
 fi
-if [[ $N_PENS -gt 0 ]]; then
-    echo "  Phase 2:     ${PENS_PIPELINES[*]} (${N_PENS} pipelines, ${PENS_JOBS} jobs, afterok Phase 1)"
+if [[ $N_PH2 -gt 0 ]]; then
+    echo "  Phase 2:     ${PHASE2_PIPELINES[*]} (${N_PH2} pipelines, ${PH2_JOBS} jobs, afterok Phase 1)"
+fi
+if [[ $N_PH3 -gt 0 ]]; then
+    echo "  Phase 3:     ${PHASE3_PIPELINES[*]} (${N_PH3} pipelines, ${PH3_JOBS} jobs, afterok Phase 2)"
 fi
 if [[ -n "$SKIPPED_STR" ]]; then
     echo "  Skipped:     $SKIPPED_STR"
@@ -351,7 +372,7 @@ submit_array() {
         --error="$SLURM_LOG_DIR/hncv_%A_%a.err" \
         $MAIL_ARGS \
         $dep_args \
-        --export=NONE,PROJECT_DIR="$PROJECT_DIR",RUN_NAME="$RUN_NAME",CONFIG_FILE="$FROZEN_CONFIG",REPEATS_PER_PIPELINE="$REPEATS_PER_PIPELINE",PIPELINES_STR="$pipes_str",CONDA_PREFIX_DIR="$CONDA_PREFIX_DIR",CONDA_ENV_NAME="$CONDA_ENV_NAME",HOME="$HOME",USER="$USER",PATH="$PATH" \
+        --export=NONE,PROJECT_DIR="$PROJECT_DIR",RUN_NAME="$RUN_NAME",CONFIG_FILE="$FROZEN_CONFIG",REPEATS_PER_PIPELINE="$REPEATS_PER_PIPELINE",SEED_START="$SEED_START",PIPELINES_STR="$pipes_str",CONDA_PREFIX_DIR="$CONDA_PREFIX_DIR",CONDA_ENV_NAME="$CONDA_ENV_NAME",HOME="$HOME",USER="$USER",PATH="$PATH" \
         --parsable \
         "${BASH_SOURCE[0]}"
 }
@@ -363,16 +384,29 @@ if [[ $N_BASE -gt 0 ]]; then
     echo "Phase 1 submitted: job $BASE_JOB_ID (${N_BASE} pipelines x ${REPEATS_PER_PIPELINE} repeats = ${BASE_JOBS} tasks)"
 fi
 
-# Phase 2: plateau ensemble pipelines (depend on Phase 1).
-if [[ $N_PENS -gt 0 ]]; then
-    PENS_DEP=""
+# Phase 2: plateau ensembles + nmc_ensemble (depend on Phase 1).
+PH2_JOB_ID=""
+if [[ $N_PH2 -gt 0 ]]; then
+    PH2_DEP=""
     if [[ -n "$BASE_JOB_ID" ]]; then
-        PENS_DEP="--dependency=afterok:${BASE_JOB_ID}"
+        PH2_DEP="--dependency=afterok:${BASE_JOB_ID}"
     elif [[ -n "$DEP_ARGS" ]]; then
-        PENS_DEP="$DEP_ARGS"
+        PH2_DEP="$DEP_ARGS"
     fi
-    PENS_JOB_ID=$(submit_array "hncv_pens_${RUN_NAME}" "$PENS_DEP" "${PENS_PIPELINES[@]}")
-    echo "Phase 2 submitted: job $PENS_JOB_ID (${N_PENS} pipelines x ${REPEATS_PER_PIPELINE} repeats = ${PENS_JOBS} tasks, afterok:${BASE_JOB_ID:-none})"
+    PH2_JOB_ID=$(submit_array "hncv_ph2_${RUN_NAME}" "$PH2_DEP" "${PHASE2_PIPELINES[@]}")
+    echo "Phase 2 submitted: job $PH2_JOB_ID (${N_PH2} pipelines x ${REPEATS_PER_PIPELINE} repeats = ${PH2_JOBS} tasks, afterok:${BASE_JOB_ID:-external})"
+fi
+
+# Phase 3: nmc_pens_ensemble (depends on Phase 2).
+if [[ $N_PH3 -gt 0 ]]; then
+    PH3_DEP=""
+    if [[ -n "$PH2_JOB_ID" ]]; then
+        PH3_DEP="--dependency=afterok:${PH2_JOB_ID}"
+    elif [[ -n "$DEP_ARGS" ]]; then
+        PH3_DEP="$DEP_ARGS"
+    fi
+    PH3_JOB_ID=$(submit_array "hncv_ph3_${RUN_NAME}" "$PH3_DEP" "${PHASE3_PIPELINES[@]}")
+    echo "Phase 3 submitted: job $PH3_JOB_ID (${N_PH3} pipelines x ${REPEATS_PER_PIPELINE} repeats = ${PH3_JOBS} tasks, afterok:${PH2_JOB_ID:-external})"
 fi
 
 echo ""
