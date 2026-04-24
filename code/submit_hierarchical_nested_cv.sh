@@ -16,6 +16,14 @@
 #     bash code/submit_hierarchical_nested_cv.sh my_experiment                              # custom run name
 #     bash code/submit_hierarchical_nested_cv.sh my_experiment config_files/local.yaml      # custom run name + config
 #     bash code/submit_hierarchical_nested_cv.sh --skip kw_rf,en_rf my_experiment           # skip specific pipelines
+#     bash code/submit_hierarchical_nested_cv.sh --only kw_nmc_pens,en_nmc_pens my_run      # only submit listed pipelines
+#     bash code/submit_hierarchical_nested_cv.sh --dependency 12345 --only kw_nmc_pens my_run  # wait for job 12345
+#
+# Two-phase submission for plateau ensembles (_pens):
+#   Phase 1: submit base pipelines (skip _pens)
+#     bash code/submit_hierarchical_nested_cv.sh --skip kw_nmc_pens,standalone_en_pens,en_nmc_pens my_run
+#   Phase 2: after Phase 1 completes, submit _pens with dependency
+#     bash code/submit_hierarchical_nested_cv.sh --only kw_nmc_pens,standalone_en_pens,en_nmc_pens --dependency <phase1_job_id> my_run
 #
 # Array mapping:
 #     Task ID = pipeline_index * n_repeats + (repeat - 1)
@@ -129,15 +137,26 @@ fi
 # ===========================================================================
 
 # ---------------------------------------------------------------------------
-# Parse arguments: [--skip pipe1,pipe2,...] [run_name] [config_file]
+# Parse arguments: [--skip pipe1,pipe2,...] [--only pipe1,pipe2,...]
+#                   [--dependency job_id] [run_name] [config_file]
 # ---------------------------------------------------------------------------
 SKIP_PIPELINES=""
+ONLY_PIPELINES=""
+DEPENDENCY_JOB=""
 POSITIONAL_ARGS=()
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --skip)
             SKIP_PIPELINES="$2"
+            shift 2
+            ;;
+        --only)
+            ONLY_PIPELINES="$2"
+            shift 2
+            ;;
+        --dependency)
+            DEPENDENCY_JOB="$2"
             shift 2
             ;;
         *)
@@ -167,9 +186,13 @@ sl = cfg['slurm']
 env = cfg.get('environment', {})
 pipes = cfg['pipelines']['names']
 skip = set('$SKIP_PIPELINES'.split(',')) if '$SKIP_PIPELINES' else set()
-pipes = [p for p in pipes if p not in skip]
+only = set('$ONLY_PIPELINES'.split(',')) if '$ONLY_PIPELINES' else set()
+if only:
+    pipes = [p for p in pipes if p in only]
+if skip:
+    pipes = [p for p in pipes if p not in skip]
 if not pipes:
-    raise ValueError('All pipelines were skipped. Nothing to submit.')
+    raise ValueError('All pipelines were filtered out. Nothing to submit.')
 conda_prefix = os.path.expanduser(env.get('conda_prefix', '~/miniconda3'))
 conda_env = env.get('conda_env', 'tb_310')
 print(f'REPEATS_PER_PIPELINE={cv[\"n_repeats\"]}')
@@ -278,6 +301,13 @@ if [[ -n "$SLURM_MAIL_USER" ]]; then
     MAIL_ARGS="--mail-type=END,FAIL --mail-user=$SLURM_MAIL_USER"
 fi
 
+# Build dependency argument if specified.
+DEP_ARGS=""
+if [[ -n "$DEPENDENCY_JOB" ]]; then
+    DEP_ARGS="--dependency=afterok:${DEPENDENCY_JOB}"
+    echo "  Dependency: afterok:${DEPENDENCY_JOB}"
+fi
+
 # Export frozen config path so array tasks read the snapshot, not the live YAML.
 ARRAY_JOB_ID=$(sbatch \
     --job-name="hncv_${RUN_NAME}" \
@@ -289,6 +319,7 @@ ARRAY_JOB_ID=$(sbatch \
     --output="$SLURM_LOG_DIR/hncv_%A_%a.out" \
     --error="$SLURM_LOG_DIR/hncv_%A_%a.err" \
     $MAIL_ARGS \
+    $DEP_ARGS \
     --export=NONE,PROJECT_DIR="$PROJECT_DIR",RUN_NAME="$RUN_NAME",CONFIG_FILE="$FROZEN_CONFIG",REPEATS_PER_PIPELINE="$REPEATS_PER_PIPELINE",PIPELINES_STR="${PIPELINES[*]}",CONDA_PREFIX_DIR="$CONDA_PREFIX_DIR",CONDA_ENV_NAME="$CONDA_ENV_NAME",HOME="$HOME",USER="$USER",PATH="$PATH" \
     --parsable \
     "${BASH_SOURCE[0]}")

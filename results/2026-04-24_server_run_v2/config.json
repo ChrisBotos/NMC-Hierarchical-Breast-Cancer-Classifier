@@ -68,14 +68,14 @@
     "friedman_p": 1.9705478868255801e-10
   },
   "hierarchical_nested_cv_runner": {
-    "timestamp": "2026-04-24T15:24:02.899189",
-    "command": "code/hierarchical_nested_cv_runner.py --pipeline en_nmc_pens --repeat 3 --config local --name server_run_v2",
-    "stage2_pipeline": "en_nmc_pens",
-    "repeat": 3,
+    "timestamp": "2026-04-24T16:53:31.424697",
+    "command": "code/hierarchical_nested_cv_runner.py --pipeline standalone_en_pens --repeat 1 --config local --name server_run_v2",
+    "stage2_pipeline": "standalone_en_pens",
+    "repeat": 1,
     "config_file": "/mnt/d/Coursework/TB-Project/config_files/local.yaml",
     "input_path": "/mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/preprocessing/data/train_merged.tsv",
-    "mean_combined_balanced_accuracy": 0.8694443999999999,
+    "mean_combined_balanced_accuracy": 0.8281745999999999,
     "mean_stage1_balanced_accuracy": 1.0,
-    "mean_stage2_balanced_accuracy": 0.8041668000000002
+    "mean_stage2_balanced_accuracy": 0.742262
   }
 }

@@ -13,13 +13,15 @@ Description:
     (class_weight='balanced' via log-weight bias) and supports k-ensemble
     and pipeline-ensemble variants.
 
-    Supports 7 pipeline variants for Stage 2: 4 base pipelines with
+    Supports 11 pipeline variants for Stage 2: 4 base pipelines with
     cost-sensitive NMC, k-ensemble averaging over fixed k values,
-    a pipeline ensemble (KW k-ensemble + EN+NMC), and k-grid (restricted
-    k set with GridSearchCV).
+    a pipeline ensemble (KW k-ensemble + EN+NMC), k-grid (restricted
+    k set with GridSearchCV), standalone EN, and 3 plateau ensemble
+    variants that pool inner CV scores from base pipelines to identify
+    a stable set of hyperparameter combos for averaging.
 
     Each invocation runs one Stage 2 pipeline for one repeat seed. Jobs
-    can be parallelized via SLURM array (7 pipelines x 50 repeats = 350).
+    can be parallelized via SLURM array (11 pipelines x 50 repeats = 550).
     Supports fold-level checkpointing for crash recovery. Computes metrics
     with and without suspected mislabel samples for sensitivity analysis.
 
@@ -149,17 +151,21 @@ def run_stage2_gridsearch(X_train_s2, y_train_s2, X_test, pipeline_name,
     return proba_s2, best_s2, gscv.cv_results_, gscv.best_params_, en_converged
 
 
-def run_plateau_ensemble(gscv, base_pipeline_name, X_train_s2, y_train_s2,
-                         X_test, repeat_seed, config, feature_names, log):
-    """Build a plateau ensemble from GridSearchCV results.
+def retrain_plateau_models(plateau_params, base_pipeline_name,
+                           X_train_s2, y_train_s2, X_test,
+                           repeat_seed, config, feature_names, log):
+    """Retrain a fixed set of plateau models and average predictions.
 
-    Identifies all hyperparameter combos within one best-std of the best
-    inner CV score, retrains a model for each, and averages their
-    predict_proba outputs. Caps the ensemble size at MAX_PLATEAU_SIZE.
+    Takes a pre-computed list of plateau hyperparameter combinations
+    (from compute_pooled_plateau()), builds and fits a fresh pipeline
+    for each, and averages their predict_proba outputs. Also extracts
+    feature selection information across all plateau models.
 
     Args:
-        gscv (GridSearchCV): Fitted GridSearchCV object.
-        base_pipeline_name (str): Base pipeline name for building fresh pipes.
+        plateau_params (list[dict]): Pre-computed plateau param dicts,
+            one dict per plateau combo.
+        base_pipeline_name (str): Base pipeline name for building fresh
+            pipelines (e.g. "kw_nmc", "en_nmc", "standalone_en").
         X_train_s2 (np.ndarray): Stage 2 training features.
         y_train_s2 (np.ndarray): Binary labels (0=HR+, 1=TN).
         X_test (np.ndarray): Full test set features.
@@ -173,44 +179,13 @@ def run_plateau_ensemble(gscv, base_pipeline_name, X_train_s2, y_train_s2,
                 feature_intersection, feature_frequency) where avg_proba
                 is shape (n_test, 2).
     """
-    mean_scores = gscv.cv_results_["mean_test_score"]
-    std_scores = gscv.cv_results_["std_test_score"]
-
-    best_idx = np.argmax(mean_scores)
-    best_std = float(std_scores[best_idx])
-    threshold = mean_scores[best_idx] - best_std
-    plateau_mask = mean_scores >= threshold
-
-    # Get indices of plateau combos, sorted by score descending.
-    plateau_indices = np.where(plateau_mask)[0]
-    plateau_indices = plateau_indices[np.argsort(mean_scores[plateau_indices])[::-1]]
-
-    # Cap at MAX_PLATEAU_SIZE.
-    if len(plateau_indices) > MAX_PLATEAU_SIZE:
-        log.info(
-            "    Plateau capped: %d -> %d combos",
-            len(plateau_indices), MAX_PLATEAU_SIZE,
-        )
-        plateau_indices = plateau_indices[:MAX_PLATEAU_SIZE]
-
-    n_plateau = len(plateau_indices)
-    log.info(
-        "    Plateau: %d of %d combos (threshold=%.4f, best=%.4f, best_std=%.4f)",
-        n_plateau, len(mean_scores), threshold,
-        float(mean_scores[best_idx]), best_std,
-    )
+    n_plateau = len(plateau_params)
+    log.info("    Retraining %d plateau models", n_plateau)
 
     all_proba = []
     all_features = []
 
-    for rank, idx in enumerate(plateau_indices):
-        params = {
-            k.replace("param_", ""): v
-            for k, v in gscv.cv_results_.items()
-            if k.startswith("param_") and not isinstance(v[idx], type(np.ma.masked))
-        }
-        params = {k: v[idx] for k, v in params.items()}
-
+    for rank, params in enumerate(plateau_params):
         pipe = build_stage2_pipeline(
             base_pipeline_name, random_state=repeat_seed, config=config,
         )
@@ -231,16 +206,14 @@ def run_plateau_ensemble(gscv, base_pipeline_name, X_train_s2, y_train_s2,
             # Standalone EN: features with non-zero coefficients.
             clf = pipe.named_steps["clf"]
             nonzero_mask = np.any(clf.coef_ != 0, axis=0)
-            # Account for the scaler step (features are in original order).
             selected = {feature_names[i] for i, nz in enumerate(nonzero_mask) if nz}
 
         all_features.append(selected)
 
         if rank < 3 or rank == n_plateau - 1:
             log.info(
-                "      [%d/%d] score=%.4f, n_features=%d, params=%s",
-                rank + 1, n_plateau, float(mean_scores[idx]),
-                len(selected), params,
+                "      [%d/%d] n_features=%d, params=%s",
+                rank + 1, n_plateau, len(selected), params,
             )
 
     avg_proba = np.mean(all_proba, axis=0)
@@ -256,7 +229,7 @@ def run_plateau_ensemble(gscv, base_pipeline_name, X_train_s2, y_train_s2,
         for f in feat_set:
             feature_frequency[f] = feature_frequency.get(f, 0) + 1
 
-    best_params = gscv.cv_results_["params"][best_idx]
+    best_params = plateau_params[0]
     log.info(
         "    Plateau features: union=%d, intersection=%d",
         len(feature_union), len(feature_intersection),
@@ -264,6 +237,142 @@ def run_plateau_ensemble(gscv, base_pipeline_name, X_train_s2, y_train_s2,
 
     return (avg_proba, n_plateau, best_params, feature_union,
             feature_intersection, feature_frequency)
+
+
+def compute_pooled_plateau(base_pipeline_name, run_dir, log):
+    """Read all inner_cv.csv files for a base pipeline, pool scores,
+    and identify the stable plateau.
+
+    Globs across all phase directories in the run for fold_details files
+    matching the base pipeline. Pools mean_test_score across all folds
+    and repeats (typically 250 observations per combo), then applies
+    the standard plateau threshold (best_mean - best_std) with a cap
+    at MAX_PLATEAU_SIZE.
+
+    Args:
+        base_pipeline_name (str): Base pipeline name (e.g. "kw_nmc").
+        run_dir (Path): Path to the run directory.
+        log (logging.Logger): Logger instance.
+
+    Returns:
+        tuple: (plateau_params_list, n_total_combos, pooled_best_score,
+                pooled_best_std, threshold, n_files_read) where
+                plateau_params_list is a list of dicts (one per plateau
+                combo). Returns ([], 0, 0, 0, 0, 0) if no files found.
+    """
+    # Glob all inner_cv.csv files for the base pipeline across phases.
+    pattern = f"*/fold_details/{base_pipeline_name}/r*/fold*_inner_cv.csv"
+    csv_files = sorted(run_dir.glob(pattern))
+
+    if not csv_files:
+        log.warning(
+            "No inner_cv.csv files found for base pipeline '%s' in %s",
+            base_pipeline_name, run_dir,
+        )
+        return [], 0, 0.0, 0.0, 0.0, 0
+
+    # Read all files and collect mean_test_score per combo. Files with
+    # mismatched param columns or row counts are skipped (can happen
+    # when old phase directories with different grids coexist in the run).
+    all_scores = []
+    param_cols = None
+    expected_n_rows = None
+
+    # First pass: determine the most common schema (param cols + row count).
+    schema_counts = {}
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        file_param_cols = tuple(sorted(c for c in df.columns if c.startswith("param_")))
+        key = (file_param_cols, len(df))
+        schema_counts[key] = schema_counts.get(key, 0) + 1
+
+    # Use the most common schema.
+    best_schema = max(schema_counts, key=schema_counts.get)
+    param_cols = list(best_schema[0])
+    expected_n_rows = best_schema[1]
+
+    if len(schema_counts) > 1:
+        log.warning(
+            "Multiple inner_cv schemas found; using majority (%d files "
+            "with %d combos). Skipping %d files with different schemas.",
+            schema_counts[best_schema], expected_n_rows,
+            len(csv_files) - schema_counts[best_schema],
+        )
+
+    # Second pass: collect scores from matching files.
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        file_param_cols = tuple(sorted(c for c in df.columns if c.startswith("param_")))
+        if (file_param_cols, len(df)) != best_schema:
+            continue
+        all_scores.append(df["mean_test_score"].values)
+
+    n_files = len(all_scores)
+    if n_files == 0:
+        return [], 0, 0.0, 0.0, 0.0, 0
+
+    # Stack into (n_files, n_combos) matrix and pool.
+    score_matrix = np.array(all_scores)
+    pooled_mean = score_matrix.mean(axis=0)
+    pooled_std = score_matrix.std(axis=0)
+
+    n_combos = len(pooled_mean)
+    best_idx = np.argmax(pooled_mean)
+    best_score = float(pooled_mean[best_idx])
+    best_std = float(pooled_std[best_idx])
+    threshold = best_score - best_std
+
+    plateau_mask = pooled_mean >= threshold
+    plateau_indices = np.where(plateau_mask)[0]
+    # Sort by pooled score descending.
+    plateau_indices = plateau_indices[
+        np.argsort(pooled_mean[plateau_indices])[::-1]
+    ]
+
+    if len(plateau_indices) > MAX_PLATEAU_SIZE:
+        log.info(
+            "Pooled plateau capped: %d -> %d combos",
+            len(plateau_indices), MAX_PLATEAU_SIZE,
+        )
+        plateau_indices = plateau_indices[:MAX_PLATEAU_SIZE]
+
+    # Read one matching file to extract the actual param values per combo.
+    ref_df = None
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        file_param_cols = tuple(sorted(c for c in df.columns if c.startswith("param_")))
+        if (file_param_cols, len(df)) == best_schema:
+            ref_df = df
+            break
+
+    plateau_params_list = []
+    for idx in plateau_indices:
+        params = {}
+        for col in param_cols:
+            val = ref_df[col].iloc[idx]
+            param_name = col.replace("param_", "")
+            # Convert numpy types to Python native types.
+            if isinstance(val, (np.integer,)):
+                val = int(val)
+            elif isinstance(val, (np.floating,)):
+                val = float(val)
+            params[param_name] = val
+        plateau_params_list.append(params)
+
+    log.info(
+        "Pooled plateau: %d of %d combos from %d fold files "
+        "(best=%.4f, std=%.4f, threshold=%.4f)",
+        len(plateau_params_list), n_combos, n_files,
+        best_score, best_std, threshold,
+    )
+    for i, params in enumerate(plateau_params_list):
+        log.info(
+            "  Plateau combo %d: score=%.4f, params=%s",
+            i + 1, float(pooled_mean[plateau_indices[i]]), params,
+        )
+
+    return (plateau_params_list, n_combos, best_score,
+            best_std, threshold, n_files)
 
 
 def run_stage2_k_ensemble(X_train_s2, y_train_s2, X_test, feature_names,
@@ -413,7 +522,9 @@ def compute_metrics_excluding_mislabels(y_true_labels, y_pred_combined,
 def run_single_repeat(X, y, le, feature_names, sample_names,
                          stage2_pipeline_name, repeat_seed, stage2_grid,
                          config, log, ckpt_path=None, prior_folds=None,
-                         details_dir=None):
+                         details_dir=None, plateau_params=None,
+                         pooled_best_score=None, pooled_best_std=None,
+                         pooled_n_files=None):
     """Run hierarchical outer CV for one Stage 2 pipeline and one repeat (v2).
 
     Enhanced version with cost-sensitive NMC, k-ensemble/pipeline-ensemble
@@ -435,6 +546,12 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
         ckpt_path (Path or None): Checkpoint file path.
         prior_folds (list[dict] or None): Previously completed folds.
         details_dir (Path or None): Root directory for per-fold diagnostics.
+        plateau_params (list[dict] or None): Pre-computed plateau param
+            dicts for plateau ensemble pipelines. None for other pipelines.
+        pooled_best_score (float or None): Best pooled inner CV score from
+            compute_pooled_plateau(). Used as s2_best_inner for _pens folds.
+        pooled_best_std (float or None): Std of the best pooled combo.
+        pooled_n_files (int or None): Number of base fold files pooled.
 
     Returns:
         list[dict]: One dict per outer fold with hierarchical results.
@@ -523,30 +640,20 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
         is_plateau_ensemble = stage2_pipeline_name in PLATEAU_ENSEMBLE_BASE
 
         if is_plateau_ensemble:
-            # Plateau ensemble: run GridSearchCV with the base pipeline,
-            # then retrain all combos within one mean-std of the best.
+            # Pooled plateau ensemble: use pre-computed plateau params
+            # (pooled across all base pipeline folds/repeats). No
+            # GridSearchCV is run per fold - just retrain and average.
             base_name = PLATEAU_ENSEMBLE_BASE[stage2_pipeline_name]
-            base_grid = config["grids"][stage2_pipeline_name]
-            proba_s2, _, s2_cv_results, _, en_converged = (
-                run_stage2_gridsearch(
-                    X_train_s2, y_train_s2, X_test, base_name,
-                    base_grid, inner_folds, repeat_seed, config, log,
-                )
-            )
-            # Build a minimal gscv-like object to pass cv_results_.
-            class _GscvResults:
-                pass
-            gscv_holder = _GscvResults()
-            gscv_holder.cv_results_ = s2_cv_results
 
             (proba_s2, n_plateau, best_plateau_params, feat_union,
-             feat_inter, feat_freq) = run_plateau_ensemble(
-                gscv_holder, base_name, X_train_s2, y_train_s2,
+             feat_inter, feat_freq) = retrain_plateau_models(
+                plateau_params, base_name, X_train_s2, y_train_s2,
                 X_test, repeat_seed, config, feature_names, log,
             )
             s2_best_params = {
-                "ensemble": "plateau",
+                "ensemble": "plateau_pooled",
                 "n_plateau": n_plateau,
+                "n_files_pooled": pooled_n_files,
                 "best": best_plateau_params,
             }
             s2_n_features = len(feat_union)
@@ -554,12 +661,9 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
             pens_n_features_intersection = len(feat_inter)
             pens_feature_frequency = feat_freq
 
-            # Extract inner CV score for the best configuration.
-            gscv_mean_scores = s2_cv_results["mean_test_score"]
-            gscv_std_scores = s2_cv_results["std_test_score"]
-            best_gscv_idx = np.argmax(gscv_mean_scores)
-            s2_best_inner = float(gscv_mean_scores[best_gscv_idx])
-            s2_best_inner_std = float(gscv_std_scores[best_gscv_idx])
+            # Use the pooled best score/std since no per-fold inner CV.
+            s2_best_inner = pooled_best_score
+            s2_best_inner_std = pooled_best_std
 
         elif stage2_pipeline_name in GRIDSEARCH_PIPELINES:
             # Standard GridSearchCV path.
@@ -767,9 +871,10 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
                 df_en = df_en[[c for c in keep if c in df_en.columns]]
                 df_en.to_csv(en_fold_path, index=False)
 
-            elif is_plateau_ensemble and s2_cv_results is not None:
-                # Save inner CV results for the plateau ensemble.
-                save_inner_cv_results(fold_dir, fold_idx, s2_cv_results)
+            elif is_plateau_ensemble:
+                # Pooled plateau: no per-fold inner CV to save. The
+                # plateau was computed once from base pipeline results.
+                pass
 
         log.info(
             "  Fold %d: s1=%.4f (t=%.2f)  s2=%.4f  combined=%.4f  "
@@ -953,6 +1058,28 @@ def main():
     # Per-fold diagnostic output directory.
     details_dir = run_dir / "hierarchical_nested_cv" / "fold_details"
 
+    # For plateau ensembles, compute the pooled plateau from base pipeline
+    # results before the fold loop. This gives a single stable plateau
+    # used identically for every fold/repeat.
+    plateau_params = None
+    pooled_best_score = None
+    pooled_best_std = None
+    pooled_n_files = None
+
+    if args.pipeline in PLATEAU_ENSEMBLE_BASE:
+        base_name = PLATEAU_ENSEMBLE_BASE[args.pipeline]
+        (plateau_params, n_combos, pooled_best_score,
+         pooled_best_std, threshold, pooled_n_files) = (
+            compute_pooled_plateau(base_name, run_dir, log)
+        )
+        if not plateau_params:
+            log.error(
+                "No base pipeline inner_cv files found for '%s'. "
+                "Run the base pipeline (%s) first.",
+                args.pipeline, base_name,
+            )
+            sys.exit(1)
+
     # Run hierarchical nested CV.
     job_start = time.perf_counter()
 
@@ -962,6 +1089,10 @@ def main():
         stage2_grid, config, log,
         ckpt_path=ckpt, prior_folds=prior_folds,
         details_dir=details_dir,
+        plateau_params=plateau_params,
+        pooled_best_score=pooled_best_score,
+        pooled_best_std=pooled_best_std,
+        pooled_n_files=pooled_n_files,
     )
 
     job_elapsed = time.perf_counter() - job_start

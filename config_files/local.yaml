@@ -49,15 +49,8 @@ grids:
   standalone_en:
     clf__C: [0.001, 0.01, 0.1, 1.0, 10.0]
     clf__l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
-  kw_nmc_pens:
-    selector__k: [5, 20]
-  standalone_en_pens:
-    clf__C: [0.001, 0.01, 0.1, 1.0, 10.0]
-    clf__l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
-  en_nmc_pens:
-    selector__C: [0.01, 0.1, 1.0, 10.0]
-    selector__l1_ratio: [0.1, 0.5, 0.9]
-    selector__top_k: [5, 20]
+  # Plateau ensemble pipelines (_pens) have no grids of their own.
+  # They pool inner CV results from their base pipeline's completed folds.
 
 preprocessing:
   merge_threshold: 0.8

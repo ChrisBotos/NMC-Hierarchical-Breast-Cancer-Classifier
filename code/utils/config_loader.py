@@ -75,13 +75,17 @@ def load_config(config_path=None):
 def get_grids(config):
     """Extract hyperparameter grids from a loaded config.
 
+    Returns the grids dict from config. Plateau ensemble pipelines
+    (_pens) are not expected to have grid entries because they pool
+    results from their base pipeline's inner CV instead.
+
     Args:
         config (dict): Loaded configuration dictionary.
 
     Returns:
         dict: Pipeline name to param_grid mapping.
     """
-    return config["grids"]
+    return config.get("grids", {})
 
 
 def get_pipeline_names(config):
