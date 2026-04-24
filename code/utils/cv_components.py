@@ -59,7 +59,11 @@ class KruskalWallisSelector(BaseEstimator, TransformerMixin):
 
         for i in range(n_features):
             groups = [X[y == cls, i] for cls in unique_classes]
-            stat, _ = kruskal(*groups)
+            try:
+                stat, _ = kruskal(*groups)
+            except ValueError:
+                # All values identical across groups; no discriminative power.
+                stat = 0.0
             scores[i] = stat
 
         self.scores_ = scores
