@@ -4,6 +4,7 @@ All paths are derived from the location of this file so scripts work
 from any working directory.
 """
 
+import fcntl
 import json
 import shutil
 import sys
@@ -131,7 +132,8 @@ def save_config(run_dir, script_name, **kwargs):
 
     Merges new entries into an existing config.json if present. Each
     entry is keyed by script_name with a timestamp and any extra
-    keyword arguments.
+    keyword arguments. Uses file locking to prevent corruption when
+    multiple concurrent jobs write to the same config.json.
 
     Args:
         run_dir (Path): The run root directory.
@@ -139,18 +141,22 @@ def save_config(run_dir, script_name, **kwargs):
         **kwargs: Arbitrary parameters to record (e.g. pipeline, repeat, config).
     """
     config_path = run_dir / "config.json"
+    lock_path = run_dir / ".config.json.lock"
 
-    if config_path.exists():
-        with open(config_path) as f:
-            config = json.load(f)
-    else:
-        config = {}
+    with open(lock_path, "w") as lock_f:
+        fcntl.flock(lock_f, fcntl.LOCK_EX)
 
-    config[script_name] = {
-        "timestamp": datetime.now().isoformat(),
-        "command": " ".join(sys.argv),
-        **kwargs,
-    }
+        if config_path.exists():
+            with open(config_path) as f:
+                config = json.load(f)
+        else:
+            config = {}
 
-    with open(config_path, "w") as f:
-        json.dump(config, f, indent=2, default=str)
+        config[script_name] = {
+            "timestamp": datetime.now().isoformat(),
+            "command": " ".join(sys.argv),
+            **kwargs,
+        }
+
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2, default=str)

@@ -10,25 +10,24 @@ Affiliation: Computer Science and Bioinformatics Master's Programmes.
 Script Name: hierarchical_nested_cv_runner.py.
 Description:
     Hierarchical nested cross-validation runner. Uses cost-sensitive NMC
-    (class_weight='balanced' via log-weight bias) and supports k-ensemble
-    and pipeline-ensemble variants.
+    (class_weight='balanced' via log-weight bias) and supports post-hoc
+    ensemble and plateau ensemble variants.
 
-    Supports 11 pipeline variants for Stage 2: 4 base pipelines with
-    cost-sensitive NMC, k-ensemble averaging over fixed k values,
-    a pipeline ensemble (KW k-ensemble + EN+NMC), k-grid (restricted
-    k set with GridSearchCV), standalone EN, and 3 plateau ensemble
-    variants that pool inner CV scores from base pipelines to identify
-    a stable set of hyperparameter combos for averaging.
+    Supports 10 pipeline variants for Stage 2: 4 base pipelines (kw_nmc,
+    en_nmc, kw_rf, en_rf), standalone EN, 3 plateau ensemble variants
+    that pool inner CV scores to identify stable hyperparameter combos,
+    and 2 post-hoc ensembles that average 3-class probabilities from
+    completed component pipeline results.
 
     Each invocation runs one Stage 2 pipeline for one repeat seed. Jobs
-    can be parallelized via SLURM array (11 pipelines x 50 repeats = 550).
+    can be parallelized via SLURM array (10 pipelines x 100 repeats = 1000).
     Supports fold-level checkpointing for crash recovery. Computes metrics
     with and without suspected mislabel samples for sensitivity analysis.
 
 Usage:
-    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc --repeat 1 --config local
-    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc_kens --repeat 3 --config server
-    python3 code/hierarchical_nested_cv_runner.py --pipeline nmc_ensemble --repeat 1 --config local
+    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc --repeat 1001 --config local
+    python3 code/hierarchical_nested_cv_runner.py --pipeline nmc_ensemble --repeat 1001 --config local
+    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc_pens --repeat 1001 --config server
 
 Dependencies:
     Python >= 3.10.
@@ -63,6 +62,7 @@ from utils.config_loader import get_grids, load_config
 from utils.constants import (
     MAX_PLATEAU_SIZE,
     PLATEAU_ENSEMBLE_BASE,
+    POSTHOC_ENSEMBLE_COMPONENTS,
     GRIDSEARCH_PIPELINES,
     PIPELINE_NAMES,
 )
@@ -352,7 +352,10 @@ def compute_pooled_plateau(base_pipeline_name, run_dir, log):
             val = ref_df[col].iloc[idx]
             param_name = col.replace("param_", "")
             # Convert numpy types to Python native types.
-            if isinstance(val, (np.integer,)):
+            # NaN in CSV represents None (e.g. shrink_threshold=None).
+            if isinstance(val, float) and np.isnan(val):
+                val = None
+            elif isinstance(val, (np.integer,)):
                 val = int(val)
             elif isinstance(val, (np.floating,)):
                 val = float(val)
@@ -373,116 +376,6 @@ def compute_pooled_plateau(base_pipeline_name, run_dir, log):
 
     return (plateau_params_list, n_combos, best_score,
             best_std, threshold, n_files)
-
-
-def run_stage2_k_ensemble(X_train_s2, y_train_s2, X_test, feature_names,
-                          k_values, repeat_seed, config, log):
-    """Run Stage 2 k-ensemble: average probabilities over multiple k values.
-
-    Fits a KW+NMC pipeline (with cost-sensitive class_weight) for each k
-    in k_values, then averages predict_proba across all k pipelines.
-
-    Args:
-        X_train_s2 (np.ndarray): Stage 2 training features.
-        y_train_s2 (np.ndarray): Binary labels (0=HR+, 1=TN).
-        X_test (np.ndarray): Full test set features.
-        feature_names (list[str]): Region name strings.
-        k_values (list[int]): K values for the ensemble.
-        repeat_seed (int): Random seed.
-        config (dict): Loaded configuration dictionary.
-        log (logging.Logger): Logger instance.
-
-    Returns:
-        tuple: (avg_proba, per_k_info) where avg_proba is shape (n_test, 2)
-            and per_k_info is a list of dicts with per-k details.
-    """
-    nmc_class_weight = None
-    if config and "pipelines" in config:
-        nmc_class_weight = config["pipelines"].get("nmc_class_weight", None)
-
-    all_proba = []
-    per_k_info = []
-
-    for k in k_values:
-        pipe = Pipeline([
-            ("scaler", StandardScaler()),
-            ("selector", KruskalWallisSelector(k=k)),
-            ("clf", NearestCentroidWithProba(class_weight=nmc_class_weight)),
-        ])
-        pipe.fit(X_train_s2, y_train_s2)
-        proba = pipe.predict_proba(X_test)
-        all_proba.append(proba)
-
-        selector = pipe.named_steps["selector"]
-        selected_features = [feature_names[i] for i in selector.indices_]
-
-        per_k_info.append({
-            "k": k,
-            "n_features": len(selector.indices_),
-            "selected_features": ",".join(selected_features),
-            "mean_max_prob": float(np.mean(np.max(proba, axis=1))),
-        })
-        log.info(
-            "      k=%d: mean_max_prob=%.4f",
-            k, per_k_info[-1]["mean_max_prob"],
-        )
-
-    avg_proba = np.mean(all_proba, axis=0)
-    return avg_proba, per_k_info
-
-
-def run_stage2_pipeline_ensemble(X_train_s2, y_train_s2, X_test, feature_names,
-                                 k_values, en_grid, inner_folds, repeat_seed,
-                                 config, log):
-    """Run Stage 2 pipeline ensemble: average k-ensemble and EN+NMC proba.
-
-    Runs the k-ensemble (KW+NMC over multiple k values) and EN+NMC
-    GridSearchCV independently, then averages their probabilities.
-
-    Args:
-        X_train_s2 (np.ndarray): Stage 2 training features.
-        y_train_s2 (np.ndarray): Binary labels (0=HR+, 1=TN).
-        X_test (np.ndarray): Full test set features.
-        feature_names (list[str]): Region name strings.
-        k_values (list[int]): K values for the k-ensemble component.
-        en_grid (dict): Hyperparameter grid for EN+NMC GridSearchCV.
-        inner_folds (int): Number of inner CV folds.
-        repeat_seed (int): Random seed.
-        config (dict): Loaded configuration dictionary.
-        log (logging.Logger): Logger instance.
-
-    Returns:
-        tuple: (avg_proba, kens_proba, en_proba, kens_info, en_cv_results,
-                en_best_params, en_converged) with all component details.
-    """
-    # Component 1: k-ensemble.
-    log.info("    Pipeline ensemble component 1: KW k-ensemble")
-    kens_proba, kens_info = run_stage2_k_ensemble(
-        X_train_s2, y_train_s2, X_test, feature_names,
-        k_values, repeat_seed, config, log,
-    )
-
-    # Component 2: EN+NMC GridSearchCV.
-    log.info("    Pipeline ensemble component 2: EN+NMC GridSearchCV")
-    en_proba, en_best, en_cv_results, en_best_params, en_converged = run_stage2_gridsearch(
-        X_train_s2, y_train_s2, X_test, "en_nmc",
-        en_grid, inner_folds, repeat_seed, config, log,
-    )
-
-    # Average probabilities from both components.
-    avg_proba = (kens_proba + en_proba) / 2.0
-
-    # Log probability scale comparison.
-    kens_mean_max = float(np.mean(np.max(kens_proba, axis=1)))
-    en_mean_max = float(np.mean(np.max(en_proba, axis=1)))
-    log.info(
-        "    Ensemble mean_max_prob: kens=%.4f, en=%.4f, ratio=%.2f",
-        kens_mean_max, en_mean_max,
-        kens_mean_max / en_mean_max if en_mean_max > 0 else float("inf"),
-    )
-
-    return (avg_proba, kens_proba, en_proba, kens_info,
-            en_cv_results, en_best_params, en_converged)
 
 
 """Mislabel Sensitivity Helpers"""
@@ -516,6 +409,222 @@ def compute_metrics_excluding_mislabels(y_true_labels, y_pred_combined,
     return round(ba_excl, 6), n_excluded
 
 
+"""Post-hoc Ensemble"""
+
+
+def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
+                         config, log, out_csv):
+    """Average 3-class probabilities from completed component pipeline folds.
+
+    Reads fold_results CSVs for each component pipeline (same repeat seed),
+    averages their proba_combined arrays per fold, and recomputes all metrics
+    from the averaged probabilities. This avoids re-running any models.
+
+    Args:
+        ensemble_name (str): Name of the ensemble pipeline (e.g.
+            "nmc_ensemble", "nmc_pens_ensemble").
+        component_names (tuple[str]): Names of the component pipelines
+            whose fold results to average.
+        data_dir (Path): Directory containing fold_results CSVs.
+        repeat_seed (int): Repeat seed matching the component CSVs.
+        config (dict): Loaded configuration dictionary.
+        log (logging.Logger): Logger instance.
+        out_csv (Path): Output path for the ensemble fold results CSV.
+    """
+    from utils.cv_io import csv_path
+
+    # Mislabel indices for sensitivity analysis.
+    mislabel_cfg = config.get("suspected_mislabels", {})
+    mislabel_indices = mislabel_cfg.get("indices", [])
+    outer_folds = config["cv"].get("outer_folds", 5)
+
+    # Load component fold results.
+    component_dfs = []
+    for comp_name in component_names:
+        comp_csv = csv_path(data_dir, comp_name, repeat_seed)
+        if not comp_csv.exists():
+            log.error(
+                "Component '%s' results not found: %s. "
+                "Run the component pipeline first.",
+                comp_name, comp_csv,
+            )
+            sys.exit(1)
+        comp_df = pd.read_csv(comp_csv)
+        component_dfs.append((comp_name, comp_df))
+        log.info("Loaded component: %s (%d rows)", comp_name, len(comp_df))
+
+    # Discover the class ordering from the first component's y_true column.
+    # The proba_combined columns follow the LabelEncoder's alphabetical order.
+    sample_true = component_dfs[0][1].iloc[0]["y_true"].split(",")
+    observed_classes = sorted(set(sample_true))
+    assert observed_classes == ["HER2+", "HR+", "Triple Neg"], (
+        f"Unexpected class ordering: {observed_classes}. "
+        "Expected ['HER2+', 'HR+', 'Triple Neg']."
+    )
+    # Class indices: HER2+=0, HR+=1, Triple Neg=2 (alphabetical).
+    class_names = np.array(observed_classes)
+
+    fold_results = []
+
+    for fold_idx in range(1, outer_folds + 1):
+        fold_start = time.perf_counter()
+
+        # Get matching rows from each component.
+        comp_rows = []
+        for comp_name, comp_df in component_dfs:
+            matching = comp_df[comp_df["outer_fold"] == fold_idx]
+            if len(matching) != 1:
+                log.error(
+                    "Expected 1 row for %s fold %d, got %d.",
+                    comp_name, fold_idx, len(matching),
+                )
+                sys.exit(1)
+            comp_rows.append(matching.iloc[0])
+
+        # Verify test_indices and y_true are identical across components.
+        ref_test_indices = comp_rows[0]["test_indices"]
+        ref_y_true = comp_rows[0]["y_true"]
+        for i, row in enumerate(comp_rows[1:], 1):
+            assert row["test_indices"] == ref_test_indices, (
+                f"test_indices mismatch between {component_names[0]} and "
+                f"{component_names[i]} at fold {fold_idx}."
+            )
+            assert row["y_true"] == ref_y_true, (
+                f"y_true mismatch between {component_names[0]} and "
+                f"{component_names[i]} at fold {fold_idx}."
+            )
+
+        # Parse and average proba_combined arrays.
+        proba_list = [
+            np.array(json.loads(row["proba_combined"])) for row in comp_rows
+        ]
+        avg_proba = np.mean(proba_list, axis=0)
+
+        # Compute predictions from averaged probabilities.
+        y_pred_idx = np.argmax(avg_proba, axis=1)
+        y_pred_combined = class_names[y_pred_idx]
+        y_true_labels = np.array(ref_y_true.split(","))
+
+        # Combined 3-class balanced accuracy.
+        combined_bal_acc = balanced_accuracy_score(y_true_labels, y_pred_combined)
+
+        # Stage 2 balanced accuracy (HR+ vs TN only).
+        mask_hrt = np.isin(y_true_labels, ["HR+", "Triple Neg"])
+        if mask_hrt.any():
+            y_true_s2 = y_true_labels[mask_hrt]
+            y_pred_s2 = y_pred_combined[mask_hrt]
+            stage2_bal_acc = balanced_accuracy_score(y_true_s2, y_pred_s2)
+        else:
+            stage2_bal_acc = float("nan")
+
+        # AUROC via averaged 3-class probabilities.
+        # Encode y_true as integers matching class_names order.
+        y_true_int = np.array([
+            list(class_names).index(label) for label in y_true_labels
+        ])
+        auroc = roc_auc_score(
+            y_true_int, avg_proba, multi_class="ovr", average="macro",
+        )
+
+        # Mislabel sensitivity analysis.
+        test_idx = np.array([int(x) for x in ref_test_indices.split(",")])
+        if mislabel_indices:
+            combined_ba_excl, n_excluded = compute_metrics_excluding_mislabels(
+                y_true_labels, y_pred_combined, test_idx, mislabel_indices,
+            )
+            if mask_hrt.any():
+                test_idx_hrt = test_idx[mask_hrt]
+                s2_ba_excl, _ = compute_metrics_excluding_mislabels(
+                    y_true_s2, y_pred_s2, test_idx_hrt, mislabel_indices,
+                )
+            else:
+                s2_ba_excl = float("nan")
+        else:
+            combined_ba_excl = float("nan")
+            s2_ba_excl = float("nan")
+            n_excluded = 0
+
+        # Average Stage 1 metrics from components (identical since Stage 1 is fixed).
+        stage1_bal_acc = float(comp_rows[0]["stage1_bal_acc"])
+        stage1_threshold = float(comp_rows[0]["stage1_threshold"])
+        s1_n_features = int(comp_rows[0]["stage1_n_features"])
+        s1_features = comp_rows[0]["stage1_features"]
+
+        fold_elapsed = time.perf_counter() - fold_start
+
+        fold_row = {
+            "stage2_pipeline": ensemble_name,
+            "repeat": repeat_seed,
+            "outer_fold": fold_idx,
+            "stage1_bal_acc": round(stage1_bal_acc, 6),
+            "stage1_threshold": round(stage1_threshold, 4),
+            "stage2_bal_acc": round(stage2_bal_acc, 6),
+            "combined_bal_acc": round(combined_bal_acc, 6),
+            "auroc_macro": round(auroc, 6),
+            "stage2_best_inner": None,
+            "stage2_best_inner_std": None,
+            "stage2_best_params": json.dumps({
+                "ensemble": "posthoc_avg",
+                "components": list(component_names),
+            }),
+            "stage1_n_features": s1_n_features,
+            "stage2_n_features": 0,
+            "stage1_features": s1_features,
+            "stage2_features": "",
+            "stage2_n_features_intersection": None,
+            "stage2_feature_frequency": None,
+            "n_test": len(y_true_labels),
+            "n_train_s2": int(comp_rows[0].get("n_train_s2", 0)),
+            "n_routed_to_s2": int((y_pred_combined != "HER2+").sum()),
+            "combined_bal_acc_excl": (
+                round(combined_ba_excl, 6)
+                if not np.isnan(combined_ba_excl) else None
+            ),
+            "stage2_bal_acc_excl": (
+                round(s2_ba_excl, 6)
+                if not np.isnan(s2_ba_excl) else None
+            ),
+            "n_excluded": n_excluded,
+            "en_converged": None,
+            "test_indices": ref_test_indices,
+            "y_true": ref_y_true,
+            "y_pred": ",".join(y_pred_combined.tolist()),
+            "proba_combined": json.dumps(
+                np.round(avg_proba, 6).tolist(),
+            ),
+            "fold_seconds": round(fold_elapsed, 1),
+        }
+        fold_results.append(fold_row)
+
+        log.info(
+            "  Fold %d: combined=%.4f  s2=%.4f  auroc=%.4f  (%.1fs)",
+            fold_idx, combined_bal_acc, stage2_bal_acc, auroc, fold_elapsed,
+        )
+
+    # Save fold results.
+    results_df = pd.DataFrame(fold_results)
+    results_df.to_csv(out_csv, index=False)
+    log.info("Ensemble fold results saved to %s", out_csv)
+
+    # Summary.
+    combined_scores = [r["combined_bal_acc"] for r in fold_results]
+    s2_scores = [r["stage2_bal_acc"] for r in fold_results]
+    log.info(
+        "Summary for %s repeat %d:",
+        ensemble_name, repeat_seed,
+    )
+    log.info(
+        "  Combined (3-class): %.4f (+/- %.4f)",
+        np.mean(combined_scores), np.std(combined_scores),
+    )
+    log.info(
+        "  Stage 2 (HR+ vs TN): %.4f (+/- %.4f)",
+        np.nanmean(s2_scores), np.nanstd(s2_scores),
+    )
+
+    return fold_results
+
+
 """Hierarchical Nested CV Runner"""
 
 
@@ -525,7 +634,7 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
                          details_dir=None, plateau_params=None,
                          pooled_best_score=None, pooled_best_std=None,
                          pooled_n_files=None):
-    """Run hierarchical outer CV for one Stage 2 pipeline and one repeat (v2).
+    """Run hierarchical outer CV for one Stage 2 pipeline and one repeat.
 
     Enhanced version with cost-sensitive NMC, k-ensemble/pipeline-ensemble
     dispatch, and mislabel sensitivity analysis. Stage 1 uses a fixed
@@ -566,10 +675,6 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
     # permissive thresholds (0.10-0.20) due to a tie-breaking artifact,
     # causing ~31 misroutings per run with no offsetting benefit.
 
-    # K-ensemble parameters.
-    kens_cfg = config.get("k_ensemble", {})
-    k_values = kens_cfg.get("k_values", [15, 20, 30, 50])
-
     # Mislabel indices for sensitivity analysis.
     mislabel_cfg = config.get("suspected_mislabels", {})
     mislabel_indices = mislabel_cfg.get("indices", [])
@@ -595,7 +700,7 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
     for fold_idx, (train_idx, test_idx) in track(
         enumerate(outer_cv.split(X, y), start=1),
         total=outer_folds,
-        description=f"  v2_{stage2_pipeline_name} r{repeat_seed}",
+        description=f"  {stage2_pipeline_name} r{repeat_seed}",
     ):
         # Skip folds already completed in the checkpoint.
         if fold_idx <= n_completed:
@@ -681,26 +786,6 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
             best_idx = np.argmax(gscv_mean_scores)
             s2_best_inner = float(gscv_mean_scores[best_idx])
             s2_best_inner_std = float(gscv_std_scores[best_idx])
-
-        elif stage2_pipeline_name == "kw_nmc_kens":
-            # K-ensemble path.
-            proba_s2, per_k_info = run_stage2_k_ensemble(
-                X_train_s2, y_train_s2, X_test, feature_names,
-                k_values, repeat_seed, config, log,
-            )
-
-        elif stage2_pipeline_name == "nmc_ensemble":
-            # Pipeline ensemble path (k-ensemble + EN+NMC).
-            en_grid = config["grids"]["en_nmc"]
-            (proba_s2, kens_proba, en_proba, kens_info,
-             en_cv_results_ens, en_best_params_ens, en_converged) = (
-                run_stage2_pipeline_ensemble(
-                    X_train_s2, y_train_s2, X_test, feature_names,
-                    k_values, en_grid, inner_folds, repeat_seed, config, log,
-                )
-            )
-            s2_best_params = {"ensemble": "kens+en_nmc"}
-            s2_cv_results = en_cv_results_ens
 
         if not is_plateau_ensemble:
             s2_n_features = len(s2_selector.indices_) if s2_selector else 0
@@ -997,6 +1082,29 @@ def main():
         )
         return
 
+    # Post-hoc ensemble pipelines read from completed component results.
+    # They do not need to load training data or run any models.
+    if args.pipeline in POSTHOC_ENSEMBLE_COMPONENTS:
+        component_names = POSTHOC_ENSEMBLE_COMPONENTS[args.pipeline]
+        log.info(
+            "Post-hoc ensemble: averaging %s components %s",
+            args.pipeline, component_names,
+        )
+        job_start = time.perf_counter()
+        run_posthoc_ensemble(
+            args.pipeline, component_names, data_dir, args.repeat,
+            config, log, out_csv,
+        )
+        job_elapsed = time.perf_counter() - job_start
+        log.info("Total time: %.1fs", job_elapsed)
+        save_config(
+            run_dir, "hierarchical_nested_cv_runner",
+            stage2_pipeline=args.pipeline,
+            repeat=args.repeat,
+            config_file=config["_config_path"],
+        )
+        return
+
     # Checkpoint handling.
     ckpt = checkpoint_path(data_dir, args.pipeline, args.repeat)
     prior_folds = []
@@ -1103,7 +1211,7 @@ def main():
     combined_scores = [r["combined_bal_acc"] for r in fold_results]
 
     log.info("")
-    log.info("Summary for v2_%s repeat %d:", args.pipeline, args.repeat)
+    log.info("Summary for %s repeat %d:", args.pipeline, args.repeat)
     log.info(
         "  Stage 1 (HER2+ vs rest):  %.4f (+/- %.4f)",
         np.mean(s1_scores), np.std(s1_scores),

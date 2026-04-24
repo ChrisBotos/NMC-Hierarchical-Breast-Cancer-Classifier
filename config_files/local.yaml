@@ -1,14 +1,15 @@
-# Local v2 configuration for quick testing of hierarchical nested CV v2.
-# Small grids and 3 repeats for laptop feedback.
+# Local configuration for quick testing of hierarchical nested CV.
+# Small grids and 3 repeats for laptop smoke tests.
 
 cv:
   n_repeats: 3
+  seed_start: 1001
   outer_folds: 5
   inner_folds: 5
   scoring: balanced_accuracy
 
 pipelines:
-  names: [kw_nmc, en_nmc, kw_rf, en_rf, kw_nmc_kens, nmc_ensemble, kw_nmc_kgrid, standalone_en, kw_nmc_pens, standalone_en_pens, en_nmc_pens]
+  names: [kw_nmc, en_nmc, kw_rf, en_rf, standalone_en, nmc_ensemble, kw_nmc_pens, standalone_en_pens, en_nmc_pens, nmc_pens_ensemble]
   rf_n_estimators: 500
   rf_class_weight: balanced
   nmc_class_weight: balanced
@@ -18,18 +19,15 @@ stage1:
   threshold_range: [0.3, 0.5, 0.7]
   inner_folds: 5
 
-# K-ensemble parameters (pipelines kw_nmc_kens and nmc_ensemble).
-k_ensemble:
-  k_values: [15, 20, 30, 50]
-
 # Suspected mislabel samples for sensitivity analysis.
 suspected_mislabels:
-  indices: [2, 4]
-  names: ["Array.67", "Array.22"]
+  indices: [2, 4, 45]
+  names: ["Array.67", "Array.22", "Array.113"]
 
 grids:
   kw_nmc:
     selector__k: [5, 20]
+    clf__shrink_threshold: [null, 0.2]
   kw_rf:
     selector__k: [5, 20]
     clf__max_features: ["sqrt", "log2"]
@@ -38,19 +36,20 @@ grids:
     selector__C: [0.01, 0.1, 1.0, 10.0]
     selector__l1_ratio: [0.1, 0.5, 0.9]
     selector__top_k: [5, 20]
+    clf__shrink_threshold: [null, 0.2]
   en_rf:
     selector__C: [0.01, 0.1, 1.0, 10.0]
     selector__l1_ratio: [0.1, 0.5, 0.9]
     selector__top_k: [5, 20]
     clf__max_features: ["sqrt", "log2"]
     clf__min_samples_leaf: [1, 2]
-  kw_nmc_kgrid:
-    selector__k: [15, 20, 30, 50]
   standalone_en:
     clf__C: [0.001, 0.01, 0.1, 1.0, 10.0]
     clf__l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
   # Plateau ensemble pipelines (_pens) have no grids of their own.
   # They pool inner CV results from their base pipeline's completed folds.
+  # Post-hoc ensemble pipelines (nmc_ensemble, nmc_pens_ensemble) have no grids.
+  # They average 3-class probabilities from completed component fold results.
 
 preprocessing:
   merge_threshold: 0.8

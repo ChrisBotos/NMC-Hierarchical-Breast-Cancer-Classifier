@@ -1,0 +1,348 @@
+Run directory: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2
+Reading fold results from: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv/data
+Found 550 fold result files.
+Renamed hierarchical columns to standard analysis names.
+Aggregated 2750 fold rows across 11 pipelines and 50 repeats.
+Pipeline ordering: ['kw_nmc', 'en_nmc', 'kw_rf', 'en_rf', 'kw_nmc_kens', 'nmc_ensemble', 'kw_nmc_kgrid', 'standalone_en', 'kw_nmc_pens', 'standalone_en_pens', 'en_nmc_pens']
+Saved aggregated fold results: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/data/all_fold_results.csv
+Computed per-repeat means for 550 pipeline-repeat pairs.
+Hierarchical mode detected: using BA2 (stage2_bal_acc) as primary metric.
+Summary statistics (primary metric: stage2_bal_acc):
+  EN + NMC (plateau): mean=0.7511 +/- 0.0340, median=0.7583, n_repeats=50
+  KW + NMC (k-ens): mean=0.7451 +/- 0.0449, median=0.7512, n_repeats=50
+  NMC Ensemble: mean=0.7420 +/- 0.0398, median=0.7482, n_repeats=50
+  KW + NMC (plateau): mean=0.7390 +/- 0.0464, median=0.7461, n_repeats=50
+  EN (plateau): mean=0.7344 +/- 0.0266, median=0.7390, n_repeats=50
+  KW + NMC (k-grid): mean=0.7332 +/- 0.0486, median=0.7348, n_repeats=50
+  Standalone EN: mean=0.7297 +/- 0.0343, median=0.7310, n_repeats=50
+  KW + NMC: mean=0.7282 +/- 0.0485, median=0.7324, n_repeats=50
+  EN + NMC: mean=0.7238 +/- 0.0414, median=0.7312, n_repeats=50
+  KW + RF: mean=0.7136 +/- 0.0376, median=0.7164, n_repeats=50
+  EN + RF: mean=0.6871 +/- 0.0445, median=0.6905, n_repeats=50
+Combined 3-class BA (for reference, not used for p-values):
+  EN + NMC (plateau): BA2=0.7511, combined_BA=0.8341
+  KW + NMC (k-ens): BA2=0.7451, combined_BA=0.8301
+  NMC Ensemble: BA2=0.7420, combined_BA=0.8280
+  KW + NMC (plateau): BA2=0.7390, combined_BA=0.8260
+  EN (plateau): BA2=0.7344, combined_BA=0.8230
+  KW + NMC (k-grid): BA2=0.7332, combined_BA=0.8222
+  Standalone EN: BA2=0.7297, combined_BA=0.8198
+  KW + NMC: BA2=0.7282, combined_BA=0.8188
+  EN + NMC: BA2=0.7238, combined_BA=0.8158
+  KW + RF: BA2=0.7136, combined_BA=0.8091
+  EN + RF: BA2=0.6871, combined_BA=0.7914
+Saved combined BA summary: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/data/summary_statistics_combined_ba.csv
+Saved primary summary statistics: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/data/summary_statistics.csv
+=== Mislabel Exclusion Sensitivity Analysis (metric: stage2_bal_acc_excl) ===
+  EN + NMC (plateau): excl=0.7741 +/- 0.1096 (incl=0.7511, delta=+0.0230)
+  KW + NMC (k-ens): excl=0.7676 +/- 0.1180 (incl=0.7451, delta=+0.0225)
+  NMC Ensemble: excl=0.7649 +/- 0.1118 (incl=0.7420, delta=+0.0229)
+  KW + NMC (plateau): excl=0.7611 +/- 0.1186 (incl=0.7390, delta=+0.0221)
+  EN (plateau): excl=0.7563 +/- 0.1076 (incl=0.7344, delta=+0.0218)
+  KW + NMC (k-grid): excl=0.7547 +/- 0.1172 (incl=0.7332, delta=+0.0215)
+  Standalone EN: excl=0.7511 +/- 0.1138 (incl=0.7297, delta=+0.0214)
+  KW + NMC: excl=0.7495 +/- 0.1221 (incl=0.7282, delta=+0.0213)
+  EN + NMC: excl=0.7451 +/- 0.1153 (incl=0.7238, delta=+0.0213)
+  KW + RF: excl=0.7347 +/- 0.1158 (incl=0.7136, delta=+0.0211)
+  EN + RF: excl=0.7065 +/- 0.1250 (incl=0.6871, delta=+0.0194)
+Saved mislabel exclusion summary: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/data/sensitivity_mislabel_exclusion.csv
+Friedman test: chi2=99.1362, p=0.000000
+  kw_nmc vs en_nmc: W=588.5, p=0.811310, p_corrected=1.000000 
+  kw_nmc vs kw_rf: W=430.0, p=0.045169, p_corrected=1.000000 
+  kw_nmc vs en_rf: W=183.0, p=0.000019, p_corrected=0.001064 *
+  kw_nmc vs kw_nmc_kens: W=247.0, p=0.001342, p_corrected=0.073836 
+  kw_nmc vs nmc_ensemble: W=311.0, p=0.002707, p_corrected=0.148905 
+  kw_nmc vs kw_nmc_kgrid: W=113.0, p=0.067786, p_corrected=1.000000 
+  kw_nmc vs standalone_en: W=637.0, p=1.000000, p_corrected=1.000000 
+  kw_nmc vs kw_nmc_pens: W=385.5, p=0.037800, p_corrected=1.000000 
+  kw_nmc vs standalone_en_pens: W=566.0, p=0.490052, p_corrected=1.000000 
+  kw_nmc vs en_nmc_pens: W=280.0, p=0.000941, p_corrected=0.051766 
+  en_nmc vs kw_rf: W=501.5, p=0.189230, p_corrected=1.000000 
+  en_nmc vs en_rf: W=227.5, p=0.000076, p_corrected=0.004158 *
+  en_nmc vs kw_nmc_kens: W=364.5, p=0.008404, p_corrected=0.462243 
+  en_nmc vs nmc_ensemble: W=229.0, p=0.000666, p_corrected=0.036607 *
+  en_nmc vs kw_nmc_kgrid: W=517.0, p=0.244732, p_corrected=1.000000 
+  en_nmc vs standalone_en: W=599.5, p=0.713745, p_corrected=1.000000 
+  en_nmc vs kw_nmc_pens: W=464.0, p=0.093963, p_corrected=1.000000 
+  en_nmc vs standalone_en_pens: W=459.0, p=0.126783, p_corrected=1.000000 
+  en_nmc vs en_nmc_pens: W=170.0, p=0.000011, p_corrected=0.000591 *
+  kw_rf vs en_rf: W=304.0, p=0.002149, p_corrected=0.118222 
+  kw_rf vs kw_nmc_kens: W=202.5, p=0.000045, p_corrected=0.002493 *
+  kw_rf vs nmc_ensemble: W=239.0, p=0.000120, p_corrected=0.006579 *
+  kw_rf vs kw_nmc_kgrid: W=360.5, p=0.007495, p_corrected=0.412252 
+  kw_rf vs standalone_en: W=361.0, p=0.006941, p_corrected=0.381776 
+  kw_rf vs kw_nmc_pens: W=290.0, p=0.001336, p_corrected=0.073493 
+  kw_rf vs standalone_en_pens: W=329.5, p=0.002947, p_corrected=0.162077 
+  kw_rf vs en_nmc_pens: W=112.0, p=0.000001, p_corrected=0.000035 *
+  en_rf vs kw_nmc_kens: W=115.0, p=0.000000, p_corrected=0.000025 *
+  en_rf vs nmc_ensemble: W=84.0, p=0.000000, p_corrected=0.000005 *
+  en_rf vs kw_nmc_kgrid: W=176.0, p=0.000014, p_corrected=0.000777 *
+  en_rf vs standalone_en: W=154.0, p=0.000003, p_corrected=0.000168 *
+  en_rf vs kw_nmc_pens: W=144.0, p=0.000002, p_corrected=0.000104 *
+  en_rf vs standalone_en_pens: W=74.0, p=0.000000, p_corrected=0.000000 *
+  en_rf vs en_nmc_pens: W=44.0, p=0.000000, p_corrected=0.000000 *
+  kw_nmc_kens vs nmc_ensemble: W=531.0, p=0.558755, p_corrected=1.000000 
+  kw_nmc_kens vs kw_nmc_kgrid: W=332.0, p=0.022720, p_corrected=1.000000 
+  kw_nmc_kens vs standalone_en: W=418.0, p=0.033688, p_corrected=1.000000 
+  kw_nmc_kens vs kw_nmc_pens: W=307.0, p=0.017298, p_corrected=0.951376 
+  kw_nmc_kens vs standalone_en_pens: W=438.0, p=0.054123, p_corrected=1.000000 
+  kw_nmc_kens vs en_nmc_pens: W=480.5, p=0.270191, p_corrected=1.000000 
+  nmc_ensemble vs kw_nmc_kgrid: W=430.0, p=0.156171, p_corrected=1.000000 
+  nmc_ensemble vs standalone_en: W=406.0, p=0.025433, p_corrected=1.000000 
+  nmc_ensemble vs kw_nmc_pens: W=494.5, p=0.337534, p_corrected=1.000000 
+  nmc_ensemble vs standalone_en_pens: W=462.0, p=0.090229, p_corrected=1.000000 
+  nmc_ensemble vs en_nmc_pens: W=378.0, p=0.075819, p_corrected=1.000000 
+  kw_nmc_kgrid vs standalone_en: W=581.0, p=0.585463, p_corrected=1.000000 
+  kw_nmc_kgrid vs kw_nmc_pens: W=517.0, p=0.466462, p_corrected=1.000000 
+  kw_nmc_kgrid vs standalone_en_pens: W=584.5, p=0.780602, p_corrected=1.000000 
+  kw_nmc_kgrid vs en_nmc_pens: W=352.5, p=0.009700, p_corrected=0.533524 
+  standalone_en vs kw_nmc_pens: W=518.5, p=0.250655, p_corrected=1.000000 
+  standalone_en vs standalone_en_pens: W=490.0, p=0.314768, p_corrected=1.000000 
+  standalone_en vs en_nmc_pens: W=285.0, p=0.000667, p_corrected=0.036679 *
+  kw_nmc_pens vs standalone_en_pens: W=553.0, p=0.414660, p_corrected=1.000000 
+  kw_nmc_pens vs en_nmc_pens: W=401.5, p=0.022711, p_corrected=1.000000 
+  standalone_en_pens vs en_nmc_pens: W=285.5, p=0.001142, p_corrected=0.062805 
+Saved pairwise Wilcoxon tests: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/data/pairwise_wilcoxon.csv
+Grouped classifier test (NMC vs RF, pooled over feature selectors):
+  NMC mean=0.7260, RF mean=0.7004, diff=0.0256, W=220.0, p=0.000024 *
+Saved grouped NMC vs RF test: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/data/grouped_nmc_vs_rf.csv
+Nadeau-Bengio tests: k=5 folds, r=50 repeats, n_test=20, n_train=80, correction_factor=0.2540
+  kw_nmc vs en_nmc: diff=0.0044, t=0.082, df=249, p=0.934571, p_corrected=1.000000 
+  kw_nmc vs kw_rf: diff=0.0145, t=0.250, df=249, p=0.802873, p_corrected=1.000000 
+  kw_nmc vs en_rf: diff=0.0410, t=0.638, df=249, p=0.523757, p_corrected=1.000000 
+  kw_nmc vs kw_nmc_kens: diff=-0.0170, t=-0.457, df=249, p=0.648246, p_corrected=1.000000 
+  kw_nmc vs nmc_ensemble: diff=-0.0138, t=-0.344, df=249, p=0.730791, p_corrected=1.000000 
+  kw_nmc vs kw_nmc_kgrid: diff=-0.0051, t=-0.244, df=249, p=0.807376, p_corrected=1.000000 
+  kw_nmc vs standalone_en: diff=-0.0016, t=-0.028, df=249, p=0.977623, p_corrected=1.000000 
+  kw_nmc vs kw_nmc_pens: diff=-0.0108, t=-0.286, df=249, p=0.774976, p_corrected=1.000000 
+  kw_nmc vs standalone_en_pens: diff=-0.0063, t=-0.115, df=249, p=0.908407, p_corrected=1.000000 
+  kw_nmc vs en_nmc_pens: diff=-0.0229, t=-0.459, df=249, p=0.646949, p_corrected=1.000000 
+  en_nmc vs kw_rf: diff=0.0102, t=0.179, df=249, p=0.858440, p_corrected=1.000000 
+  en_nmc vs en_rf: diff=0.0366, t=0.564, df=249, p=0.573575, p_corrected=1.000000 
+  en_nmc vs kw_nmc_kens: diff=-0.0214, t=-0.420, df=249, p=0.674936, p_corrected=1.000000 
+  en_nmc vs nmc_ensemble: diff=-0.0182, t=-0.488, df=249, p=0.625692, p_corrected=1.000000 
+  en_nmc vs kw_nmc_kgrid: diff=-0.0095, t=-0.179, df=249, p=0.857875, p_corrected=1.000000 
+  en_nmc vs standalone_en: diff=-0.0060, t=-0.113, df=249, p=0.909800, p_corrected=1.000000 
+  en_nmc vs kw_nmc_pens: diff=-0.0152, t=-0.300, df=249, p=0.764578, p_corrected=1.000000 
+  en_nmc vs standalone_en_pens: diff=-0.0107, t=-0.208, df=249, p=0.835483, p_corrected=1.000000 
+  en_nmc vs en_nmc_pens: diff=-0.0273, t=-0.572, df=249, p=0.567819, p_corrected=1.000000 
+  kw_rf vs en_rf: diff=0.0265, t=0.436, df=249, p=0.663025, p_corrected=1.000000 
+  kw_rf vs kw_nmc_kens: diff=-0.0315, t=-0.568, df=249, p=0.570565, p_corrected=1.000000 
+  kw_rf vs nmc_ensemble: diff=-0.0284, t=-0.538, df=249, p=0.591093, p_corrected=1.000000 
+  kw_rf vs kw_nmc_kgrid: diff=-0.0196, t=-0.352, df=249, p=0.725301, p_corrected=1.000000 
+  kw_rf vs standalone_en: diff=-0.0161, t=-0.294, df=249, p=0.768841, p_corrected=1.000000 
+  kw_rf vs kw_nmc_pens: diff=-0.0254, t=-0.467, df=249, p=0.640929, p_corrected=1.000000 
+  kw_rf vs standalone_en_pens: diff=-0.0208, t=-0.374, df=249, p=0.708549, p_corrected=1.000000 
+  kw_rf vs en_nmc_pens: diff=-0.0375, t=-0.692, df=249, p=0.489738, p_corrected=1.000000 
+  en_rf vs kw_nmc_kens: diff=-0.0580, t=-0.925, df=249, p=0.355984, p_corrected=1.000000 
+  en_rf vs nmc_ensemble: diff=-0.0549, t=-0.949, df=249, p=0.343348, p_corrected=1.000000 
+  en_rf vs kw_nmc_kgrid: diff=-0.0461, t=-0.707, df=249, p=0.480136, p_corrected=1.000000 
+  en_rf vs standalone_en: diff=-0.0426, t=-0.709, df=249, p=0.478831, p_corrected=1.000000 
+  en_rf vs kw_nmc_pens: diff=-0.0519, t=-0.845, df=249, p=0.398839, p_corrected=1.000000 
+  en_rf vs standalone_en_pens: diff=-0.0473, t=-0.763, df=249, p=0.446230, p_corrected=1.000000 
+  en_rf vs en_nmc_pens: diff=-0.0640, t=-1.017, df=249, p=0.309979, p_corrected=1.000000 
+  kw_nmc_kens vs nmc_ensemble: diff=0.0031, t=0.095, df=249, p=0.924615, p_corrected=1.000000 
+  kw_nmc_kens vs kw_nmc_kgrid: diff=0.0119, t=0.345, df=249, p=0.730647, p_corrected=1.000000 
+  kw_nmc_kens vs standalone_en: diff=0.0154, t=0.301, df=249, p=0.763941, p_corrected=1.000000 
+  kw_nmc_kens vs kw_nmc_pens: diff=0.0061, t=0.263, df=249, p=0.792924, p_corrected=1.000000 
+  kw_nmc_kens vs standalone_en_pens: diff=0.0107, t=0.216, df=249, p=0.828865, p_corrected=1.000000 
+  kw_nmc_kens vs en_nmc_pens: diff=-0.0060, t=-0.143, df=249, p=0.886475, p_corrected=1.000000 
+  nmc_ensemble vs kw_nmc_kgrid: diff=0.0088, t=0.220, df=249, p=0.825779, p_corrected=1.000000 
+  nmc_ensemble vs standalone_en: diff=0.0123, t=0.263, df=249, p=0.792868, p_corrected=1.000000 
+  nmc_ensemble vs kw_nmc_pens: diff=0.0030, t=0.087, df=249, p=0.930918, p_corrected=1.000000 
+  nmc_ensemble vs standalone_en_pens: diff=0.0076, t=0.163, df=249, p=0.870268, p_corrected=1.000000 
+  nmc_ensemble vs en_nmc_pens: diff=-0.0091, t=-0.225, df=249, p=0.822005, p_corrected=1.000000 
+  kw_nmc_kgrid vs standalone_en: diff=0.0035, t=0.062, df=249, p=0.950750, p_corrected=1.000000 
+  kw_nmc_kgrid vs kw_nmc_pens: diff=-0.0058, t=-0.159, df=249, p=0.873801, p_corrected=1.000000 
+  kw_nmc_kgrid vs standalone_en_pens: diff=-0.0012, t=-0.022, df=249, p=0.982152, p_corrected=1.000000 
+  kw_nmc_kgrid vs en_nmc_pens: diff=-0.0179, t=-0.367, df=249, p=0.714189, p_corrected=1.000000 
+  standalone_en vs kw_nmc_pens: diff=-0.0093, t=-0.179, df=249, p=0.858267, p_corrected=1.000000 
+  standalone_en vs standalone_en_pens: diff=-0.0047, t=-0.123, df=249, p=0.902413, p_corrected=1.000000 
+  standalone_en vs en_nmc_pens: diff=-0.0214, t=-0.494, df=249, p=0.621897, p_corrected=1.000000 
+  kw_nmc_pens vs standalone_en_pens: diff=0.0046, t=0.093, df=249, p=0.925779, p_corrected=1.000000 
+  kw_nmc_pens vs en_nmc_pens: diff=-0.0121, t=-0.289, df=249, p=0.772678, p_corrected=1.000000 
+  standalone_en_pens vs en_nmc_pens: diff=-0.0167, t=-0.474, df=249, p=0.635734, p_corrected=1.000000 
+Saved Nadeau-Bengio tests: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/data/pairwise_nadeau_bengio.csv
+Winning pipeline: EN + NMC (plateau) (mean BA2 = 0.7511)
+Error agreement analysis (5000 total sample-predictions):
+  KW + NMC: 917 errors (18.3% error rate)
+  EN + NMC: 938 errors (18.8% error rate)
+  KW + RF: 972 errors (19.4% error rate)
+  EN + RF: 1060 errors (21.2% error rate)
+  KW + NMC (k-ens): 863 errors (17.3% error rate)
+  NMC Ensemble: 875 errors (17.5% error rate)
+  KW + NMC (k-grid): 902 errors (18.0% error rate)
+  Standalone EN: 911 errors (18.2% error rate)
+  KW + NMC (plateau): 882 errors (17.6% error rate)
+  EN (plateau): 894 errors (17.9% error rate)
+  EN + NMC (plateau): 843 errors (16.9% error rate)
+Pairwise error overlap (Jaccard index of error sets):
+  KW + NMC vs EN + NMC: Jaccard=0.575, P(EN + NMC wrong | KW + NMC wrong)=0.738, P(KW + NMC wrong | EN + NMC wrong)=0.722
+  KW + NMC vs KW + RF: Jaccard=0.541, P(KW + RF wrong | KW + NMC wrong)=0.723, P(KW + NMC wrong | KW + RF wrong)=0.682
+  KW + NMC vs EN + RF: Jaccard=0.505, P(EN + RF wrong | KW + NMC wrong)=0.723, P(KW + NMC wrong | EN + RF wrong)=0.625
+  KW + NMC vs KW + NMC (k-ens): Jaccard=0.742, P(KW + NMC (k-ens) wrong | KW + NMC wrong)=0.827, P(KW + NMC wrong | KW + NMC (k-ens) wrong)=0.878
+  KW + NMC vs NMC Ensemble: Jaccard=0.697, P(NMC Ensemble wrong | KW + NMC wrong)=0.803, P(KW + NMC wrong | NMC Ensemble wrong)=0.841
+  KW + NMC vs KW + NMC (k-grid): Jaccard=0.903, P(KW + NMC (k-grid) wrong | KW + NMC wrong)=0.941, P(KW + NMC wrong | KW + NMC (k-grid) wrong)=0.957
+  KW + NMC vs Standalone EN: Jaccard=0.587, P(Standalone EN wrong | KW + NMC wrong)=0.737, P(KW + NMC wrong | Standalone EN wrong)=0.742
+  KW + NMC vs KW + NMC (plateau): Jaccard=0.743, P(KW + NMC (plateau) wrong | KW + NMC wrong)=0.836, P(KW + NMC wrong | KW + NMC (plateau) wrong)=0.870
+  KW + NMC vs EN (plateau): Jaccard=0.587, P(EN (plateau) wrong | KW + NMC wrong)=0.731, P(KW + NMC wrong | EN (plateau) wrong)=0.749
+  KW + NMC vs EN + NMC (plateau): Jaccard=0.631, P(EN + NMC (plateau) wrong | KW + NMC wrong)=0.743, P(KW + NMC wrong | EN + NMC (plateau) wrong)=0.808
+  EN + NMC vs KW + RF: Jaccard=0.515, P(KW + RF wrong | EN + NMC wrong)=0.692, P(EN + NMC wrong | KW + RF wrong)=0.668
+  EN + NMC vs EN + RF: Jaccard=0.517, P(EN + RF wrong | EN + NMC wrong)=0.726, P(EN + NMC wrong | EN + RF wrong)=0.642
+  EN + NMC vs KW + NMC (k-ens): Jaccard=0.605, P(KW + NMC (k-ens) wrong | EN + NMC wrong)=0.724, P(EN + NMC wrong | KW + NMC (k-ens) wrong)=0.787
+  EN + NMC vs NMC Ensemble: Jaccard=0.757, P(NMC Ensemble wrong | EN + NMC wrong)=0.833, P(EN + NMC wrong | NMC Ensemble wrong)=0.893
+  EN + NMC vs KW + NMC (k-grid): Jaccard=0.582, P(KW + NMC (k-grid) wrong | EN + NMC wrong)=0.722, P(EN + NMC wrong | KW + NMC (k-grid) wrong)=0.751
+  EN + NMC vs Standalone EN: Jaccard=0.641, P(Standalone EN wrong | EN + NMC wrong)=0.770, P(EN + NMC wrong | Standalone EN wrong)=0.793
+  EN + NMC vs KW + NMC (plateau): Jaccard=0.602, P(KW + NMC (plateau) wrong | EN + NMC wrong)=0.729, P(EN + NMC wrong | KW + NMC (plateau) wrong)=0.776
+  EN + NMC vs EN (plateau): Jaccard=0.611, P(EN (plateau) wrong | EN + NMC wrong)=0.741, P(EN + NMC wrong | EN (plateau) wrong)=0.777
+  EN + NMC vs EN + NMC (plateau): Jaccard=0.671, P(EN + NMC (plateau) wrong | EN + NMC wrong)=0.762, P(EN + NMC wrong | EN + NMC (plateau) wrong)=0.848
+  KW + RF vs EN + RF: Jaccard=0.604, P(EN + RF wrong | KW + RF wrong)=0.787, P(KW + RF wrong | EN + RF wrong)=0.722
+  KW + RF vs KW + NMC (k-ens): Jaccard=0.572, P(KW + NMC (k-ens) wrong | KW + RF wrong)=0.687, P(KW + RF wrong | KW + NMC (k-ens) wrong)=0.774
+  KW + RF vs NMC Ensemble: Jaccard=0.575, P(NMC Ensemble wrong | KW + RF wrong)=0.693, P(KW + RF wrong | NMC Ensemble wrong)=0.770
+  KW + RF vs KW + NMC (k-grid): Jaccard=0.549, P(KW + NMC (k-grid) wrong | KW + RF wrong)=0.683, P(KW + RF wrong | KW + NMC (k-grid) wrong)=0.736
+  KW + RF vs Standalone EN: Jaccard=0.543, P(Standalone EN wrong | KW + RF wrong)=0.682, P(KW + RF wrong | Standalone EN wrong)=0.728
+  KW + RF vs KW + NMC (plateau): Jaccard=0.582, P(KW + NMC (plateau) wrong | KW + RF wrong)=0.702, P(KW + RF wrong | KW + NMC (plateau) wrong)=0.773
+  KW + RF vs EN (plateau): Jaccard=0.536, P(EN (plateau) wrong | KW + RF wrong)=0.670, P(KW + RF wrong | EN (plateau) wrong)=0.728
+  KW + RF vs EN + NMC (plateau): Jaccard=0.577, P(EN + NMC (plateau) wrong | KW + RF wrong)=0.683, P(KW + RF wrong | EN + NMC (plateau) wrong)=0.788
+  EN + RF vs KW + NMC (k-ens): Jaccard=0.508, P(KW + NMC (k-ens) wrong | EN + RF wrong)=0.611, P(EN + RF wrong | KW + NMC (k-ens) wrong)=0.751
+  EN + RF vs NMC Ensemble: Jaccard=0.543, P(NMC Ensemble wrong | EN + RF wrong)=0.642, P(EN + RF wrong | NMC Ensemble wrong)=0.778
+  EN + RF vs KW + NMC (k-grid): Jaccard=0.502, P(KW + NMC (k-grid) wrong | EN + RF wrong)=0.619, P(EN + RF wrong | KW + NMC (k-grid) wrong)=0.727
+  EN + RF vs Standalone EN: Jaccard=0.551, P(Standalone EN wrong | EN + RF wrong)=0.660, P(EN + RF wrong | Standalone EN wrong)=0.768
+  EN + RF vs KW + NMC (plateau): Jaccard=0.527, P(KW + NMC (plateau) wrong | EN + RF wrong)=0.632, P(EN + RF wrong | KW + NMC (plateau) wrong)=0.760
+  EN + RF vs EN (plateau): Jaccard=0.540, P(EN (plateau) wrong | EN + RF wrong)=0.646, P(EN + RF wrong | EN (plateau) wrong)=0.766
+  EN + RF vs EN + NMC (plateau): Jaccard=0.543, P(EN + NMC (plateau) wrong | EN + RF wrong)=0.632, P(EN + RF wrong | EN + NMC (plateau) wrong)=0.795
+  KW + NMC (k-ens) vs NMC Ensemble: Jaccard=0.801, P(NMC Ensemble wrong | KW + NMC (k-ens) wrong)=0.896, P(KW + NMC (k-ens) wrong | NMC Ensemble wrong)=0.883
+  KW + NMC (k-ens) vs KW + NMC (k-grid): Jaccard=0.781, P(KW + NMC (k-grid) wrong | KW + NMC (k-ens) wrong)=0.897, P(KW + NMC (k-ens) wrong | KW + NMC (k-grid) wrong)=0.858
+  KW + NMC (k-ens) vs Standalone EN: Jaccard=0.598, P(Standalone EN wrong | KW + NMC (k-ens) wrong)=0.769, P(KW + NMC (k-ens) wrong | Standalone EN wrong)=0.729
+  KW + NMC (k-ens) vs KW + NMC (plateau): Jaccard=0.907, P(KW + NMC (plateau) wrong | KW + NMC (k-ens) wrong)=0.962, P(KW + NMC (k-ens) wrong | KW + NMC (plateau) wrong)=0.941
+  KW + NMC (k-ens) vs EN (plateau): Jaccard=0.613, P(EN (plateau) wrong | KW + NMC (k-ens) wrong)=0.774, P(KW + NMC (k-ens) wrong | EN (plateau) wrong)=0.747
+  KW + NMC (k-ens) vs EN + NMC (plateau): Jaccard=0.713, P(EN + NMC (plateau) wrong | KW + NMC (k-ens) wrong)=0.823, P(KW + NMC (k-ens) wrong | EN + NMC (plateau) wrong)=0.842
+  NMC Ensemble vs KW + NMC (k-grid): Jaccard=0.725, P(KW + NMC (k-grid) wrong | NMC Ensemble wrong)=0.854, P(NMC Ensemble wrong | KW + NMC (k-grid) wrong)=0.828
+  NMC Ensemble vs Standalone EN: Jaccard=0.660, P(Standalone EN wrong | NMC Ensemble wrong)=0.811, P(NMC Ensemble wrong | Standalone EN wrong)=0.779
+  NMC Ensemble vs KW + NMC (plateau): Jaccard=0.789, P(KW + NMC (plateau) wrong | NMC Ensemble wrong)=0.886, P(NMC Ensemble wrong | KW + NMC (plateau) wrong)=0.879
+  NMC Ensemble vs EN (plateau): Jaccard=0.652, P(EN (plateau) wrong | NMC Ensemble wrong)=0.798, P(NMC Ensemble wrong | EN (plateau) wrong)=0.781
+  NMC Ensemble vs EN + NMC (plateau): Jaccard=0.757, P(EN + NMC (plateau) wrong | NMC Ensemble wrong)=0.846, P(NMC Ensemble wrong | EN + NMC (plateau) wrong)=0.878
+  KW + NMC (k-grid) vs Standalone EN: Jaccard=0.574, P(Standalone EN wrong | KW + NMC (k-grid) wrong)=0.733, P(KW + NMC (k-grid) wrong | Standalone EN wrong)=0.726
+  KW + NMC (k-grid) vs KW + NMC (plateau): Jaccard=0.763, P(KW + NMC (plateau) wrong | KW + NMC (k-grid) wrong)=0.856, P(KW + NMC (k-grid) wrong | KW + NMC (plateau) wrong)=0.875
+  KW + NMC (k-grid) vs EN (plateau): Jaccard=0.584, P(EN (plateau) wrong | KW + NMC (k-grid) wrong)=0.734, P(KW + NMC (k-grid) wrong | EN (plateau) wrong)=0.740
+  KW + NMC (k-grid) vs EN + NMC (plateau): Jaccard=0.640, P(EN + NMC (plateau) wrong | KW + NMC (k-grid) wrong)=0.755, P(KW + NMC (k-grid) wrong | EN + NMC (plateau) wrong)=0.808
+  Standalone EN vs KW + NMC (plateau): Jaccard=0.604, P(KW + NMC (plateau) wrong | Standalone EN wrong)=0.741, P(Standalone EN wrong | KW + NMC (plateau) wrong)=0.765
+  Standalone EN vs EN (plateau): Jaccard=0.775, P(EN (plateau) wrong | Standalone EN wrong)=0.865, P(Standalone EN wrong | EN (plateau) wrong)=0.881
+  Standalone EN vs EN + NMC (plateau): Jaccard=0.720, P(EN + NMC (plateau) wrong | Standalone EN wrong)=0.806, P(Standalone EN wrong | EN + NMC (plateau) wrong)=0.871
+  KW + NMC (plateau) vs EN (plateau): Jaccard=0.619, P(EN (plateau) wrong | KW + NMC (plateau) wrong)=0.770, P(KW + NMC (plateau) wrong | EN (plateau) wrong)=0.760
+  KW + NMC (plateau) vs EN + NMC (plateau): Jaccard=0.720, P(EN + NMC (plateau) wrong | KW + NMC (plateau) wrong)=0.819, P(KW + NMC (plateau) wrong | EN + NMC (plateau) wrong)=0.856
+  EN (plateau) vs EN + NMC (plateau): Jaccard=0.755, P(EN + NMC (plateau) wrong | EN (plateau) wrong)=0.836, P(EN (plateau) wrong | EN + NMC (plateau) wrong)=0.886
+Saved error agreement matrices.
+Saved figure: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/figures/01_pipeline_comparison.png
+Saved figure: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/figures/02_interaction_plot.png
+Saved figure: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/figures/03_repeat_convergence.png
+Saved figure: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/figures/04_feature_importance.png
+Saved figure: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/figures/05_confusion_matrices.png
+Saved figure: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/figures/06_error_agreement.png
+=== Hard Sample Diagnostic Analysis ===
+Per-sample error rates pooled across 2750 fold-pipeline evaluations.
+  HER2+ (n=32): mean error rate=0.000, never wrong=32, wrong at least once=0
+  HR+ (n=36): mean error rate=0.245, never wrong=7, wrong at least once=29
+  Triple Neg (n=32): mean error rate=0.296, never wrong=0, wrong at least once=32
+Stage 2 samples (HR+ and Triple Neg): 68 total.
+  HR+: median error rate=0.091, hard (>0.091)=18, easy (<=0.091)=18
+    KW test (hard vs easy within HR+):
+      Features with uncorrected p < 0.05: 12 / 273 (13.7 expected by chance)
+      Features with Bonferroni p < 0.05: 0 / 273
+      Features with BH-FDR q < 0.05: 0 / 273
+      Features with BH-FDR q < 0.10: 0 / 273
+      Top 10 features by raw p-value:
+        chr16_54390012_68679377: H=9.37, p_raw=2.2016e-03, p_bonf=6.0103e-01, q_BH=4.1298e-01
+        chr16_45058242_54336421: H=7.88, p_raw=4.9934e-03, p_bonf=1.0000e+00, q_BH=4.1298e-01
+        chr16_69763173_88690571: H=7.54, p_raw=6.0510e-03, p_bonf=1.0000e+00, q_BH=4.1298e-01
+        chr16_68838368_69397102: H=7.54, p_raw=6.0510e-03, p_bonf=1.0000e+00, q_BH=4.1298e-01
+        chr4_190887518_191165971: H=5.94, p_raw=1.4778e-02, p_bonf=1.0000e+00, q_BH=6.2797e-01
+        chr22_37683612_37705310: H=5.69, p_raw=1.7061e-02, p_bonf=1.0000e+00, q_BH=6.2797e-01
+        chr23_90837054_91203848: H=5.61, p_raw=1.7808e-02, p_bonf=1.0000e+00, q_BH=6.2797e-01
+        chr23_91365063_92103804: H=5.56, p_raw=1.8402e-02, p_bonf=1.0000e+00, q_BH=6.2797e-01
+        chr17_2333732_2343255: H=5.31, p_raw=2.1208e-02, p_bonf=1.0000e+00, q_BH=6.4332e-01
+        chr22_22672513_22714749: H=4.47, p_raw=3.4523e-02, p_bonf=1.0000e+00, q_BH=7.5223e-01
+  Triple Neg: median error rate=0.108, hard (>0.108)=16, easy (<=0.108)=16
+    KW test (hard vs easy within Triple Neg):
+      Features with uncorrected p < 0.05: 20 / 273 (13.7 expected by chance)
+      Features with Bonferroni p < 0.05: 0 / 273
+      Features with BH-FDR q < 0.05: 0 / 273
+      Features with BH-FDR q < 0.10: 0 / 273
+      Top 10 features by raw p-value:
+        chr22_24263116_37678070: H=7.88, p_raw=4.9870e-03, p_bonf=1.0000e+00, q_BH=5.0564e-01
+        chr22_37717564_49509094: H=7.54, p_raw=6.0302e-03, p_bonf=1.0000e+00, q_BH=5.0564e-01
+        chr3_164112881_193467200: H=6.29, p_raw=1.2136e-02, p_bonf=1.0000e+00, q_BH=5.0564e-01
+        chr3_127015333_163987465: H=6.23, p_raw=1.2548e-02, p_bonf=1.0000e+00, q_BH=5.0564e-01
+        chr22_22725750_24228038: H=5.42, p_raw=1.9874e-02, p_bonf=1.0000e+00, q_BH=5.0564e-01
+        chr6_1535319_30010234: H=5.42, p_raw=1.9958e-02, p_bonf=1.0000e+00, q_BH=5.0564e-01
+        chr5_21979223_32203336: H=5.31, p_raw=2.1144e-02, p_bonf=1.0000e+00, q_BH=5.0564e-01
+        chr23_91234699_91344716: H=5.27, p_raw=2.1642e-02, p_bonf=1.0000e+00, q_BH=5.0564e-01
+        chr6_30021894_32519935: H=5.23, p_raw=2.2185e-02, p_bonf=1.0000e+00, q_BH=5.0564e-01
+        chr1_2870100_2901629: H=5.22, p_raw=2.2387e-02, p_bonf=1.0000e+00, q_BH=5.0564e-01
+All Stage 2 samples with error_rate > 0 (61 samples):
+  Array.67 (HR+): error_rate=0.984 (541 / 550 evaluations wrong)
+  Array.23 (HR+): error_rate=0.982 (540 / 550 evaluations wrong)
+  Array.22 (Triple Neg): error_rate=0.975 (536 / 550 evaluations wrong)
+  Array.113 (Triple Neg): error_rate=0.962 (529 / 550 evaluations wrong)
+  Array.114 (Triple Neg): error_rate=0.907 (499 / 550 evaluations wrong)
+  Array.69 (Triple Neg): error_rate=0.856 (471 / 550 evaluations wrong)
+  Array.124 (HR+): error_rate=0.851 (468 / 550 evaluations wrong)
+  Array.34 (HR+): error_rate=0.847 (466 / 550 evaluations wrong)
+  Array.99 (Triple Neg): error_rate=0.840 (462 / 550 evaluations wrong)
+  Array.100 (HR+): error_rate=0.800 (440 / 550 evaluations wrong)
+  Array.104 (Triple Neg): error_rate=0.795 (437 / 550 evaluations wrong)
+  Array.146 (Triple Neg): error_rate=0.755 (415 / 550 evaluations wrong)
+  Array.107 (Triple Neg): error_rate=0.742 (408 / 550 evaluations wrong)
+  Array.142 (HR+): error_rate=0.693 (381 / 550 evaluations wrong)
+  Array.85 (HR+): error_rate=0.629 (346 / 550 evaluations wrong)
+  Array.59 (HR+): error_rate=0.535 (294 / 550 evaluations wrong)
+  Array.101 (HR+): error_rate=0.498 (274 / 550 evaluations wrong)
+  Array.118 (Triple Neg): error_rate=0.465 (256 / 550 evaluations wrong)
+  Array.38 (Triple Neg): error_rate=0.404 (222 / 550 evaluations wrong)
+  Array.154 (Triple Neg): error_rate=0.358 (197 / 550 evaluations wrong)
+  Array.82 (HR+): error_rate=0.329 (181 / 550 evaluations wrong)
+  Array.56 (HR+): error_rate=0.315 (173 / 550 evaluations wrong)
+  Array.90 (Triple Neg): error_rate=0.311 (171 / 550 evaluations wrong)
+  Array.7 (HR+): error_rate=0.235 (129 / 550 evaluations wrong)
+  Array.123 (HR+): error_rate=0.215 (118 / 550 evaluations wrong)
+  Array.149 (HR+): error_rate=0.151 (83 / 550 evaluations wrong)
+  Array.88 (Triple Neg): error_rate=0.140 (77 / 550 evaluations wrong)
+  Array.37 (HR+): error_rate=0.136 (75 / 550 evaluations wrong)
+  Array.2 (HR+): error_rate=0.129 (71 / 550 evaluations wrong)
+  Array.62 (Triple Neg): error_rate=0.127 (70 / 550 evaluations wrong)
+  Array.145 (Triple Neg): error_rate=0.124 (68 / 550 evaluations wrong)
+  Array.25 (Triple Neg): error_rate=0.120 (66 / 550 evaluations wrong)
+  Array.89 (HR+): error_rate=0.118 (65 / 550 evaluations wrong)
+  Array.33 (HR+): error_rate=0.102 (56 / 550 evaluations wrong)
+  Array.102 (Triple Neg): error_rate=0.096 (53 / 550 evaluations wrong)
+  Array.71 (Triple Neg): error_rate=0.089 (49 / 550 evaluations wrong)
+  Array.134 (HR+): error_rate=0.080 (44 / 550 evaluations wrong)
+  Array.50 (Triple Neg): error_rate=0.071 (39 / 550 evaluations wrong)
+  Array.57 (Triple Neg): error_rate=0.055 (30 / 550 evaluations wrong)
+  Array.135 (Triple Neg): error_rate=0.053 (29 / 550 evaluations wrong)
+  Array.159 (Triple Neg): error_rate=0.051 (28 / 550 evaluations wrong)
+  Array.36 (HR+): error_rate=0.044 (24 / 550 evaluations wrong)
+  Array.94 (HR+): error_rate=0.038 (21 / 550 evaluations wrong)
+  Array.112 (Triple Neg): error_rate=0.036 (20 / 550 evaluations wrong)
+  Array.98 (HR+): error_rate=0.035 (19 / 550 evaluations wrong)
+  Array.95 (HR+): error_rate=0.033 (18 / 550 evaluations wrong)
+  Array.52 (HR+): error_rate=0.025 (14 / 550 evaluations wrong)
+  Array.24 (Triple Neg): error_rate=0.024 (13 / 550 evaluations wrong)
+  Array.93 (Triple Neg): error_rate=0.022 (12 / 550 evaluations wrong)
+  Array.31 (Triple Neg): error_rate=0.020 (11 / 550 evaluations wrong)
+  Array.5 (Triple Neg): error_rate=0.020 (11 / 550 evaluations wrong)
+  Array.153 (Triple Neg): error_rate=0.018 (10 / 550 evaluations wrong)
+  Array.8 (HR+): error_rate=0.015 (8 / 550 evaluations wrong)
+  Array.47 (Triple Neg): error_rate=0.007 (4 / 550 evaluations wrong)
+  Array.111 (Triple Neg): error_rate=0.007 (4 / 550 evaluations wrong)
+  Array.64 (Triple Neg): error_rate=0.005 (3 / 550 evaluations wrong)
+  Array.65 (HR+): error_rate=0.004 (2 / 550 evaluations wrong)
+  Array.30 (Triple Neg): error_rate=0.004 (2 / 550 evaluations wrong)
+  Array.117 (HR+): error_rate=0.004 (2 / 550 evaluations wrong)
+  Array.48 (HR+): error_rate=0.002 (1 / 550 evaluations wrong)
+  Array.137 (HR+): error_rate=0.002 (1 / 550 evaluations wrong)
+Saved per-sample error summary: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/data/hard_sample_summary.csv
+Saved figure: /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/nested_cv_analysis/figures/07_hard_sample_analysis.png
+CONCLUSION (HR+): 12 uncorrected hits vs 13.7 expected by chance - pure noise. Hard and easy samples are indistinguishable. Performance is at ceiling.
+CONCLUSION (Triple Neg): 20 uncorrected hits vs 13.7 expected by chance - pure noise. Hard and easy samples are indistinguishable. Performance is at ceiling.
+Analysis complete.

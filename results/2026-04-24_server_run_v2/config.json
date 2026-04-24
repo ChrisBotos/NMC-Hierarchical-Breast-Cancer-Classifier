@@ -56,16 +56,17 @@
     "mean_stage2_balanced_accuracy": 0.7440476
   },
   "analyse_nested_cv": {
-    "timestamp": "2026-04-24T10:48:38.847626",
-    "command": "code/analyse_nested_cv.py --name server_run_v2 --phase hierarchical_nested_cv_v2",
-    "config_file": "/mnt/d/Coursework/TB-Project/config_files/local.yaml",
-    "n_fold_files": 350,
-    "n_total_folds": 1750,
-    "n_pipelines": 7,
+    "timestamp": "2026-04-25T00:37:31.179795",
+    "command": "code/analyse_nested_cv.py --name server_run_v2 --config config_files/server.yaml --phase hierarchical_nested_cv",
+    "config_file": "/mnt/d/Coursework/TB-Project/config_files/server.yaml",
+    "n_fold_files": 550,
+    "n_total_folds": 2750,
+    "n_pipelines": 11,
     "n_repeats": 50,
-    "winning_pipeline": "kw_nmc_kens",
-    "winning_mean_bal_acc": 0.8246190919999999,
-    "friedman_p": 1.9705478868255801e-10
+    "primary_metric": "stage2_bal_acc",
+    "winning_pipeline": "en_nmc_pens",
+    "winning_mean_bal_acc": 0.7510952399999999,
+    "friedman_p": 8.11309020717538e-17
   },
   "hierarchical_nested_cv_runner": {
     "timestamp": "2026-04-25T00:13:13.079043",
