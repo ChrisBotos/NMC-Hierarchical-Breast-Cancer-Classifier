@@ -279,18 +279,41 @@ config['submit_hierarchical_nested_cv'] = {
 config_path.write_text(json.dumps(config, indent=2))
 "
 
+# ---------------------------------------------------------------------------
+# Split pipelines into base (Phase 1) and plateau ensemble (Phase 2).
+# Plateau ensembles (_pens) need base pipeline inner_cv results to exist,
+# so they run as a dependent job that starts after the base job completes.
+# ---------------------------------------------------------------------------
+BASE_PIPELINES=()
+PENS_PIPELINES=()
+for p in "${PIPELINES[@]}"; do
+    case "$p" in
+        *_pens) PENS_PIPELINES+=("$p") ;;
+        *)      BASE_PIPELINES+=("$p") ;;
+    esac
+done
+
+N_BASE=${#BASE_PIPELINES[@]}
+N_PENS=${#PENS_PIPELINES[@]}
+BASE_JOBS=$(( N_BASE * REPEATS_PER_PIPELINE ))
+PENS_JOBS=$(( N_PENS * REPEATS_PER_PIPELINE ))
+
 echo "========================================"
-echo "Submitting hierarchical nested CV array job"
+echo "Submitting hierarchical nested CV"
 echo "  Run name:    $RUN_NAME"
 echo "  Run dir:     $RUN_DIR"
 echo "  Config file: $CONFIG_FILE"
 echo "  Frozen as:   $FROZEN_CONFIG"
-echo "  Stage 1:     kw_rf k=5 (fixed, threshold calibrated)"
-echo "  Stage 2:     ${PIPELINES[*]} (${N_PIPELINES} pipelines)"
+echo "  Stage 1:     kw_rf k=5 (fixed, threshold=0.5)"
+if [[ $N_BASE -gt 0 ]]; then
+    echo "  Phase 1:     ${BASE_PIPELINES[*]} (${N_BASE} pipelines, ${BASE_JOBS} jobs)"
+fi
+if [[ $N_PENS -gt 0 ]]; then
+    echo "  Phase 2:     ${PENS_PIPELINES[*]} (${N_PENS} pipelines, ${PENS_JOBS} jobs, afterok Phase 1)"
+fi
 if [[ -n "$SKIPPED_STR" ]]; then
     echo "  Skipped:     $SKIPPED_STR"
 fi
-echo "  Jobs:        $TOTAL_JOBS (${N_PIPELINES} stage2 pipelines x ${REPEATS_PER_PIPELINE} repeats)"
 echo "  SLURM:       mem=${SLURM_MEM}  time=${SLURM_TIME}  cpus=${SLURM_CPUS}  max_concurrent=${SLURM_MAX_CONCURRENT}"
 echo "  SLURM logs:  $SLURM_LOG_DIR"
 echo "========================================"
@@ -301,31 +324,59 @@ if [[ -n "$SLURM_MAIL_USER" ]]; then
     MAIL_ARGS="--mail-type=END,FAIL --mail-user=$SLURM_MAIL_USER"
 fi
 
-# Build dependency argument if specified.
+# Build dependency argument if specified externally.
 DEP_ARGS=""
 if [[ -n "$DEPENDENCY_JOB" ]]; then
     DEP_ARGS="--dependency=afterok:${DEPENDENCY_JOB}"
-    echo "  Dependency: afterok:${DEPENDENCY_JOB}"
 fi
 
-# Export frozen config path so array tasks read the snapshot, not the live YAML.
-ARRAY_JOB_ID=$(sbatch \
-    --job-name="hncv_${RUN_NAME}" \
-    --array="0-$(( TOTAL_JOBS - 1 ))%${SLURM_MAX_CONCURRENT}" \
-    --ntasks=1 \
-    --cpus-per-task="$SLURM_CPUS" \
-    --mem="$SLURM_MEM" \
-    --time="$SLURM_TIME" \
-    --output="$SLURM_LOG_DIR/hncv_%A_%a.out" \
-    --error="$SLURM_LOG_DIR/hncv_%A_%a.err" \
-    $MAIL_ARGS \
-    $DEP_ARGS \
-    --export=NONE,PROJECT_DIR="$PROJECT_DIR",RUN_NAME="$RUN_NAME",CONFIG_FILE="$FROZEN_CONFIG",REPEATS_PER_PIPELINE="$REPEATS_PER_PIPELINE",PIPELINES_STR="${PIPELINES[*]}",CONDA_PREFIX_DIR="$CONDA_PREFIX_DIR",CONDA_ENV_NAME="$CONDA_ENV_NAME",HOME="$HOME",USER="$USER",PATH="$PATH" \
-    --parsable \
-    "${BASH_SOURCE[0]}")
+# Helper: submit one array job for a set of pipelines.
+submit_array() {
+    local job_name="$1"
+    local dep_args="$2"
+    shift 2
+    local pipes=("$@")
+    local n_pipes=${#pipes[@]}
+    local n_jobs=$(( n_pipes * REPEATS_PER_PIPELINE ))
+    local pipes_str="${pipes[*]}"
 
-echo "Array job submitted: $ARRAY_JOB_ID"
-echo "Monitor with: squeue -u \$USER -j $ARRAY_JOB_ID"
+    sbatch \
+        --job-name="${job_name}" \
+        --array="0-$(( n_jobs - 1 ))%${SLURM_MAX_CONCURRENT}" \
+        --ntasks=1 \
+        --cpus-per-task="$SLURM_CPUS" \
+        --mem="$SLURM_MEM" \
+        --time="$SLURM_TIME" \
+        --output="$SLURM_LOG_DIR/hncv_%A_%a.out" \
+        --error="$SLURM_LOG_DIR/hncv_%A_%a.err" \
+        $MAIL_ARGS \
+        $dep_args \
+        --export=NONE,PROJECT_DIR="$PROJECT_DIR",RUN_NAME="$RUN_NAME",CONFIG_FILE="$FROZEN_CONFIG",REPEATS_PER_PIPELINE="$REPEATS_PER_PIPELINE",PIPELINES_STR="$pipes_str",CONDA_PREFIX_DIR="$CONDA_PREFIX_DIR",CONDA_ENV_NAME="$CONDA_ENV_NAME",HOME="$HOME",USER="$USER",PATH="$PATH" \
+        --parsable \
+        "${BASH_SOURCE[0]}"
+}
+
+# Phase 1: base pipelines.
+BASE_JOB_ID=""
+if [[ $N_BASE -gt 0 ]]; then
+    BASE_JOB_ID=$(submit_array "hncv_${RUN_NAME}" "$DEP_ARGS" "${BASE_PIPELINES[@]}")
+    echo "Phase 1 submitted: job $BASE_JOB_ID (${N_BASE} pipelines x ${REPEATS_PER_PIPELINE} repeats = ${BASE_JOBS} tasks)"
+fi
+
+# Phase 2: plateau ensemble pipelines (depend on Phase 1).
+if [[ $N_PENS -gt 0 ]]; then
+    PENS_DEP=""
+    if [[ -n "$BASE_JOB_ID" ]]; then
+        PENS_DEP="--dependency=afterok:${BASE_JOB_ID}"
+    elif [[ -n "$DEP_ARGS" ]]; then
+        PENS_DEP="$DEP_ARGS"
+    fi
+    PENS_JOB_ID=$(submit_array "hncv_pens_${RUN_NAME}" "$PENS_DEP" "${PENS_PIPELINES[@]}")
+    echo "Phase 2 submitted: job $PENS_JOB_ID (${N_PENS} pipelines x ${REPEATS_PER_PIPELINE} repeats = ${PENS_JOBS} tasks, afterok:${BASE_JOB_ID:-none})"
+fi
+
+echo ""
+echo "Monitor with: squeue -u \$USER"
 echo "Run analysis after completion with:"
 echo "  python3 code/analyse_nested_cv.py --name $RUN_NAME --config $FROZEN_CONFIG --phase hierarchical_nested_cv"
 
