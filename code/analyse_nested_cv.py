@@ -142,43 +142,51 @@ def compute_per_repeat_means(all_results):
     """Average fold scores within each (pipeline, repeat) to get one value per repeat.
 
     This produces the repeated-measures data needed for statistical testing:
-    each repeat gives one balanced accuracy per pipeline.
+    each repeat gives one balanced accuracy per pipeline. When stage2_bal_acc
+    is present (hierarchical runs), it is also aggregated.
 
     Args:
         all_results (pd.DataFrame): Raw fold-level results.
 
     Returns:
         pd.DataFrame: Columns: pipeline, repeat, mean_balanced_accuracy,
-            mean_auroc_macro, mean_n_features.
+            mean_auroc_macro, mean_n_features, and optionally
+            mean_stage2_bal_acc.
     """
-    grouped = all_results.groupby(["pipeline", "repeat"], as_index=False).agg(
-        mean_balanced_accuracy=("balanced_accuracy", "mean"),
-        mean_auroc_macro=("auroc_macro", "mean"),
-        mean_n_features=("n_features_selected", "mean"),
-    )
+    agg_dict = {
+        "mean_balanced_accuracy": ("balanced_accuracy", "mean"),
+        "mean_auroc_macro": ("auroc_macro", "mean"),
+        "mean_n_features": ("n_features_selected", "mean"),
+    }
+    if "stage2_bal_acc" in all_results.columns:
+        agg_dict["mean_stage2_bal_acc"] = ("stage2_bal_acc", "mean")
+
+    grouped = all_results.groupby(["pipeline", "repeat"], as_index=False).agg(**agg_dict)
     return grouped
 
 
-def compute_summary_statistics(per_repeat):
+def compute_summary_statistics(per_repeat, metric="mean_balanced_accuracy"):
     """Compute overall summary statistics per pipeline.
 
     Args:
         per_repeat (pd.DataFrame): Per-repeat mean scores.
+        metric (str): Column name to summarise (default:
+            mean_balanced_accuracy).
 
     Returns:
         pd.DataFrame: One row per pipeline with mean, std, median, min, max
-            for balanced accuracy and AUROC.
+            for the chosen metric and AUROC.
     """
     summary = per_repeat.groupby("pipeline").agg(
-        mean_bal_acc=("mean_balanced_accuracy", "mean"),
-        std_bal_acc=("mean_balanced_accuracy", "std"),
-        median_bal_acc=("mean_balanced_accuracy", "median"),
-        min_bal_acc=("mean_balanced_accuracy", "min"),
-        max_bal_acc=("mean_balanced_accuracy", "max"),
+        mean_bal_acc=(metric, "mean"),
+        std_bal_acc=(metric, "std"),
+        median_bal_acc=(metric, "median"),
+        min_bal_acc=(metric, "min"),
+        max_bal_acc=(metric, "max"),
         mean_auroc=("mean_auroc_macro", "mean"),
         std_auroc=("mean_auroc_macro", "std"),
         mean_n_features=("mean_n_features", "mean"),
-        n_repeats=("mean_balanced_accuracy", "count"),
+        n_repeats=(metric, "count"),
     )
     # Sort by mean balanced accuracy descending.
     summary = summary.sort_values("mean_bal_acc", ascending=False)
@@ -188,7 +196,8 @@ def compute_summary_statistics(per_repeat):
 """Statistical Testing"""
 
 
-def run_statistical_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES):
+def run_statistical_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES,
+                          metric="mean_balanced_accuracy"):
     """Run Friedman test and pairwise Wilcoxon signed-rank tests.
 
     Thin wrapper around utils.statistics.pairwise_wilcoxon that pivots
@@ -196,9 +205,10 @@ def run_statistical_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES):
 
     Args:
         per_repeat (pd.DataFrame): Per-repeat mean scores with columns
-            pipeline, repeat, mean_balanced_accuracy.
+            pipeline, repeat, and the metric column.
         log (logging.Logger): Logger instance.
         pipeline_order (tuple): Canonical pipeline ordering to use.
+        metric (str): Column name in per_repeat to compare.
 
     Returns:
         tuple: (friedman_stat, friedman_p, pairwise_df) where pairwise_df
@@ -208,7 +218,7 @@ def run_statistical_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES):
     """
     # Pivot to wide format: rows=repeats, columns=pipelines.
     wide = per_repeat.pivot(
-        index="repeat", columns="pipeline", values="mean_balanced_accuracy",
+        index="repeat", columns="pipeline", values=metric,
     )
     present = [p for p in pipeline_order if p in wide.columns]
     return pairwise_wilcoxon(wide, present, log)
