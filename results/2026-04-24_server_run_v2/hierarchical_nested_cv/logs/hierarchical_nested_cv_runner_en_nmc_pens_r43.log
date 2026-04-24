@@ -1,0 +1,55 @@
+Run: 2026-04-24_server_run_v2
+Config: /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)
+Stage 2: en_nmc_pens (HR+ vs Triple Neg)
+Repeat seed: 43
+Stage 2: no GridSearchCV (ensemble pipeline)
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
+Pooled plateau capped: 80 -> 15 combos
+Pooled plateau: 15 of 200 combos from 250 fold files (best=0.7476, std=0.0547, threshold=0.6929)
+  Plateau combo 1: score=0.7476, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+  Plateau combo 2: score=0.7459, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+  Plateau combo 3: score=0.7434, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+  Plateau combo 4: score=0.7427, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+  Plateau combo 5: score=0.7427, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+  Plateau combo 6: score=0.7414, params={'selector__C': 100.0, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+  Plateau combo 7: score=0.7409, params={'selector__C': 100.0, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+  Plateau combo 8: score=0.7405, params={'selector__C': 100.0, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+  Plateau combo 9: score=0.7405, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+  Plateau combo 10: score=0.7404, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+  Plateau combo 11: score=0.7402, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+  Plateau combo 12: score=0.7399, params={'selector__C': 100.0, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+  Plateau combo 13: score=0.7398, params={'selector__C': 7.74264, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+  Plateau combo 14: score=0.7397, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k': 20}
+  Plateau combo 15: score=0.7388, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+    Retraining 15 plateau models
+      [1/15] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+      [2/15] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+      [3/15] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+      [15/15] n_features=50, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+    Plateau features: union=87, intersection=18
+  Fold 1: s1=1.0000 (t=0.50)  s2=0.5357  combined=0.6905  auroc=0.8932  excl=0.7222 (1)  (4.8s)
+    Retraining 15 plateau models
+      [1/15] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+      [2/15] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+      [3/15] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+      [15/15] n_features=50, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+    Plateau features: union=99, intersection=17
+  Fold 2: s1=1.0000 (t=0.50)  s2=0.7024  combined=0.8016  auroc=0.9277  excl=0.8016 (0)  (4.6s)
+    Retraining 15 plateau models
+      [1/15] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+      [2/15] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+      [3/15] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+      [15/15] n_features=50, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+    Plateau features: union=104, intersection=14
+  Fold 3: s1=1.0000 (t=0.50)  s2=0.8542  combined=0.9028  auroc=0.9702  excl=0.9028 (0)  (4.5s)
+    Retraining 15 plateau models
+      [1/15] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+      [2/15] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+      [3/15] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}

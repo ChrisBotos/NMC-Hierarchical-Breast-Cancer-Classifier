@@ -1,0 +1,66 @@
+Run: 2026-04-24_server_run_v2
+Config: /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)
+Stage 2: kw_nmc_pens (HR+ vs Triple Neg)
+Repeat seed: 46
+Stage 2: no GridSearchCV (ensemble pipeline)
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
+Pooled plateau: 7 of 8 combos from 250 fold files (best=0.7264, std=0.0615, threshold=0.6649)
+  Plateau combo 1: score=0.7264, params={'selector__k': 30}
+  Plateau combo 2: score=0.7220, params={'selector__k': 50}
+  Plateau combo 3: score=0.7212, params={'selector__k': 20}
+  Plateau combo 4: score=0.7066, params={'selector__k': 15}
+  Plateau combo 5: score=0.7065, params={'selector__k': 75}
+  Plateau combo 6: score=0.6950, params={'selector__k': 100}
+  Plateau combo 7: score=0.6786, params={'selector__k': 10}
+    Retraining 7 plateau models
+      [1/7] n_features=30, params={'selector__k': 30}
+      [2/7] n_features=50, params={'selector__k': 50}
+      [3/7] n_features=20, params={'selector__k': 20}
+      [7/7] n_features=10, params={'selector__k': 10}
+    Plateau features: union=100, intersection=10
+  Fold 1: s1=1.0000 (t=0.50)  s2=0.8452  combined=0.8968  auroc=0.9887  excl=0.8968 (0)  (2.0s)
+    Retraining 7 plateau models
+      [1/7] n_features=30, params={'selector__k': 30}
+      [2/7] n_features=50, params={'selector__k': 50}
+      [3/7] n_features=20, params={'selector__k': 20}
+      [7/7] n_features=10, params={'selector__k': 10}
+    Plateau features: union=100, intersection=10
+  Fold 2: s1=1.0000 (t=0.50)  s2=0.6667  combined=0.7778  auroc=0.9695  excl=0.7778 (0)  (2.0s)
+    Retraining 7 plateau models
+      [1/7] n_features=30, params={'selector__k': 30}
+      [2/7] n_features=50, params={'selector__k': 50}
+      [3/7] n_features=20, params={'selector__k': 20}
+      [7/7] n_features=10, params={'selector__k': 10}
+    Plateau features: union=100, intersection=10
+  Fold 3: s1=1.0000 (t=0.50)  s2=0.6458  combined=0.7639  auroc=0.9256  excl=0.8083 (1)  (1.9s)
+    Retraining 7 plateau models
+      [1/7] n_features=30, params={'selector__k': 30}
+      [2/7] n_features=50, params={'selector__k': 50}
+      [3/7] n_features=20, params={'selector__k': 20}
+      [7/7] n_features=10, params={'selector__k': 10}
+    Plateau features: union=100, intersection=10
+  Fold 4: s1=1.0000 (t=0.50)  s2=0.3571  combined=0.5714  auroc=0.8352  excl=0.5714 (0)  (1.9s)
+    Retraining 7 plateau models
+      [1/7] n_features=30, params={'selector__k': 30}
+      [2/7] n_features=50, params={'selector__k': 50}
+      [3/7] n_features=20, params={'selector__k': 20}
+      [7/7] n_features=10, params={'selector__k': 10}
+    Plateau features: union=100, intersection=10
+  Fold 5: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9487  excl=0.8333 (1)  (1.5s)
+
+Summary for v2_kw_nmc_pens repeat 46:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.6458 (+/- 0.1601)
+  Combined (3-class):       0.7639 (+/- 0.1068)
+  Combined (excl mislabels): 0.7775 (+/- 0.1102)
+  Combined fold scores: [0.8968, 0.7778, 0.7639, 0.5714, 0.8095]
+  Total time: 9.4s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv/data/fold_results_kw_nmc_pens_r46.csv
+Checkpoint removed (job complete).
