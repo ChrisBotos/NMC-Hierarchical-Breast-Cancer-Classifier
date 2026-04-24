@@ -7,13 +7,12 @@ Authors:
     Yan Qiao (2874296).
 Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
-Script Name: hierarchical_nested_cv_v2_runner.py.
+Script Name: hierarchical_nested_cv_runner.py.
 Description:
     Enhanced hierarchical nested cross-validation runner (v2). Extends the
-    v1 runner with three principled modifications applied uniformly:
+    v1 runner with two principled modifications applied uniformly:
       1. Cost-sensitive NMC (class_weight='balanced' via log-weight bias).
-      2. Stage 1 threshold calibration via inner CV.
-      3. K-ensemble and pipeline-ensemble variants.
+      2. K-ensemble and pipeline-ensemble variants.
 
     Supports 7 pipeline variants for Stage 2: the 4 original baselines
     (now with cost-sensitive NMC), k-ensemble averaging over fixed k values,
@@ -26,9 +25,9 @@ Description:
     with and without suspected mislabel samples for sensitivity analysis.
 
 Usage:
-    python3 code/hierarchical_nested_cv_v2_runner.py --pipeline kw_nmc --repeat 1 --config local_v2
-    python3 code/hierarchical_nested_cv_v2_runner.py --pipeline kw_nmc_kens --repeat 3 --config server_v2
-    python3 code/hierarchical_nested_cv_v2_runner.py --pipeline nmc_ensemble --repeat 1 --config local_v2
+    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc --repeat 1 --config local_v2
+    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc_kens --repeat 3 --config server_v2
+    python3 code/hierarchical_nested_cv_runner.py --pipeline nmc_ensemble --repeat 1 --config local_v2
 
 Dependencies:
     Python >= 3.10.
@@ -84,80 +83,6 @@ rich.traceback.install()
 
 """Stage 1 Threshold Calibration"""
 
-
-def calibrate_stage1_threshold(stage1_pipe, X_train, y_train_s1,
-                               threshold_range, inner_folds, repeat_seed,
-                               log):
-    """Find the optimal Stage 1 probability threshold via inner CV.
-
-    For each candidate threshold, runs inner stratified k-fold CV on the
-    binary HER2+ vs rest problem. The Stage 1 pipeline is re-fitted on
-    each inner train split, then the threshold is applied to predict_proba
-    on the inner test split. The threshold with the highest mean balanced
-    accuracy across inner folds is selected.
-
-    When all thresholds achieve the same BA (expected when Stage 1 separation
-    is perfect), defaults to 0.5.
-
-    Args:
-        stage1_pipe (Pipeline): Fitted Stage 1 KW+RF pipeline (will be
-            cloned and re-fitted on inner splits).
-        X_train (np.ndarray): Outer fold training features.
-        y_train_s1 (np.ndarray): Binary labels (1=HER2+, 0=rest).
-        threshold_range (list[float]): Candidate thresholds to evaluate.
-        inner_folds (int): Number of inner CV folds.
-        repeat_seed (int): Seed for inner CV splitting.
-        log (logging.Logger): Logger instance.
-
-    Returns:
-        float: The selected threshold.
-    """
-    from sklearn.base import clone
-
-    inner_cv = StratifiedKFold(
-        n_splits=inner_folds, shuffle=True,
-        random_state=300 + repeat_seed,
-    )
-
-    # Track mean BA per threshold across inner folds.
-    threshold_scores = {t: [] for t in threshold_range}
-
-    for inner_train, inner_test in inner_cv.split(X_train, y_train_s1):
-        pipe_clone = clone(stage1_pipe)
-        pipe_clone.fit(X_train[inner_train], y_train_s1[inner_train])
-        proba = pipe_clone.predict_proba(X_train[inner_test])
-        # proba[:, 1] = P(HER2+).
-        p_her2 = proba[:, 1]
-        y_inner_true = y_train_s1[inner_test]
-
-        for t in threshold_range:
-            y_pred_t = (p_her2 >= t).astype(int)
-            ba = balanced_accuracy_score(y_inner_true, y_pred_t)
-            threshold_scores[t].append(ba)
-
-    # Select threshold with highest mean BA.
-    mean_scores = {t: np.mean(scores) for t, scores in threshold_scores.items()}
-    best_threshold = max(mean_scores, key=mean_scores.get)
-    best_ba = mean_scores[best_threshold]
-
-    # Check if all thresholds tied (perfect separation).
-    all_scores = list(mean_scores.values())
-    all_tied = all(abs(s - all_scores[0]) < 1e-10 for s in all_scores)
-
-    if all_tied:
-        best_threshold = 0.5
-        log.info(
-            "    Stage 1 threshold: all %d candidates tied at BA=%.4f; "
-            "defaulting to 0.5.",
-            len(threshold_range), best_ba,
-        )
-    else:
-        log.info(
-            "    Stage 1 threshold: %.2f (BA=%.4f, range %.4f-%.4f).",
-            best_threshold, best_ba, min(all_scores), max(all_scores),
-        )
-
-    return best_threshold
 
 
 """Stage 2 Dispatch Functions"""
@@ -370,8 +295,9 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
                          details_dir=None):
     """Run hierarchical outer CV for one Stage 2 pipeline and one repeat (v2).
 
-    Enhanced version with threshold calibration, cost-sensitive NMC,
-    k-ensemble/pipeline-ensemble dispatch, and mislabel sensitivity analysis.
+    Enhanced version with cost-sensitive NMC, k-ensemble/pipeline-ensemble
+    dispatch, and mislabel sensitivity analysis. Stage 1 uses a fixed
+    threshold of 0.5 (calibration removed due to tie-breaking artifact).
 
     Args:
         X (np.ndarray): Feature matrix of shape (n_samples, n_features).
@@ -397,10 +323,10 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
     inner_folds = cv_cfg.get("inner_folds", 5)
     n_completed = len(prior_folds) if prior_folds else 0
 
-    # Stage 1 threshold calibration parameters.
-    s1_cfg = config.get("stage1", {})
-    threshold_range = s1_cfg.get("threshold_range", [0.5])
-    s1_inner_folds = s1_cfg.get("inner_folds", 5)
+    # Stage 1 uses a fixed threshold of 0.5 (no calibration). Threshold
+    # calibration was removed because it consistently selected overly
+    # permissive thresholds (0.10-0.20) due to a tie-breaking artifact,
+    # causing ~31 misroutings per run with no offsetting benefit.
 
     # K-ensemble parameters.
     kens_cfg = config.get("k_ensemble", {})
@@ -448,13 +374,8 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
 
         stage1_pipe.fit(X_train, y_train_s1)
 
-        # --- Stage 1 threshold calibration ---
-        best_threshold = calibrate_stage1_threshold(
-            stage1_pipe, X_train, y_train_s1,
-            threshold_range, s1_inner_folds, repeat_seed, log,
-        )
-
-        # Apply calibrated threshold to test set.
+        # Apply fixed threshold to test set.
+        best_threshold = 0.5
         proba_s1 = stage1_pipe.predict_proba(X_test)
         p_her2_test = proba_s1[:, 1]
         y_pred_s1 = (p_her2_test >= best_threshold).astype(int)
@@ -765,8 +686,8 @@ def parse_args():
 def main():
     """Entry point: run hierarchical nested CV v2 with checkpointing.
 
-    Stage 1 is always KW+RF on binary HER2+ vs rest labels with threshold
-    calibration. Stage 2 uses the pipeline specified by --pipeline.
+    Stage 1 is always KW+RF on binary HER2+ vs rest labels with a fixed
+    threshold of 0.5. Stage 2 uses the pipeline specified by --pipeline.
     """
     args = parse_args()
 
@@ -779,12 +700,12 @@ def main():
         args.name, "hierarchical_nested_cv_v2",
     )
     log, console = setup_logging(
-        "hierarchical_nested_cv_v2_runner", tag=tag, log_dir=log_dir,
+        "hierarchical_nested_cv_runner", tag=tag, log_dir=log_dir,
     )
 
     log.info("Run: %s", run_dir.name)
     log.info("Config: %s", config["_config_path"])
-    log.info("Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold calibrated)")
+    log.info("Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)")
     log.info("Stage 2: %s (HR+ vs Triple Neg)", args.pipeline)
     log.info("Repeat seed: %d", args.repeat)
 
@@ -920,7 +841,7 @@ def main():
 
     # Save run config snapshot.
     save_config(
-        run_dir, "hierarchical_nested_cv_v2_runner",
+        run_dir, "hierarchical_nested_cv_runner",
         stage2_pipeline=args.pipeline,
         repeat=args.repeat,
         config_file=config["_config_path"],

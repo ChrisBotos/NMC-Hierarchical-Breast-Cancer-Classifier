@@ -80,7 +80,7 @@ for PIPELINE in "${PIPELINES[@]}"; do
         echo "--- Job $COMPLETED / $TOTAL_JOBS: $PIPELINE repeat $REPEAT ---"
 
         set +e
-        python3 "$PROJECT_DIR/code/hierarchical_nested_cv_v2_runner.py" \
+        python3 "$PROJECT_DIR/code/hierarchical_nested_cv_runner.py" \
             --pipeline "$PIPELINE" \
             --repeat "$REPEAT" \
             --config "$CONFIG_FILE" \
