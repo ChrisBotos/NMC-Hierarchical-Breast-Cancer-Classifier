@@ -353,3 +353,23 @@ Three independent reasons:
 **Decision:** r=0.8 stays. No tuning of r needed - the curve is flat across 0.7-0.9 and only drops at raw. The merging threshold is not a sensitive hyperparameter for this problem.
 
 **Caveat:** This is a 10-repeat preliminary result. The per-repeat breakdown shows variance (individual repeats range from 0.66 to 0.79 for r=0.8). A 50-repeat server run would tighten the confidence intervals, but the direction is clear enough to close this question. Consider rerunning with 50 repeats if the result needs to be cited in the paper with tight error bars.
+
+---
+
+# Findings: Stage 1 Threshold Bug Fix
+
+## Problem
+
+Initial implementation used inner-CV-tuned Stage 1 threshold. The Stage 1 classifier (KW+RF, HER2+ vs rest) is trivially separable - inner CV produces perfect or near-perfect AUROC across a wide range of thresholds. When multiple thresholds tie on inner CV performance, the tiebreaker policy (e.g. selecting the first, last, or median tied value) can select pathological values far from the natural decision boundary.
+
+## Root cause
+
+For a trivially separable binary problem, the ROC curve is a step function: every threshold between the most-positive "rest" score and the least-positive "HER2+" score achieves perfect classification. GridSearchCV or threshold-sweep logic that picks among ties has no principled basis for choosing within this flat region. Depending on implementation, it may select a threshold near the extreme of the tied range, which classifies correctly on training data but is fragile to slight score perturbations in test data.
+
+## Fix
+
+Stage 1 threshold was fixed at 0.5 (the natural midpoint for probability outputs). Since Stage 1 is perfectly separable with wide margins, the exact threshold value does not matter as long as it is not pathological. Fixing it at 0.5 eliminates the tiebreaker artifact entirely.
+
+## Methodological lesson (for Methods section)
+
+When inner CV produces ties over a wide threshold range (as expected for trivially separable problems), naive tiebreaker policies can select pathological values. The correct approach is to fix the threshold at the natural decision boundary (0.5 for probability outputs) rather than tuning a parameter that has no meaningful gradient to optimise over. This is a specific instance of a general principle: do not tune hyperparameters that the data cannot inform.

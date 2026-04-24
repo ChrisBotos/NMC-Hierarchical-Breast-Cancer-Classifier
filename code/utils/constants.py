@@ -24,6 +24,7 @@ PIPELINE_LABELS = {
     "kw_nmc_kens": "KW + NMC (k-ens)",
     "nmc_ensemble": "NMC Ensemble",
     "kw_nmc_kgrid": "KW + NMC (k-grid)",
+    "standalone_en": "Standalone EN",
 }
 
 # Pipeline colours (consistent palette, extended for v2 variants).
@@ -35,13 +36,14 @@ PIPELINE_COLORS = {
     "kw_nmc_kens": "#3C5488",
     "nmc_ensemble": "#8491B4",
     "kw_nmc_kgrid": "#91D1C2",
+    "standalone_en": "#B09C85",
 }
 
 # Canonical ordering for the 7 v2 hierarchical pipeline variants.
 V2_PIPELINE_NAMES = (
     "kw_nmc", "en_nmc", "kw_rf", "en_rf",
-    "kw_nmc_kens", "nmc_ensemble", "kw_nmc_kgrid",
+    "kw_nmc_kens", "nmc_ensemble", "kw_nmc_kgrid", "standalone_en",
 )
 
 # V2 pipelines that use GridSearchCV for Stage 2 hyperparameter tuning.
-V2_GRIDSEARCH_PIPELINES = ("kw_nmc", "en_nmc", "kw_rf", "en_rf", "kw_nmc_kgrid")
+V2_GRIDSEARCH_PIPELINES = ("kw_nmc", "en_nmc", "kw_rf", "en_rf", "kw_nmc_kgrid", "standalone_en")

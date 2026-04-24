@@ -161,6 +161,46 @@ def resolve_merged_input(run_name, input_path):
     return PROJECT_DIR / "results" / "data" / "preprocessing_phase" / "train_merged.tsv"
 
 
+def extract_selected_features(pipeline, feature_names):
+    """Extract selected feature indices and names from a fitted pipeline.
+
+    Handles both pipelines with an explicit selector step (KW/EN) and
+    pipelines without one (standalone EN classifier, where non-zero
+    coefficients indicate implicit feature selection via L1 penalty).
+
+    Args:
+        pipeline (Pipeline): A fitted sklearn Pipeline.
+        feature_names (list[str]): Full list of feature names matching
+            the original input columns.
+
+    Returns:
+        tuple: (n_features, indices, names) where n_features is the
+            count of selected features, indices is a numpy array of
+            selected column indices, and names is a list of
+            corresponding feature name strings.
+    """
+    if "selector" in pipeline.named_steps:
+        selector = pipeline.named_steps["selector"]
+        indices = selector.indices_
+        n_features = len(indices)
+        names = [feature_names[i] for i in indices]
+        return n_features, indices, names
+
+    # No explicit selector - extract non-zero coefficients from the clf.
+    clf = pipeline.named_steps["clf"]
+    if hasattr(clf, "coef_"):
+        importance = np.abs(clf.coef_).sum(axis=0)
+        indices = np.where(importance > 0)[0]
+        n_features = len(indices)
+        names = [feature_names[i] for i in indices]
+        return n_features, indices, names
+
+    # Fallback: all features used.
+    n_features = len(feature_names)
+    indices = np.arange(n_features)
+    return n_features, indices, list(feature_names)
+
+
 def get_selector_scores(selector):
     """Extract feature scores from a fitted KW or EN selector.
 

@@ -8,7 +8,7 @@ cv:
   scoring: balanced_accuracy
 
 pipelines:
-  names: [kw_nmc, kw_rf, en_nmc, en_rf]
+  names: [kw_nmc, kw_rf, en_nmc, en_rf, standalone_en]
   rf_n_estimators: 500
   rf_class_weight: balanced
 
@@ -29,6 +29,9 @@ grids:
     selector__top_k: [5, 20]
     clf__max_features: ["sqrt", "log2"]
     clf__min_samples_leaf: [1, 2]
+  standalone_en:
+    clf__C: [0.001, 0.01, 0.1, 1.0, 10.0]
+    clf__l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
 
 preprocessing:
   merge_threshold: 0.8

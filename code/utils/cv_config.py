@@ -6,6 +6,7 @@ config files in config_files/ via :mod:`utils.config_loader`.
 """
 
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -97,6 +98,22 @@ def build_pipeline(pipeline_name, random_state=42, config=None):
             )),
         ])
 
+    if pipeline_name == "standalone_en":
+        # Elastic net logistic regression as both selector and classifier.
+        # L1 penalty implicitly zeroes out uninformative features.
+        return Pipeline([
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(
+                penalty="elasticnet",
+                solver="saga",
+                l1_ratio=0.5,
+                class_weight="balanced",
+                max_iter=10000,
+                random_state=random_state,
+                n_jobs=1,
+            )),
+        ])
+
     raise ValueError(
         f"Unknown pipeline '{pipeline_name}'. "
         f"Choose from: {PIPELINE_NAMES}."
@@ -176,6 +193,22 @@ def build_v2_stage2_pipeline(pipeline_name, random_state=42, config=None):
             ("clf", RandomForestClassifier(
                 n_estimators=rf_n_estimators,
                 class_weight=rf_class_weight,
+                random_state=random_state,
+                n_jobs=1,
+            )),
+        ])
+
+    if pipeline_name == "standalone_en":
+        # Elastic net logistic regression as both selector and classifier.
+        # L1 penalty implicitly zeroes out uninformative features.
+        return Pipeline([
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(
+                penalty="elasticnet",
+                solver="saga",
+                l1_ratio=0.5,
+                class_weight="balanced",
+                max_iter=10000,
                 random_state=random_state,
                 n_jobs=1,
             )),
