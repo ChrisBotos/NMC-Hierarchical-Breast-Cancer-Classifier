@@ -1,0 +1,40 @@
+========================================
+Hierarchical CV v2 - Job 47 of 350
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  kw_nmc
+Repeat:   47 / 50
+Config:   /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml
+Run:      server_run_v2
+Node:     node2
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-24 06:38:53
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_v2_runner.py --pipeline kw_nmc --repeat 47 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml --name server_run_v2
+INFO     Run: 2026-04-24_server_run_v2                                          
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapsho
+         t_hierarchical_v2.yaml                                                 
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold calibrated)     
+INFO     Stage 2: kw_nmc (HR+ vs Triple Neg)                                    
+INFO     Repeat seed: 47                                                        
+INFO     Stage 2 grid size: 8 combinations                                      
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]          
+INFO         Stage 1 threshold: 0.30 (BA=1.0000, range 0.8200-1.0000).          
+INFO       Fold 1: s1=1.0000 (t=0.30)  s2=0.8333  combined=0.8889  auroc=0.9847 
+         excl=0.9333 (1)  (10.6s)                                               
+INFO         Stage 1 threshold: 0.15 (BA=1.0000, range 0.8400-1.0000).          
+  v2_kw_nmc r47 ━━━━━━━━                                  20% -:--:--
+========================================
+Finished: 2026-04-24 06:39:16
+Elapsed:  0h 0m 23s
+Exit:     1
+========================================
+[HNCV2-TASK-DONE] array=15667 task=46 stage2_pipeline=kw_nmc repeat=47 exit=1 elapsed=23s

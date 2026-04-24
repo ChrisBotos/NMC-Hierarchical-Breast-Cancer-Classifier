@@ -1,0 +1,83 @@
+========================================
+Hierarchical CV v2 - Job 238 of 350
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  kw_nmc_kens
+Repeat:   38 / 50
+Config:   /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml
+Run:      server_run_v2
+Node:     node3
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-24 10:34:51
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_v2_runner.py --pipeline kw_nmc_kens --repeat 38 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml --name server_run_v2
+INFO     Run: 2026-04-24_server_run_v2                                          
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapsho
+         t_hierarchical_v2.yaml                                                 
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold calibrated)     
+INFO     Stage 2: kw_nmc_kens (HR+ vs Triple Neg)                               
+INFO     Repeat seed: 38                                                        
+INFO     Stage 2: no GridSearchCV (ensemble pipeline)                           
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]          
+INFO         Stage 1 threshold: 0.20 (BA=1.0000, range 0.9000-1.0000).          
+INFO           k=15: mean_max_prob=0.6933                                       
+INFO           k=20: mean_max_prob=0.7064                                       
+INFO           k=30: mean_max_prob=0.6798                                       
+INFO           k=50: mean_max_prob=0.7021                                       
+INFO       Fold 1: s1=1.0000 (t=0.20)  s2=0.7500  combined=0.8333  auroc=0.9237 
+         excl=0.8333 (0)  (3.6s)                                                
+INFO         Stage 1 threshold: 0.15 (BA=1.0000, range 0.9000-1.0000).          
+INFO           k=15: mean_max_prob=0.6875                                       
+INFO           k=20: mean_max_prob=0.7047                                       
+INFO           k=30: mean_max_prob=0.6957                                       
+INFO           k=50: mean_max_prob=0.7119                                       
+INFO       Fold 2: s1=0.9615 (t=0.15)  s2=0.7738  combined=0.8016  auroc=0.9200 
+         excl=0.8016 (0)  (3.6s)                                                
+INFO         Stage 1 threshold: 0.20 (BA=1.0000, range 0.8267-1.0000).          
+INFO           k=15: mean_max_prob=0.6829                                       
+INFO           k=20: mean_max_prob=0.7016                                       
+INFO           k=30: mean_max_prob=0.7221                                       
+INFO           k=50: mean_max_prob=0.6978                                       
+INFO       Fold 3: s1=1.0000 (t=0.20)  s2=0.7708  combined=0.8472  auroc=0.9405 
+         excl=0.8472 (0)  (3.6s)                                                
+INFO         Stage 1 threshold: 0.25 (BA=1.0000, range 0.8900-1.0000).          
+INFO           k=15: mean_max_prob=0.6595                                       
+INFO           k=20: mean_max_prob=0.6675                                       
+INFO           k=30: mean_max_prob=0.6686                                       
+INFO           k=50: mean_max_prob=0.6695                                       
+INFO       Fold 4: s1=1.0000 (t=0.25)  s2=0.9286  combined=0.9524  auroc=0.9597 
+         excl=1.0000 (1)  (3.6s)                                                
+INFO         Stage 1 threshold: 0.30 (BA=1.0000, range 0.9233-1.0000).          
+INFO           k=15: mean_max_prob=0.7007                                       
+INFO           k=20: mean_max_prob=0.6906                                       
+INFO           k=30: mean_max_prob=0.7129                                       
+INFO           k=50: mean_max_prob=0.7087                                       
+INFO       Fold 5: s1=1.0000 (t=0.30)  s2=0.8571  combined=0.9048  auroc=0.9707 
+         excl=0.9444 (1)  (3.6s)                                                
+  v2_kw_nmc_kens r38 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:18
+INFO                                                                            
+INFO     Summary for v2_kw_nmc_kens repeat 38:                                  
+INFO       Stage 1 (HER2+ vs rest):  0.9923 (+/- 0.0154)                        
+INFO       Stage 2 (HR+ vs TN):      0.8161 (+/- 0.0671)                        
+INFO       Combined (3-class):       0.8679 (+/- 0.0539)                        
+INFO       Combined (excl mislabels): 0.8853 (+/- 0.0746)                       
+INFO       Combined fold scores: [0.8333, 0.8016, 0.8472, 0.9524, 0.9048]       
+INFO       Total time: 18.1s                                                    
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_n
+         ested_cv_v2/data/fold_results_kw_nmc_kens_r38.csv                      
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-24 10:35:11
+Elapsed:  0h 0m 20s
+Exit:     0
+========================================
+[HNCV2-TASK-DONE] array=15768 task=237 stage2_pipeline=kw_nmc_kens repeat=38 exit=0 elapsed=20s

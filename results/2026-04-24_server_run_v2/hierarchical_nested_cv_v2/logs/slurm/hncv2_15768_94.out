@@ -1,0 +1,61 @@
+========================================
+Hierarchical CV v2 - Job 95 of 350
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  en_nmc
+Repeat:   45 / 50
+Config:   /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml
+Run:      server_run_v2
+Node:     node1
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-24 06:49:32
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_v2_runner.py --pipeline en_nmc --repeat 45 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml --name server_run_v2
+INFO     Run: 2026-04-24_server_run_v2                                          
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapsho
+         t_hierarchical_v2.yaml                                                 
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold calibrated)     
+INFO     Stage 2: en_nmc (HR+ vs Triple Neg)                                    
+INFO     Repeat seed: 45                                                        
+INFO     Resuming from checkpoint: 1 folds already completed.                   
+INFO     Stage 2 grid size: 200 combinations                                    
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]          
+INFO         Stage 1 threshold: 0.20 (BA=1.0000, range 0.9000-1.0000).          
+INFO       Fold 2: s1=1.0000 (t=0.20)  s2=0.3929  combined=0.5952  auroc=0.8626 
+         excl=0.5952 (0)  (220.6s)                                              
+INFO         Stage 1 threshold: 0.20 (BA=1.0000, range 0.9267-1.0000).          
+INFO       Fold 3: s1=1.0000 (t=0.20)  s2=0.8333  combined=0.8889  auroc=0.9702 
+         excl=0.8889 (0)  (218.4s)                                              
+INFO         Stage 1 threshold: 0.20 (BA=1.0000, range 0.8667-1.0000).          
+INFO       Fold 4: s1=1.0000 (t=0.20)  s2=0.7857  combined=0.8571  auroc=0.9048 
+         excl=0.8889 (1)  (205.6s)                                              
+INFO         Stage 1 threshold: 0.25 (BA=1.0000, range 0.8300-1.0000).          
+INFO       Fold 5: s1=1.0000 (t=0.25)  s2=0.6429  combined=0.7619  auroc=0.9121 
+         excl=0.7619 (0)  (210.5s)                                              
+  v2_en_nmc r45 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:14:15
+INFO                                                                            
+INFO     Summary for v2_en_nmc repeat 45:                                       
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.7000 (+/- 0.1696)                        
+INFO       Combined (3-class):       0.8000 (+/- 0.1131)                        
+INFO       Combined (excl mislabels): 0.8175 (+/- 0.1272)                       
+INFO       Combined fold scores: [0.8968, 0.5952, 0.8889, 0.8571, 0.7619]       
+INFO       Total time: 855.3s                                                   
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_n
+         ested_cv_v2/data/fold_results_en_nmc_r45.csv                           
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-24 07:03:49
+Elapsed:  0h 14m 17s
+Exit:     0
+========================================
+[HNCV2-TASK-DONE] array=15768 task=94 stage2_pipeline=en_nmc repeat=45 exit=0 elapsed=857s

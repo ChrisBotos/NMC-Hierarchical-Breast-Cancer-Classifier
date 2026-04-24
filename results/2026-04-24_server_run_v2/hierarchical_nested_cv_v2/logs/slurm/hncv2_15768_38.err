@@ -1,0 +1,74 @@
+╭───────────────────── Traceback (most recent call last) ──────────────────────╮
+│ /data/cbotos/TB-Project/code/hierarchical_nested_cv_v2_runner.py:935 in      │
+│ <module>                                                                     │
+│                                                                              │
+│   932                                                                        │
+│   933                                                                        │
+│   934 if __name__ == "__main__":                                             │
+│ ❱ 935 │   main()                                                             │
+│   936                                                                        │
+│                                                                              │
+│ /data/cbotos/TB-Project/code/hierarchical_nested_cv_v2_runner.py:922 in main │
+│                                                                              │
+│   919 │   │   log.info("Checkpoint removed (job complete).")                 │
+│   920 │                                                                      │
+│   921 │   # Save run config snapshot.                                        │
+│ ❱ 922 │   save_config(                                                       │
+│   923 │   │   run_dir, "hierarchical_nested_cv_v2_runner",                   │
+│   924 │   │   stage2_pipeline=args.pipeline,                                 │
+│   925 │   │   repeat=args.repeat,                                            │
+│                                                                              │
+│ /data/cbotos/TB-Project/code/utils/paths.py:145 in save_config               │
+│                                                                              │
+│   142 │                                                                      │
+│   143 │   if config_path.exists():                                           │
+│   144 │   │   with open(config_path) as f:                                   │
+│ ❱ 145 │   │   │   config = json.load(f)                                      │
+│   146 │   else:                                                              │
+│   147 │   │   config = {}                                                    │
+│   148                                                                        │
+│                                                                              │
+│ /data/cbotos/miniconda3/envs/tb_310/lib/python3.10/json/__init__.py:293 in   │
+│ load                                                                         │
+│                                                                              │
+│   290 │   To use a custom ``JSONDecoder`` subclass, specify it with the ``cl │
+│   291 │   kwarg; otherwise ``JSONDecoder`` is used.                          │
+│   292 │   """                                                                │
+│ ❱ 293 │   return loads(fp.read(),                                            │
+│   294 │   │   cls=cls, object_hook=object_hook,                              │
+│   295 │   │   parse_float=parse_float, parse_int=parse_int,                  │
+│   296 │   │   parse_constant=parse_constant, object_pairs_hook=object_pairs_ │
+│                                                                              │
+│ /data/cbotos/miniconda3/envs/tb_310/lib/python3.10/json/__init__.py:346 in   │
+│ loads                                                                        │
+│                                                                              │
+│   343 │   if (cls is None and object_hook is None and                        │
+│   344 │   │   │   parse_int is None and parse_float is None and              │
+│   345 │   │   │   parse_constant is None and object_pairs_hook is None and n │
+│ ❱ 346 │   │   return _default_decoder.decode(s)                              │
+│   347 │   if cls is None:                                                    │
+│   348 │   │   cls = JSONDecoder                                              │
+│   349 │   if object_hook is not None:                                        │
+│                                                                              │
+│ /data/cbotos/miniconda3/envs/tb_310/lib/python3.10/json/decoder.py:337 in    │
+│ decode                                                                       │
+│                                                                              │
+│   334 │   │   containing a JSON document).                                   │
+│   335 │   │                                                                  │
+│   336 │   │   """                                                            │
+│ ❱ 337 │   │   obj, end = self.raw_decode(s, idx=_w(s, 0).end())              │
+│   338 │   │   end = _w(s, end).end()                                         │
+│   339 │   │   if end != len(s):                                              │
+│   340 │   │   │   raise JSONDecodeError("Extra data", s, end)                │
+│                                                                              │
+│ /data/cbotos/miniconda3/envs/tb_310/lib/python3.10/json/decoder.py:355 in    │
+│ raw_decode                                                                   │
+│                                                                              │
+│   352 │   │   try:                                                           │
+│   353 │   │   │   obj, end = self.scan_once(s, idx)                          │
+│   354 │   │   except StopIteration as err:                                   │
+│ ❱ 355 │   │   │   raise JSONDecodeError("Expecting value", s, err.value) fro │
+│   356 │   │   return obj, end                                                │
+│   357                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+JSONDecodeError: Expecting value: line 1 column 1 (char 0)

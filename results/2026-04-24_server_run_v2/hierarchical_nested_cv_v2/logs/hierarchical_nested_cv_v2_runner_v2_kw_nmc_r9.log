@@ -1,0 +1,33 @@
+Run: 2026-04-24_server_run_v2
+Config: /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold calibrated)
+Stage 2: kw_nmc (HR+ vs Triple Neg)
+Repeat seed: 9
+Stage 2 grid size: 8 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
+    Stage 1 threshold: 0.20 (BA=1.0000, range 0.7600-1.0000).
+  Fold 1: s1=1.0000 (t=0.20)  s2=0.7619  combined=0.8413  auroc=0.9658  excl=0.8413 (0)  (10.5s)
+    Stage 1 threshold: 0.20 (BA=1.0000, range 0.9000-1.0000).
+  Fold 2: s1=1.0000 (t=0.20)  s2=0.5357  combined=0.6905  auroc=0.8776  excl=0.7556 (2)  (9.0s)
+    Stage 1 threshold: 0.30 (BA=1.0000, range 0.8433-1.0000).
+  Fold 3: s1=1.0000 (t=0.30)  s2=0.7708  combined=0.8472  auroc=0.9519  excl=0.8472 (0)  (9.0s)
+    Stage 1 threshold: 0.15 (BA=1.0000, range 0.8233-1.0000).
+  Fold 4: s1=1.0000 (t=0.15)  s2=0.7857  combined=0.8571  auroc=0.9634  excl=0.8571 (0)  (9.0s)
+    Stage 1 threshold: 0.15 (BA=1.0000, range 0.8867-1.0000).
+  Fold 5: s1=1.0000 (t=0.15)  s2=0.7857  combined=0.8571  auroc=0.9524  excl=0.8571 (0)  (9.0s)
+
+Summary for v2_kw_nmc repeat 9:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.7280 (+/- 0.0966)
+  Combined (3-class):       0.8187 (+/- 0.0644)
+  Combined (excl mislabels): 0.8317 (+/- 0.0385)
+  Combined fold scores: [0.8413, 0.6905, 0.8472, 0.8571, 0.8571]
+  Total time: 46.4s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv_v2/data/fold_results_kw_nmc_r9.csv
+Checkpoint removed (job complete).

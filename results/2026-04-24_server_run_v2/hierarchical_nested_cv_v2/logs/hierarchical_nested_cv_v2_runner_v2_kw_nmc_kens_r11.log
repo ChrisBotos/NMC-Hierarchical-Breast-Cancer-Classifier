@@ -1,0 +1,53 @@
+Run: 2026-04-24_server_run_v2
+Config: /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold calibrated)
+Stage 2: kw_nmc_kens (HR+ vs Triple Neg)
+Repeat seed: 11
+Stage 2: no GridSearchCV (ensemble pipeline)
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
+    Stage 1 threshold: 0.20 (BA=1.0000, range 0.8800-1.0000).
+      k=15: mean_max_prob=0.6803
+      k=20: mean_max_prob=0.6752
+      k=30: mean_max_prob=0.6694
+      k=50: mean_max_prob=0.6606
+  Fold 1: s1=1.0000 (t=0.20)  s2=0.8571  combined=0.9048  auroc=1.0000  excl=0.9048 (0)  (3.6s)
+    Stage 1 threshold: 0.20 (BA=1.0000, range 0.9400-1.0000).
+      k=15: mean_max_prob=0.7089
+      k=20: mean_max_prob=0.7179
+      k=30: mean_max_prob=0.7293
+      k=50: mean_max_prob=0.7245
+  Fold 2: s1=0.8846 (t=0.20)  s2=0.7619  combined=0.7381  auroc=0.9505  excl=0.8111 (2)  (3.6s)
+    Stage 1 threshold: 0.15 (BA=1.0000, range 0.8467-1.0000).
+      k=15: mean_max_prob=0.7053
+      k=20: mean_max_prob=0.6990
+      k=30: mean_max_prob=0.6967
+      k=50: mean_max_prob=0.6998
+  Fold 3: s1=0.9643 (t=0.15)  s2=0.8333  combined=0.8472  auroc=0.9856  excl=0.8472 (0)  (3.6s)
+    Stage 1 threshold: 0.20 (BA=1.0000, range 0.8700-1.0000).
+      k=15: mean_max_prob=0.7047
+      k=20: mean_max_prob=0.7058
+      k=30: mean_max_prob=0.7085
+      k=50: mean_max_prob=0.7291
+  Fold 4: s1=1.0000 (t=0.20)  s2=0.6429  combined=0.7619  auroc=0.9158  excl=0.7619 (0)  (3.6s)
+    Stage 1 threshold: 0.10 (BA=1.0000, range 0.8467-1.0000).
+      k=15: mean_max_prob=0.7069
+      k=20: mean_max_prob=0.7145
+      k=30: mean_max_prob=0.7238
+      k=50: mean_max_prob=0.6881
+  Fold 5: s1=0.9643 (t=0.10)  s2=0.7857  combined=0.8095  auroc=0.9560  excl=0.8095 (0)  (3.6s)
+
+Summary for v2_kw_nmc_kens repeat 11:
+  Stage 1 (HER2+ vs rest):  0.9626 (+/- 0.0422)
+  Stage 2 (HR+ vs TN):      0.7762 (+/- 0.0747)
+  Combined (3-class):       0.8123 (+/- 0.0597)
+  Combined (excl mislabels): 0.8269 (+/- 0.0474)
+  Combined fold scores: [0.9048, 0.7381, 0.8472, 0.7619, 0.8095]
+  Total time: 18.0s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv_v2/data/fold_results_kw_nmc_kens_r11.csv
+Checkpoint removed (job complete).

@@ -1,0 +1,68 @@
+Run: 2026-04-24_server_run_v2
+Config: /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold calibrated)
+Stage 2: nmc_ensemble (HR+ vs Triple Neg)
+Repeat seed: 19
+Stage 2: no GridSearchCV (ensemble pipeline)
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
+    Stage 1 threshold: 0.15 (BA=1.0000, range 0.8800-1.0000).
+    Pipeline ensemble component 1: KW k-ensemble
+      k=15: mean_max_prob=0.7083
+      k=20: mean_max_prob=0.6940
+      k=30: mean_max_prob=0.6903
+      k=50: mean_max_prob=0.6926
+    Pipeline ensemble component 2: EN+NMC GridSearchCV
+    Ensemble mean_max_prob: kens=0.6867, en=0.6685, ratio=1.03
+  Fold 1: s1=1.0000 (t=0.15)  s2=0.6190  combined=0.7460  auroc=0.9237  excl=0.7778 (1)  (202.5s)
+    Stage 1 threshold: 0.20 (BA=1.0000, range 0.8000-1.0000).
+    Pipeline ensemble component 1: KW k-ensemble
+      k=15: mean_max_prob=0.6871
+      k=20: mean_max_prob=0.6811
+      k=30: mean_max_prob=0.7233
+      k=50: mean_max_prob=0.6988
+    Pipeline ensemble component 2: EN+NMC GridSearchCV
+    Ensemble mean_max_prob: kens=0.6894, en=0.6337, ratio=1.09
+  Fold 2: s1=1.0000 (t=0.20)  s2=1.0000  combined=1.0000  auroc=1.0000  excl=1.0000 (0)  (210.5s)
+    Stage 1 threshold: 0.30 (BA=1.0000, range 0.9433-1.0000).
+    Pipeline ensemble component 1: KW k-ensemble
+      k=15: mean_max_prob=0.6805
+      k=20: mean_max_prob=0.6812
+      k=30: mean_max_prob=0.6852
+      k=50: mean_max_prob=0.7090
+    Pipeline ensemble component 2: EN+NMC GridSearchCV
+    Ensemble mean_max_prob: kens=0.6827, en=0.6083, ratio=1.12
+  Fold 3: s1=1.0000 (t=0.30)  s2=0.7292  combined=0.8194  auroc=0.9266  excl=0.8194 (0)  (211.7s)
+    Stage 1 threshold: 0.15 (BA=1.0000, range 0.8600-1.0000).
+    Pipeline ensemble component 1: KW k-ensemble
+      k=15: mean_max_prob=0.6848
+      k=20: mean_max_prob=0.6640
+      k=30: mean_max_prob=0.6601
+      k=50: mean_max_prob=0.6547
+    Pipeline ensemble component 2: EN+NMC GridSearchCV
+    Ensemble mean_max_prob: kens=0.6487, en=0.6461, ratio=1.00
+  Fold 4: s1=1.0000 (t=0.15)  s2=0.6429  combined=0.7619  auroc=0.9194  excl=0.8016 (1)  (223.0s)
+    Stage 1 threshold: 0.15 (BA=1.0000, range 0.8133-1.0000).
+    Pipeline ensemble component 1: KW k-ensemble
+      k=15: mean_max_prob=0.6589
+      k=20: mean_max_prob=0.6793
+      k=30: mean_max_prob=0.6798
+      k=50: mean_max_prob=0.6693
+    Pipeline ensemble component 2: EN+NMC GridSearchCV
+    Ensemble mean_max_prob: kens=0.6653, en=0.6601, ratio=1.01
+  Fold 5: s1=1.0000 (t=0.15)  s2=0.8571  combined=0.9048  auroc=0.9670  excl=0.9048 (0)  (221.1s)
+
+Summary for v2_nmc_ensemble repeat 19:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.7696 (+/- 0.1422)
+  Combined (3-class):       0.8464 (+/- 0.0948)
+  Combined (excl mislabels): 0.8607 (+/- 0.0818)
+  Combined fold scores: [0.746, 1.0, 0.8194, 0.7619, 0.9048]
+  Total time: 1068.8s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv_v2/data/fold_results_nmc_ensemble_r19.csv
+Checkpoint removed (job complete).

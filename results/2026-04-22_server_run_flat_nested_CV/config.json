@@ -1,0 +1,23 @@
+{
+  "submit_hierarchical_nested_cv": {
+    "timestamp": "2026-04-24T05:01:30+03:00",
+    "run_name": "server_run_flat_nested_CV",
+    "config_file": "/data/cbotos/TB-Project/config_files/server.yaml",
+    "frozen_config": "/data/cbotos/TB-Project/results/2026-04-22_server_run_flat_nested_CV/config_snapshot_hierarchical.yaml",
+    "repeats_per_pipeline": 50,
+    "stage1": "kw_rf k=5 (fixed)",
+    "stage2_pipelines": [
+      "kw_nmc",
+      "kw_rf",
+      "en_nmc",
+      "en_rf"
+    ],
+    "total_jobs": 200,
+    "slurm": {
+      "mem": "4G",
+      "time": "2-00:00:00",
+      "cpus_per_task": 1,
+      "max_concurrent_jobs": 50
+    }
+  }
+}

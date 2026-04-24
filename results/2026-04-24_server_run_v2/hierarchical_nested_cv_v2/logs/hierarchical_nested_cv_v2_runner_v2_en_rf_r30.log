@@ -1,0 +1,33 @@
+Run: 2026-04-24_server_run_v2
+Config: /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold calibrated)
+Stage 2: en_rf (HR+ vs Triple Neg)
+Repeat seed: 30
+Stage 2 grid size: 800 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
+    Stage 1 threshold: 0.10 (BA=1.0000, range 0.9000-1.0000).
+  Fold 1: s1=1.0000 (t=0.10)  s2=0.6071  combined=0.7381  auroc=0.9466  excl=0.7778 (1)  (2858.2s)
+    Stage 1 threshold: 0.20 (BA=1.0000, range 0.8400-1.0000).
+  Fold 2: s1=1.0000 (t=0.20)  s2=0.7738  combined=0.8492  auroc=0.9695  excl=0.8492 (0)  (2867.5s)
+    Stage 1 threshold: 0.20 (BA=1.0000, range 0.8833-1.0000).
+  Fold 3: s1=1.0000 (t=0.20)  s2=0.6875  combined=0.7917  auroc=0.9702  excl=0.7917 (0)  (2812.8s)
+    Stage 1 threshold: 0.15 (BA=1.0000, range 0.9233-1.0000).
+  Fold 4: s1=1.0000 (t=0.15)  s2=0.5714  combined=0.7143  auroc=0.8755  excl=0.7381 (1)  (2827.2s)
+    Stage 1 threshold: 0.15 (BA=1.0000, range 0.8233-1.0000).
+  Fold 5: s1=1.0000 (t=0.15)  s2=0.7143  combined=0.8095  auroc=0.8645  excl=0.8095 (0)  (2786.2s)
+
+Summary for v2_en_rf repeat 30:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.6708 (+/- 0.0731)
+  Combined (3-class):       0.7806 (+/- 0.0487)
+  Combined (excl mislabels): 0.7933 (+/- 0.0366)
+  Combined fold scores: [0.7381, 0.8492, 0.7917, 0.7143, 0.8095]
+  Total time: 14152.1s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv_v2/data/fold_results_en_rf_r30.csv
+Checkpoint removed (job complete).

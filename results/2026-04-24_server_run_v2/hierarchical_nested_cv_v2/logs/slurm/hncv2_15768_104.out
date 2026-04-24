@@ -1,0 +1,63 @@
+========================================
+Hierarchical CV v2 - Job 105 of 350
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  kw_rf
+Repeat:   5 / 50
+Config:   /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml
+Run:      server_run_v2
+Node:     node2
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-24 07:01:17
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_v2_runner.py --pipeline kw_rf --repeat 5 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical_v2.yaml --name server_run_v2
+INFO     Run: 2026-04-24_server_run_v2                                          
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapsho
+         t_hierarchical_v2.yaml                                                 
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold calibrated)     
+INFO     Stage 2: kw_rf (HR+ vs Triple Neg)                                     
+INFO     Repeat seed: 5                                                         
+INFO     Stage 2 grid size: 32 combinations                                     
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]          
+INFO         Stage 1 threshold: 0.20 (BA=1.0000, range 0.9200-1.0000).          
+INFO       Fold 1: s1=1.0000 (t=0.20)  s2=0.6310  combined=0.7540  auroc=0.8741 
+         excl=0.7540 (0)  (92.8s)                                               
+INFO         Stage 1 threshold: 0.20 (BA=1.0000, range 0.8200-1.0000).          
+INFO       Fold 2: s1=1.0000 (t=0.20)  s2=0.7738  combined=0.8492  auroc=0.9161 
+         excl=0.8492 (0)  (102.9s)                                              
+INFO         Stage 1 threshold: 0.10 (BA=1.0000, range 0.8867-1.0000).          
+INFO       Fold 3: s1=1.0000 (t=0.10)  s2=0.7917  combined=0.8611  auroc=0.9479 
+         excl=0.8611 (0)  (105.3s)                                              
+INFO         Stage 1 threshold: 0.15 (BA=1.0000, range 0.8800-1.0000).          
+INFO       Fold 4: s1=1.0000 (t=0.15)  s2=0.7143  combined=0.8095  auroc=0.9084 
+         excl=0.8016 (1)  (105.0s)                                              
+INFO         Stage 1 threshold: 0.10 (BA=1.0000, range 0.8867-1.0000).          
+INFO       Fold 5: s1=1.0000 (t=0.10)  s2=0.6429  combined=0.7619  auroc=0.9231 
+         excl=0.7857 (1)  (105.2s)                                              
+  v2_kw_rf r5 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:08:31
+INFO                                                                            
+INFO     Summary for v2_kw_rf repeat 5:                                         
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.7107 (+/- 0.0656)                        
+INFO       Combined (3-class):       0.8071 (+/- 0.0437)                        
+INFO       Combined (excl mislabels): 0.8103 (+/- 0.0399)                       
+INFO       Combined fold scores: [0.754, 0.8492, 0.8611, 0.8095, 0.7619]        
+INFO       Total time: 511.4s                                                   
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_n
+         ested_cv_v2/data/fold_results_kw_rf_r5.csv                             
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-24 07:09:50
+Elapsed:  0h 8m 33s
+Exit:     0
+========================================
+[HNCV2-TASK-DONE] array=15768 task=104 stage2_pipeline=kw_rf repeat=5 exit=0 elapsed=513s
