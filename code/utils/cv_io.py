@@ -28,10 +28,12 @@ def load_cv_data(input_path, clinical_path):
         clinical_path (Path): Path to the clinical labels TSV file.
 
     Returns:
-        tuple: (X, y, label_encoder, feature_names) where X is a numpy
-            array of shape (n_samples, n_features), y is an integer-
-            encoded label array, label_encoder is the fitted LabelEncoder,
-            and feature_names is a list of region name strings.
+        tuple: (X, y, label_encoder, feature_names, sample_names) where
+            X is a numpy array of shape (n_samples, n_features), y is an
+            integer-encoded label array, label_encoder is the fitted
+            LabelEncoder, feature_names is a list of region name strings,
+            and sample_names is a list of sample column names matching the
+            row order of X.
     """
     train_df = pd.read_csv(input_path, sep="\t")
     clinical_df = pd.read_csv(clinical_path, sep="\t")
@@ -60,7 +62,7 @@ def load_cv_data(input_path, clinical_path):
     y = le.fit_transform(y_series)
     X = X_df.to_numpy(dtype=float)
 
-    return X, y, le, feature_names
+    return X, y, le, feature_names, sample_cols
 
 
 def checkpoint_path(data_dir, pipeline_name, repeat_seed):

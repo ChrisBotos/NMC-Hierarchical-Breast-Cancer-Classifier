@@ -182,10 +182,55 @@ class NearestCentroidWithProba(NearestCentroid):
     Computes pairwise Euclidean distances from each sample to every class
     centroid, then converts to probabilities using a softmax over negative
     distances. This enables AUROC computation for NMC pipelines.
+
+    When class_weight='balanced', a log-weight bias is added to the negative
+    distances before softmax, equivalent to adjusting class priors to inverse
+    class frequency. This compensates for class imbalance without tuning.
+
+    Args:
+        metric (str): Distance metric for NearestCentroid.
+        shrink_threshold (float or None): Shrinkage threshold.
+        class_weight (str or None): If 'balanced', applies inverse class
+            frequency log-weight bias to distances. If None, no bias
+            (identical to original behavior).
     """
+
+    def __init__(self, metric="euclidean", shrink_threshold=None,
+                 class_weight=None):
+        super().__init__(metric=metric, shrink_threshold=shrink_threshold)
+        self.class_weight = class_weight
+
+    def fit(self, X, y):
+        """Fit NearestCentroid and compute class weight bias if requested.
+
+        Args:
+            X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+            y (np.ndarray): Class labels of shape (n_samples,).
+
+        Returns:
+            NearestCentroidWithProba: The fitted estimator.
+        """
+        super().fit(X, y)
+
+        if self.class_weight == "balanced":
+            # Compute log(n_total / (n_classes * n_per_class)) for each class.
+            n_total = len(y)
+            n_classes = len(self.classes_)
+            log_weights = np.array([
+                np.log(n_total / (n_classes * np.sum(y == c)))
+                for c in self.classes_
+            ])
+            self.log_weights_ = log_weights
+        else:
+            self.log_weights_ = None
+
+        return self
 
     def predict_proba(self, X):
         """Estimate class probabilities via softmax of negative distances.
+
+        When class_weight='balanced', a log-weight bias is added before
+        softmax, shifting probabilities toward underrepresented classes.
 
         Args:
             X (np.ndarray): Feature matrix of shape (n_samples, n_features).
@@ -196,7 +241,31 @@ class NearestCentroidWithProba(NearestCentroid):
         distances = pairwise_distances(X, self.centroids_)
         # Softmax with numerical stability (subtract row max).
         neg_dist = -distances
+
+        # Apply class weight bias if fitted with class_weight='balanced'.
+        if self.log_weights_ is not None:
+            neg_dist = neg_dist + self.log_weights_
+
         neg_dist -= neg_dist.max(axis=1, keepdims=True)
         exp_vals = np.exp(neg_dist)
         proba = exp_vals / exp_vals.sum(axis=1, keepdims=True)
         return proba
+
+    def predict(self, X):
+        """Predict class labels using weighted probabilities.
+
+        Overrides the parent predict() to ensure predictions are consistent
+        with predict_proba() when class weights are applied.
+
+        Args:
+            X (np.ndarray): Feature matrix of shape (n_samples, n_features).
+
+        Returns:
+            np.ndarray: Predicted class labels of shape (n_samples,).
+        """
+        if self.log_weights_ is not None:
+            # Use weighted probabilities for prediction.
+            proba = self.predict_proba(X)
+            return self.classes_[np.argmax(proba, axis=1)]
+        # No weights: use parent's predict (identical to argmax of unweighted proba).
+        return super().predict(X)

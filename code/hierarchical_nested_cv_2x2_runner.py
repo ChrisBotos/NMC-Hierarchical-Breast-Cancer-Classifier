@@ -447,7 +447,7 @@ def main():
 
     # Load data.
     log.info("Loading data...")
-    X, y, le, feature_names = load_cv_data(args.input, args.clinical)
+    X, y, le, feature_names, _sample_names = load_cv_data(args.input, args.clinical)
     log.info("Loaded %d samples, %d features.", X.shape[0], X.shape[1])
     log.info("Classes: %s", le.classes_.tolist())
 

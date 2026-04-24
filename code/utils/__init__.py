@@ -13,6 +13,8 @@ from utils.constants import (
     RANDOM_SEED,
     SUBTYPE_COLORS,
     SUBTYPE_ORDER,
+    V2_GRIDSEARCH_PIPELINES,
+    V2_PIPELINE_NAMES,
 )
 from utils.data_helpers import get_sample_columns, get_sample_matrix, load_gene_map
 from utils.logging_setup import setup_logging
@@ -43,6 +45,7 @@ from utils.cv_components import (
 from utils.cv_config import (
     PIPELINE_NAMES,
     build_pipeline,
+    build_v2_stage2_pipeline,
 )
 from utils.cv_io import (
     checkpoint_path,
@@ -69,11 +72,14 @@ __all__ = [
     "RESULTS_DIR",
     "SUBTYPE_COLORS",
     "SUBTYPE_ORDER",
+    "V2_GRIDSEARCH_PIPELINES",
+    "V2_PIPELINE_NAMES",
     "annotate_heatmap",
     "apply_bonferroni",
     "apply_plot_style",
     "bonferroni_threshold",
     "build_pipeline",
+    "build_v2_stage2_pipeline",
     "checkpoint_path",
     "csv_path",
     "draw_significance_brackets",

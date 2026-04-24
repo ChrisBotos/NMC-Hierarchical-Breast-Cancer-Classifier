@@ -45,7 +45,7 @@ if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
 from utils.config_loader import load_config
-from utils.constants import PIPELINE_COLORS, PIPELINE_LABELS
+from utils.constants import PIPELINE_COLORS, PIPELINE_LABELS, V2_PIPELINE_NAMES
 from utils.cv_config import PIPELINE_NAMES
 from utils.logging_setup import setup_logging
 from utils.paths import _find_or_create_run_dir, get_run_dirs, save_config
@@ -53,6 +53,32 @@ from utils.plotting import annotate_heatmap, apply_plot_style, draw_significance
 from utils.statistics import nadeau_bengio_test, pairwise_wilcoxon
 
 rich.traceback.install()
+
+
+"""Pipeline Ordering"""
+
+
+def get_pipeline_order(phase, all_results):
+    """Determine canonical pipeline ordering based on phase and available data.
+
+    For v2 hierarchical phases, uses V2_PIPELINE_NAMES ordering. Falls back
+    to V2 ordering if any v2-only pipeline names are found in the data.
+    Otherwise uses the original 4-pipeline ordering.
+
+    Args:
+        phase (str): Phase directory name (e.g. 'nested_cv_2x2',
+            'hierarchical_nested_cv_v2').
+        all_results (pd.DataFrame): Loaded fold results with pipeline column.
+
+    Returns:
+        tuple: Canonical pipeline name ordering.
+    """
+    actual_pipelines = set(all_results["pipeline"].unique())
+    v2_only = {"kw_nmc_kens", "nmc_ensemble", "kw_nmc_kgrid"}
+
+    if phase == "hierarchical_nested_cv_v2" or actual_pipelines & v2_only:
+        return V2_PIPELINE_NAMES
+    return PIPELINE_NAMES
 
 
 """Data Loading and Aggregation"""
@@ -161,7 +187,7 @@ def compute_summary_statistics(per_repeat):
 """Statistical Testing"""
 
 
-def run_statistical_tests(per_repeat, log):
+def run_statistical_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES):
     """Run Friedman test and pairwise Wilcoxon signed-rank tests.
 
     Thin wrapper around utils.statistics.pairwise_wilcoxon that pivots
@@ -171,6 +197,7 @@ def run_statistical_tests(per_repeat, log):
         per_repeat (pd.DataFrame): Per-repeat mean scores with columns
             pipeline, repeat, mean_balanced_accuracy.
         log (logging.Logger): Logger instance.
+        pipeline_order (tuple): Canonical pipeline ordering to use.
 
     Returns:
         tuple: (friedman_stat, friedman_p, pairwise_df) where pairwise_df
@@ -182,7 +209,7 @@ def run_statistical_tests(per_repeat, log):
     wide = per_repeat.pivot(
         index="repeat", columns="pipeline", values="mean_balanced_accuracy",
     )
-    present = [p for p in PIPELINE_NAMES if p in wide.columns]
+    present = [p for p in pipeline_order if p in wide.columns]
     return pairwise_wilcoxon(wide, present, log)
 
 
@@ -254,7 +281,8 @@ def run_grouped_classifier_test(per_repeat, log):
     return result
 
 
-def run_nadeau_bengio_tests(all_results, config, log):
+def run_nadeau_bengio_tests(all_results, config, log,
+                           pipeline_order=PIPELINE_NAMES):
     """Pairwise Nadeau-Bengio corrected resampled t-tests.
 
     Thin wrapper around utils.statistics.nadeau_bengio_test that pivots
@@ -265,6 +293,7 @@ def run_nadeau_bengio_tests(all_results, config, log):
             pipeline, repeat, outer_fold, balanced_accuracy.
         config (dict): Configuration with cv.outer_folds.
         log (logging.Logger): Logger instance.
+        pipeline_order (tuple): Canonical pipeline ordering to use.
 
     Returns:
         pd.DataFrame or None: Pairwise test results.
@@ -278,13 +307,15 @@ def run_nadeau_bengio_tests(all_results, config, log):
         values="balanced_accuracy",
     )
 
-    return nadeau_bengio_test(pivot, list(PIPELINE_NAMES), k, n_samples=100, log=log)
+    present = [p for p in pipeline_order if p in pivot.columns]
+    return nadeau_bengio_test(pivot, present, k, n_samples=100, log=log)
 
 
 """Plotting"""
 
 
-def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log):
+def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log,
+                            pipeline_order=PIPELINE_NAMES):
     """Violin plot comparing balanced accuracy across pipelines.
 
     Shows per-repeat mean balanced accuracy as violin plots with overlaid
@@ -298,12 +329,15 @@ def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log):
             with columns: pipeline_a, pipeline_b, p_corrected, significant.
         fig_dir (Path): Directory to save the figure.
         log (logging.Logger): Logger instance.
+        pipeline_order (tuple): Canonical pipeline ordering.
     """
     apply_plot_style()
-    fig, ax = plt.subplots(figsize=(6, 4))
+    n_pipes = len([p for p in pipeline_order if p in per_repeat["pipeline"].unique()])
+    fig_width = max(6, n_pipes * 1.1)
+    fig, ax = plt.subplots(figsize=(fig_width, 4))
 
     # Order pipelines by the canonical order.
-    pipelines = [p for p in PIPELINE_NAMES if p in per_repeat["pipeline"].unique()]
+    pipelines = [p for p in pipeline_order if p in per_repeat["pipeline"].unique()]
     data_by_pipeline = [
         per_repeat.loc[per_repeat["pipeline"] == p, "mean_balanced_accuracy"].values
         for p in pipelines
@@ -364,18 +398,29 @@ def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log):
     log.info("Saved figure: %s", out_path)
 
 
-def plot_interaction(per_repeat, fig_dir, log):
+def plot_interaction(per_repeat, fig_dir, log, pipeline_order=PIPELINE_NAMES):
     """Interaction plot showing the 2x2 factorial design.
 
     X-axis: feature selection method (Kruskal-Wallis, Elastic Net).
     Two lines: NMC (simple) and RF (complex). Y-axis: mean balanced
     accuracy. Error bars show 95% confidence intervals.
 
+    Only drawn when all 4 baseline pipelines (kw_nmc, kw_rf, en_nmc, en_rf)
+    are present in the data. Skipped for v2 phases with non-baseline variants.
+
     Args:
         per_repeat (pd.DataFrame): Per-repeat mean scores.
         fig_dir (Path): Directory to save the figure.
         log (logging.Logger): Logger instance.
+        pipeline_order (tuple): Canonical pipeline ordering.
     """
+    # Only draw for phases with all 4 baseline pipelines.
+    baseline_pipes = {"kw_nmc", "kw_rf", "en_nmc", "en_rf"}
+    actual = set(per_repeat["pipeline"].unique())
+    if not baseline_pipes.issubset(actual):
+        log.info("Skipping interaction plot: not all 4 baseline pipelines present.")
+        return
+
     apply_plot_style()
     fig, ax = plt.subplots(figsize=(6, 4))
 
@@ -449,7 +494,8 @@ def plot_interaction(per_repeat, fig_dir, log):
     log.info("Saved figure: %s", out_path)
 
 
-def plot_repeat_convergence(per_repeat, fig_dir, log):
+def plot_repeat_convergence(per_repeat, fig_dir, log,
+                           pipeline_order=PIPELINE_NAMES):
     """Cumulative mean balanced accuracy across repeats.
 
     Shows how the per-pipeline mean stabilises as more repeats are
@@ -460,11 +506,12 @@ def plot_repeat_convergence(per_repeat, fig_dir, log):
         per_repeat (pd.DataFrame): Per-repeat mean scores.
         fig_dir (Path): Directory to save the figure.
         log (logging.Logger): Logger instance.
+        pipeline_order (tuple): Canonical pipeline ordering.
     """
     apply_plot_style()
     fig, ax = plt.subplots(figsize=(6, 4))
 
-    pipelines = [p for p in PIPELINE_NAMES if p in per_repeat["pipeline"].unique()]
+    pipelines = [p for p in pipeline_order if p in per_repeat["pipeline"].unique()]
 
     for p in pipelines:
         subset = per_repeat.loc[per_repeat["pipeline"] == p].sort_values("repeat")
@@ -488,7 +535,8 @@ def plot_repeat_convergence(per_repeat, fig_dir, log):
     log.info("Saved figure: %s", out_path)
 
 
-def plot_feature_importance(all_results, fig_dir, log):
+def plot_feature_importance(all_results, fig_dir, log,
+                           pipeline_order=PIPELINE_NAMES):
     """Horizontal bar chart of the most frequently selected features.
 
     Counts how often each feature is selected across all outer folds
@@ -500,6 +548,7 @@ def plot_feature_importance(all_results, fig_dir, log):
             selected_features column.
         fig_dir (Path): Directory to save the figure.
         log (logging.Logger): Logger instance.
+        pipeline_order (tuple): Canonical pipeline ordering.
     """
     if "selected_features" not in all_results.columns:
         log.warning("No selected_features column; skipping feature importance plot.")
@@ -507,8 +556,12 @@ def plot_feature_importance(all_results, fig_dir, log):
 
     apply_plot_style()
 
-    # Count feature frequencies per pipeline.
-    pipelines = [p for p in PIPELINE_NAMES if p in all_results["pipeline"].unique()]
+    # Count feature frequencies per pipeline. Skip ensemble pipelines with no features.
+    pipelines = [
+        p for p in pipeline_order
+        if p in all_results["pipeline"].unique()
+        and all_results.loc[all_results["pipeline"] == p, "selected_features"].notna().any()
+    ]
     freq_by_pipeline = {}
     for p in pipelines:
         subset = all_results.loc[all_results["pipeline"] == p, "selected_features"]
@@ -555,8 +608,9 @@ def plot_feature_importance(all_results, fig_dir, log):
     log.info("Saved figure: %s", out_path)
 
 
-def plot_confusion_matrices(all_results, fig_dir, log):
-    """2x2 grid of normalised confusion matrices (one per pipeline).
+def plot_confusion_matrices(all_results, fig_dir, log,
+                           pipeline_order=PIPELINE_NAMES):
+    """Grid of normalised confusion matrices (one per pipeline).
 
     Aggregates y_true/y_pred across all outer folds and repeats for
     each pipeline and plots row-normalised confusion matrices showing
@@ -567,6 +621,7 @@ def plot_confusion_matrices(all_results, fig_dir, log):
             and y_pred columns (comma-separated class labels).
         fig_dir (Path): Directory to save the figure.
         log (logging.Logger): Logger instance.
+        pipeline_order (tuple): Canonical pipeline ordering.
     """
     if "y_true" not in all_results.columns or "y_pred" not in all_results.columns:
         log.warning("No y_true/y_pred columns; skipping confusion matrix plot.")
@@ -574,15 +629,17 @@ def plot_confusion_matrices(all_results, fig_dir, log):
 
     apply_plot_style(scale="compact")
 
-    pipelines = [p for p in PIPELINE_NAMES if p in all_results["pipeline"].unique()]
+    pipelines = [p for p in pipeline_order if p in all_results["pipeline"].unique()]
     n_pipes = len(pipelines)
     if n_pipes == 0:
         return
 
-    # Determine subplot grid (2x2 for 4 pipelines).
-    ncols = 2
+    # Determine subplot grid: 2 columns for <=4 pipelines, 4 columns for more.
+    ncols = 4 if n_pipes > 4 else 2
     nrows = (n_pipes + ncols - 1) // ncols
-    fig, axes = plt.subplots(nrows, ncols, figsize=(6, 5))
+    fig_width = 3 * ncols
+    fig_height = 2.5 * nrows + 0.5
+    fig, axes = plt.subplots(nrows, ncols, figsize=(fig_width, fig_height))
     axes = np.atleast_2d(axes)
 
     # Collect all unique class labels in sorted order.
@@ -650,7 +707,7 @@ def plot_confusion_matrices(all_results, fig_dir, log):
 """Error Agreement Analysis"""
 
 
-def compute_error_agreement(all_results, log):
+def compute_error_agreement(all_results, log, pipeline_order=PIPELINE_NAMES):
     """Compute pairwise error agreement between pipelines.
 
     For each pair of pipelines, measures how often they make the same
@@ -662,6 +719,7 @@ def compute_error_agreement(all_results, log):
         all_results (pd.DataFrame): Fold-level results with columns
             pipeline, repeat, outer_fold, y_true, y_pred.
         log (logging.Logger): Logger instance.
+        pipeline_order (tuple): Canonical pipeline ordering.
 
     Returns:
         tuple: (agreement_matrix, conditional_matrix, pipelines) where
@@ -674,7 +732,7 @@ def compute_error_agreement(all_results, log):
         log.warning("No y_true/y_pred columns; skipping error agreement.")
         return None, None, None
 
-    pipelines = [p for p in PIPELINE_NAMES if p in all_results["pipeline"].unique()]
+    pipelines = [p for p in pipeline_order if p in all_results["pipeline"].unique()]
     n_pipes = len(pipelines)
 
     # Build a dict mapping (pipeline, repeat, fold) -> arrays of (true, pred).
@@ -1341,6 +1399,10 @@ def main():
 
     all_results = load_fold_results(nested_cv_data_dir, log)
 
+    # Determine pipeline ordering based on phase and data content.
+    pipeline_order = get_pipeline_order(args.phase, all_results)
+    log.info("Pipeline ordering: %s", list(pipeline_order))
+
     # Save aggregated results.
     all_results_path = data_dir / "all_fold_results.csv"
     all_results.to_csv(all_results_path, index=False)
@@ -1367,6 +1429,33 @@ def main():
         )
     log.info("Saved summary statistics: %s", summary_path)
 
+    """Step 3b: Sensitivity Analysis Summary (v2 mislabel exclusion)"""
+
+    if "combined_bal_acc_excl" in all_results.columns:
+        excl_col = all_results["combined_bal_acc_excl"].dropna()
+        if len(excl_col) > 0:
+            log.info("=== Mislabel Exclusion Sensitivity Analysis ===")
+            excl_repeat = all_results.dropna(subset=["combined_bal_acc_excl"]).copy()
+            excl_grouped = excl_repeat.groupby("pipeline").agg(
+                mean_ba_excl=("combined_bal_acc_excl", "mean"),
+                std_ba_excl=("combined_bal_acc_excl", "std"),
+            ).sort_values("mean_ba_excl", ascending=False)
+
+            for pipeline in excl_grouped.index:
+                row = excl_grouped.loc[pipeline]
+                incl_mean = summary.loc[pipeline, "mean_bal_acc"] if pipeline in summary.index else float("nan")
+                delta = row["mean_ba_excl"] - incl_mean
+                log.info(
+                    "  %s: excl=%.4f +/- %.4f (incl=%.4f, delta=%+.4f)",
+                    PIPELINE_LABELS.get(pipeline, pipeline),
+                    row["mean_ba_excl"], row["std_ba_excl"],
+                    incl_mean, delta,
+                )
+
+            excl_path = data_dir / "sensitivity_mislabel_exclusion.csv"
+            excl_grouped.to_csv(excl_path)
+            log.info("Saved mislabel exclusion summary: %s", excl_path)
+
     """Step 4: Data Completeness Check"""
 
     # Warn about incomplete runs.
@@ -1389,7 +1478,9 @@ def main():
 
     """Step 5: Statistical Testing (Friedman + Wilcoxon)"""
 
-    friedman_stat, friedman_p, pairwise_df = run_statistical_tests(per_repeat, log)
+    friedman_stat, friedman_p, pairwise_df = run_statistical_tests(
+        per_repeat, log, pipeline_order=pipeline_order,
+    )
 
     if pairwise_df is not None:
         pairwise_path = data_dir / "pairwise_wilcoxon.csv"
@@ -1413,7 +1504,9 @@ def main():
 
     """Step 6: Statistical Testing (Nadeau-Bengio Corrected t-test)"""
 
-    nb_df = run_nadeau_bengio_tests(all_results, config, log)
+    nb_df = run_nadeau_bengio_tests(
+        all_results, config, log, pipeline_order=pipeline_order,
+    )
     if nb_df is not None:
         nb_path = data_dir / "pairwise_nadeau_bengio.csv"
         nb_df.to_csv(nb_path, index=False)
@@ -1431,7 +1524,7 @@ def main():
     """Step 8: Error Agreement Analysis"""
 
     agreement_matrix, conditional_matrix, agree_pipelines = compute_error_agreement(
-        all_results, log,
+        all_results, log, pipeline_order=pipeline_order,
     )
 
     # Save error agreement data.
@@ -1447,11 +1540,20 @@ def main():
 
     """Step 9: Generate Figures"""
 
-    plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log)
-    plot_interaction(per_repeat, fig_dir, log)
-    plot_repeat_convergence(per_repeat, fig_dir, log)
-    plot_feature_importance(all_results, fig_dir, log)
-    plot_confusion_matrices(all_results, fig_dir, log)
+    plot_pipeline_comparison(
+        per_repeat, pairwise_df, fig_dir, log,
+        pipeline_order=pipeline_order,
+    )
+    plot_interaction(per_repeat, fig_dir, log, pipeline_order=pipeline_order)
+    plot_repeat_convergence(
+        per_repeat, fig_dir, log, pipeline_order=pipeline_order,
+    )
+    plot_feature_importance(
+        all_results, fig_dir, log, pipeline_order=pipeline_order,
+    )
+    plot_confusion_matrices(
+        all_results, fig_dir, log, pipeline_order=pipeline_order,
+    )
     plot_error_agreement(agreement_matrix, conditional_matrix, agree_pipelines, fig_dir, log)
 
     """Step 9b: Hard Sample Diagnostic Analysis"""

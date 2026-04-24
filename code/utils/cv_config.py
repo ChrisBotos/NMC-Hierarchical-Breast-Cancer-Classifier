@@ -14,6 +14,7 @@ from utils.cv_components import (
     KruskalWallisSelector,
     NearestCentroidWithProba,
 )
+from utils.constants import V2_GRIDSEARCH_PIPELINES, V2_PIPELINE_NAMES
 
 """Pipeline Names"""
 
@@ -99,4 +100,88 @@ def build_pipeline(pipeline_name, random_state=42, config=None):
     raise ValueError(
         f"Unknown pipeline '{pipeline_name}'. "
         f"Choose from: {PIPELINE_NAMES}."
+    )
+
+
+def build_v2_stage2_pipeline(pipeline_name, random_state=42, config=None):
+    """Construct a Stage 2 sklearn Pipeline for v2 hierarchical experiments.
+
+    Returns a Pipeline for the 5 GridSearchCV-compatible v2 pipelines.
+    For ensemble pipelines (kw_nmc_kens, nmc_ensemble), returns None
+    because the runner handles their multi-pipeline logic directly.
+
+    All NMC pipelines use class_weight='balanced' for cost-sensitive
+    classification. RF pipelines use class_weight='balanced' as before.
+
+    Args:
+        pipeline_name (str): One of the V2_PIPELINE_NAMES.
+        random_state (int): Random seed for stochastic components.
+        config (dict or None): Loaded configuration dictionary.
+
+    Returns:
+        Pipeline or None: A configured sklearn Pipeline, or None for
+            ensemble pipelines that are handled by the runner.
+
+    Raises:
+        ValueError: If pipeline_name is not a recognised v2 pipeline.
+    """
+    # Read fixed pipeline parameters from config if available.
+    rf_n_estimators = 500
+    rf_class_weight = "balanced"
+    nmc_class_weight = None
+    if config and "pipelines" in config:
+        rf_n_estimators = config["pipelines"].get("rf_n_estimators", 500)
+        rf_class_weight = config["pipelines"].get(
+            "rf_class_weight", "balanced",
+        )
+        nmc_class_weight = config["pipelines"].get(
+            "nmc_class_weight", None,
+        )
+
+    # Ensemble pipelines are handled by the runner, not as single Pipelines.
+    if pipeline_name in ("kw_nmc_kens", "nmc_ensemble"):
+        return None
+
+    if pipeline_name in ("kw_nmc", "kw_nmc_kgrid"):
+        # KW + NMC with cost-sensitive weights.
+        return Pipeline([
+            ("scaler", StandardScaler()),
+            ("selector", KruskalWallisSelector()),
+            ("clf", NearestCentroidWithProba(class_weight=nmc_class_weight)),
+        ])
+
+    if pipeline_name == "en_nmc":
+        # EN + NMC with cost-sensitive weights.
+        return Pipeline([
+            ("scaler", StandardScaler()),
+            ("selector", ElasticNetSelector(random_state=random_state)),
+            ("clf", NearestCentroidWithProba(class_weight=nmc_class_weight)),
+        ])
+
+    if pipeline_name == "kw_rf":
+        return Pipeline([
+            ("selector", KruskalWallisSelector()),
+            ("clf", RandomForestClassifier(
+                n_estimators=rf_n_estimators,
+                class_weight=rf_class_weight,
+                random_state=random_state,
+                n_jobs=1,
+            )),
+        ])
+
+    if pipeline_name == "en_rf":
+        return Pipeline([
+            ("scaler", StandardScaler()),
+            ("selector", ElasticNetSelector(random_state=random_state)),
+            ("clf", RandomForestClassifier(
+                n_estimators=rf_n_estimators,
+                class_weight=rf_class_weight,
+                random_state=random_state,
+                n_jobs=1,
+            )),
+        ])
+
+    raise ValueError(
+        f"Unknown v2 pipeline '{pipeline_name}'. "
+        f"Choose from: {V2_PIPELINE_NAMES}."
     )
