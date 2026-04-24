@@ -1,0 +1,57 @@
+Run: 2026-04-24_server_run_v2
+Config: /mnt/d/Coursework/TB-Project/config_files/local.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)
+Stage 2: standalone_en_pens (HR+ vs Triple Neg)
+Repeat seed: 3
+Stage 2 grid size: 25 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
+    Plateau: 12 of 25 combos (threshold=0.6904, best=0.7867, best_std=0.0963)
+      [1/12] score=0.7867, n_features=99, params={'clf__C': np.float64(0.1), 'clf__l1_ratio': np.float64(0.1)}
+      [2/12] score=0.7700, n_features=95, params={'clf__C': np.float64(10.0), 'clf__l1_ratio': np.float64(0.7)}
+      [3/12] score=0.7700, n_features=92, params={'clf__C': np.float64(1.0), 'clf__l1_ratio': np.float64(0.3)}
+      [12/12] score=0.6967, n_features=10, params={'clf__C': np.float64(0.1), 'clf__l1_ratio': np.float64(0.7)}
+    Plateau features: union=241, intersection=10
+  Fold 1: s1=1.0000 (t=0.50)  s2=0.8452  combined=0.8968  auroc=0.9924  excl=0.8968 (0)  (11.7s)
+    Plateau: 3 of 25 combos (threshold=0.7477, best=0.7800, best_std=0.0323)
+      [1/3] score=0.7800, n_features=169, params={'clf__C': np.float64(10.0), 'clf__l1_ratio': np.float64(0.3)}
+      [2/3] score=0.7800, n_features=239, params={'clf__C': np.float64(10.0), 'clf__l1_ratio': np.float64(0.1)}
+      [3/3] score=0.7600, n_features=176, params={'clf__C': np.float64(1.0), 'clf__l1_ratio': np.float64(0.1)}
+    Plateau features: union=239, intersection=165
+  Fold 2: s1=1.0000 (t=0.50)  s2=0.6786  combined=0.7857  auroc=0.9731  excl=0.8190 (1)  (10.7s)
+    Plateau: 14 of 25 combos (threshold=0.6566, best=0.7400, best_std=0.0834)
+      [1/14] score=0.7400, n_features=19, params={'clf__C': np.float64(0.1), 'clf__l1_ratio': np.float64(0.5)}
+      [2/14] score=0.7367, n_features=178, params={'clf__C': np.float64(1.0), 'clf__l1_ratio': np.float64(0.1)}
+      [3/14] score=0.7367, n_features=114, params={'clf__C': np.float64(0.1), 'clf__l1_ratio': np.float64(0.1)}
+      [14/14] score=0.6633, n_features=12, params={'clf__C': np.float64(0.1), 'clf__l1_ratio': np.float64(0.7)}
+    Plateau features: union=248, intersection=9
+  Fold 3: s1=1.0000 (t=0.50)  s2=0.8542  combined=0.9028  auroc=0.9851  excl=0.9028 (0)  (11.3s)
+    Plateau: 12 of 25 combos (threshold=0.7423, best=0.8733, best_std=0.1311)
+      [1/12] score=0.8733, n_features=156, params={'clf__C': np.float64(10.0), 'clf__l1_ratio': np.float64(0.3)}
+      [2/12] score=0.8733, n_features=115, params={'clf__C': np.float64(10.0), 'clf__l1_ratio': np.float64(0.5)}
+      [3/12] score=0.8733, n_features=159, params={'clf__C': np.float64(1.0), 'clf__l1_ratio': np.float64(0.1)}
+      [12/12] score=0.7433, n_features=45, params={'clf__C': np.float64(0.1), 'clf__l1_ratio': np.float64(0.3)}
+    Plateau features: union=233, intersection=28
+  Fold 4: s1=1.0000 (t=0.50)  s2=0.6429  combined=0.7619  auroc=0.9048  excl=0.8016 (1)  (11.8s)
+    Plateau: 15 of 25 combos (threshold=0.6740, best=0.7967, best_std=0.1227)
+      [1/15] score=0.7967, n_features=19, params={'clf__C': np.float64(0.1), 'clf__l1_ratio': np.float64(0.5)}
+      [2/15] score=0.7933, n_features=37, params={'clf__C': np.float64(0.1), 'clf__l1_ratio': np.float64(0.3)}
+      [3/15] score=0.7867, n_features=102, params={'clf__C': np.float64(10.0), 'clf__l1_ratio': np.float64(0.5)}
+      [15/15] score=0.7167, n_features=24, params={'clf__C': np.float64(1.0), 'clf__l1_ratio': np.float64(0.9)}
+    Plateau features: union=234, intersection=6
+  Fold 5: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9158  excl=0.8095 (0)  (12.4s)
+
+Summary for v2_standalone_en_pens repeat 3:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.7470 (+/- 0.0869)
+  Combined (3-class):       0.8313 (+/- 0.0579)
+  Combined (excl mislabels): 0.8460 (+/- 0.0444)
+  Combined fold scores: [0.8968, 0.7857, 0.9028, 0.7619, 0.8095]
+  Total time: 57.9s
+Fold results saved to /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv/data/fold_results_standalone_en_pens_r3.csv
+Checkpoint removed (job complete).

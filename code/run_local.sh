@@ -1,7 +1,7 @@
 #!/bin/bash
-# Local runner for nested CV on a laptop (no SLURM required).
+# Local runner for hierarchical nested CV on a laptop (no SLURM required).
 #
-# Runs all (pipeline, repeat) jobs sequentially using the local config,
+# Runs all 7 pipeline variants sequentially using the local config,
 # then runs the analysis script to aggregate results and generate figures.
 # Supports fold-level checkpointing: if a job is interrupted, re-running
 # this script will resume each job from its last completed fold.
@@ -9,7 +9,7 @@
 # Usage:
 #     bash code/run_local.sh                              # default_run, local.yaml
 #     bash code/run_local.sh my_experiment                # custom run name
-#     bash code/run_local.sh my_experiment server.yaml    # custom run + config
+#     bash code/run_local.sh my_experiment config_files/server.yaml  # custom config
 
 set -euo pipefail
 
@@ -58,7 +58,7 @@ N_PIPELINES=${#PIPELINES[@]}
 TOTAL_JOBS=$(( N_PIPELINES * N_REPEATS ))
 
 echo "========================================"
-echo "Local nested CV run"
+echo "Local hierarchical nested CV run"
 echo "  Run name:   $RUN_NAME"
 echo "  Config:     $CONFIG_FILE"
 echo "  Pipelines:  ${PIPELINES[*]}"
@@ -80,7 +80,7 @@ for PIPELINE in "${PIPELINES[@]}"; do
         echo "--- Job $COMPLETED / $TOTAL_JOBS: $PIPELINE repeat $REPEAT ---"
 
         set +e
-        python3 "$PROJECT_DIR/code/nested_cv_2x2_runner.py" \
+        python3 "$PROJECT_DIR/code/hierarchical_nested_cv_runner.py" \
             --pipeline "$PIPELINE" \
             --repeat "$REPEAT" \
             --config "$CONFIG_FILE" \
@@ -119,7 +119,8 @@ if [[ $FAILED -eq 0 ]]; then
     echo "Running analysis..."
     python3 "$PROJECT_DIR/code/analyse_nested_cv.py" \
         --name "$RUN_NAME" \
-        --config "$CONFIG_FILE"
+        --config "$CONFIG_FILE" \
+        --phase hierarchical_nested_cv
     echo "Analysis complete."
 else
     echo ""

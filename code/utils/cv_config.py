@@ -15,11 +15,11 @@ from utils.cv_components import (
     KruskalWallisSelector,
     NearestCentroidWithProba,
 )
-from utils.constants import V2_GRIDSEARCH_PIPELINES, V2_PIPELINE_NAMES
+from utils.constants import GRIDSEARCH_PIPELINES, PLATEAU_ENSEMBLE_BASE, PIPELINE_NAMES
 
 """Pipeline Names"""
 
-PIPELINE_NAMES = ("kw_nmc", "kw_rf", "en_nmc", "en_rf")
+FLAT_PIPELINE_NAMES = ("kw_nmc", "kw_rf", "en_nmc", "en_rf")
 
 
 def build_pipeline(pipeline_name, random_state=42, config=None):
@@ -116,14 +116,14 @@ def build_pipeline(pipeline_name, random_state=42, config=None):
 
     raise ValueError(
         f"Unknown pipeline '{pipeline_name}'. "
-        f"Choose from: {PIPELINE_NAMES}."
+        f"Choose from: {FLAT_PIPELINE_NAMES}."
     )
 
 
-def build_v2_stage2_pipeline(pipeline_name, random_state=42, config=None):
-    """Construct a Stage 2 sklearn Pipeline for v2 hierarchical experiments.
+def build_stage2_pipeline(pipeline_name, random_state=42, config=None):
+    """Construct a Stage 2 sklearn Pipeline for hierarchical experiments.
 
-    Returns a Pipeline for the 5 GridSearchCV-compatible v2 pipelines.
+    Returns a Pipeline for the GridSearchCV-compatible pipelines.
     For ensemble pipelines (kw_nmc_kens, nmc_ensemble), returns None
     because the runner handles their multi-pipeline logic directly.
 
@@ -131,7 +131,7 @@ def build_v2_stage2_pipeline(pipeline_name, random_state=42, config=None):
     classification. RF pipelines use class_weight='balanced' as before.
 
     Args:
-        pipeline_name (str): One of the V2_PIPELINE_NAMES.
+        pipeline_name (str): One of the PIPELINE_NAMES.
         random_state (int): Random seed for stochastic components.
         config (dict or None): Loaded configuration dictionary.
 
@@ -140,7 +140,7 @@ def build_v2_stage2_pipeline(pipeline_name, random_state=42, config=None):
             ensemble pipelines that are handled by the runner.
 
     Raises:
-        ValueError: If pipeline_name is not a recognised v2 pipeline.
+        ValueError: If pipeline_name is not a recognised pipeline.
     """
     # Read fixed pipeline parameters from config if available.
     rf_n_estimators = 500
@@ -157,6 +157,10 @@ def build_v2_stage2_pipeline(pipeline_name, random_state=42, config=None):
 
     # Ensemble pipelines are handled by the runner, not as single Pipelines.
     if pipeline_name in ("kw_nmc_kens", "nmc_ensemble"):
+        return None
+
+    # Plateau ensemble pipelines delegate to their base pipeline's builder.
+    if pipeline_name in PLATEAU_ENSEMBLE_BASE:
         return None
 
     if pipeline_name in ("kw_nmc", "kw_nmc_kgrid"):
@@ -215,6 +219,6 @@ def build_v2_stage2_pipeline(pipeline_name, random_state=42, config=None):
         ])
 
     raise ValueError(
-        f"Unknown v2 pipeline '{pipeline_name}'. "
-        f"Choose from: {V2_PIPELINE_NAMES}."
+        f"Unknown pipeline '{pipeline_name}'. "
+        f"Choose from: {PIPELINE_NAMES}."
     )

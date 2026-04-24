@@ -1,0 +1,28 @@
+Run: 2026-04-24_server_run_v2
+Config: /mnt/d/Coursework/TB-Project/config_files/local.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)
+Stage 2: standalone_en (HR+ vs Triple Neg)
+Repeat seed: 2
+Stage 2 grid size: 25 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
+  Fold 1: s1=1.0000 (t=0.50)  s2=0.7024  combined=0.8016  auroc=0.9313  excl=0.8016 (0)  (10.1s)
+  Fold 2: s1=1.0000 (t=0.50)  s2=0.7619  combined=0.8413  auroc=0.9847  excl=0.8413 (0)  (10.3s)
+  Fold 3: s1=1.0000 (t=0.50)  s2=0.6250  combined=0.7500  auroc=0.8438  excl=0.7500 (0)  (10.3s)
+  Fold 4: s1=1.0000 (t=0.50)  s2=0.6429  combined=0.7619  auroc=0.9158  excl=0.7619 (0)  (9.5s)
+  Fold 5: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9560  excl=0.8889 (2)  (10.2s)
+
+Summary for v2_standalone_en repeat 2:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.6893 (+/- 0.0497)
+  Combined (3-class):       0.7929 (+/- 0.0331)
+  Combined (excl mislabels): 0.8087 (+/- 0.0513)
+  Combined fold scores: [0.8016, 0.8413, 0.75, 0.7619, 0.8095]
+  Total time: 50.4s
+Fold results saved to /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv/data/fold_results_standalone_en_r2.csv
+Checkpoint removed (job complete).

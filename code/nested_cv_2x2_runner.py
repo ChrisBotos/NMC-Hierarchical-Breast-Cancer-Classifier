@@ -49,7 +49,7 @@ if str(CODE_DIR) not in sys.path:
 
 from utils.config_loader import get_grids, load_config
 from utils.cv_config import (
-    PIPELINE_NAMES,
+    FLAT_PIPELINE_NAMES,
     build_pipeline,
 )
 from utils.cv_io import (
@@ -237,7 +237,7 @@ def parse_args():
         "--pipeline",
         type=str,
         required=True,
-        choices=PIPELINE_NAMES,
+        choices=FLAT_PIPELINE_NAMES,
         help="Which pipeline to run.",
     )
     parser.add_argument(

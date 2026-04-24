@@ -9,25 +9,24 @@ Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
 Script Name: hierarchical_nested_cv_runner.py.
 Description:
-    Enhanced hierarchical nested cross-validation runner (v2). Extends the
-    v1 runner with two principled modifications applied uniformly:
-      1. Cost-sensitive NMC (class_weight='balanced' via log-weight bias).
-      2. K-ensemble and pipeline-ensemble variants.
+    Hierarchical nested cross-validation runner. Uses cost-sensitive NMC
+    (class_weight='balanced' via log-weight bias) and supports k-ensemble
+    and pipeline-ensemble variants.
 
-    Supports 7 pipeline variants for Stage 2: the 4 original baselines
-    (now with cost-sensitive NMC), k-ensemble averaging over fixed k values,
+    Supports 7 pipeline variants for Stage 2: 4 base pipelines with
+    cost-sensitive NMC, k-ensemble averaging over fixed k values,
     a pipeline ensemble (KW k-ensemble + EN+NMC), and k-grid (restricted
     k set with GridSearchCV).
 
     Each invocation runs one Stage 2 pipeline for one repeat seed. Jobs
-    can be parallelised via SLURM array (7 pipelines x 50 repeats = 350).
+    can be parallelized via SLURM array (7 pipelines x 50 repeats = 350).
     Supports fold-level checkpointing for crash recovery. Computes metrics
     with and without suspected mislabel samples for sensitivity analysis.
 
 Usage:
-    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc --repeat 1 --config local_v2
-    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc_kens --repeat 3 --config server_v2
-    python3 code/hierarchical_nested_cv_runner.py --pipeline nmc_ensemble --repeat 1 --config local_v2
+    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc --repeat 1 --config local
+    python3 code/hierarchical_nested_cv_runner.py --pipeline kw_nmc_kens --repeat 3 --config server
+    python3 code/hierarchical_nested_cv_runner.py --pipeline nmc_ensemble --repeat 1 --config local
 
 Dependencies:
     Python >= 3.10.
@@ -59,12 +58,17 @@ if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
 from utils.config_loader import get_grids, load_config
-from utils.constants import V2_GRIDSEARCH_PIPELINES, V2_PIPELINE_NAMES
+from utils.constants import (
+    MAX_PLATEAU_SIZE,
+    PLATEAU_ENSEMBLE_BASE,
+    GRIDSEARCH_PIPELINES,
+    PIPELINE_NAMES,
+)
 from utils.cv_components import (
     KruskalWallisSelector,
     NearestCentroidWithProba,
 )
-from utils.cv_config import build_pipeline, build_v2_stage2_pipeline
+from utils.cv_config import build_pipeline, build_stage2_pipeline
 from utils.cv_io import (
     checkpoint_path,
     csv_path,
@@ -109,7 +113,7 @@ def run_stage2_gridsearch(X_train_s2, y_train_s2, X_test, pipeline_name,
             Pipeline, cv_results is the GridSearchCV cv_results_ dict,
             and en_converged is bool or None.
     """
-    stage2_pipe = build_v2_stage2_pipeline(
+    stage2_pipe = build_stage2_pipeline(
         pipeline_name, random_state=repeat_seed, config=config,
     )
     inner_cv = StratifiedKFold(
@@ -143,6 +147,123 @@ def run_stage2_gridsearch(X_train_s2, y_train_s2, X_test, pipeline_name,
     proba_s2 = best_s2.predict_proba(X_test)
 
     return proba_s2, best_s2, gscv.cv_results_, gscv.best_params_, en_converged
+
+
+def run_plateau_ensemble(gscv, base_pipeline_name, X_train_s2, y_train_s2,
+                         X_test, repeat_seed, config, feature_names, log):
+    """Build a plateau ensemble from GridSearchCV results.
+
+    Identifies all hyperparameter combos within one best-std of the best
+    inner CV score, retrains a model for each, and averages their
+    predict_proba outputs. Caps the ensemble size at MAX_PLATEAU_SIZE.
+
+    Args:
+        gscv (GridSearchCV): Fitted GridSearchCV object.
+        base_pipeline_name (str): Base pipeline name for building fresh pipes.
+        X_train_s2 (np.ndarray): Stage 2 training features.
+        y_train_s2 (np.ndarray): Binary labels (0=HR+, 1=TN).
+        X_test (np.ndarray): Full test set features.
+        repeat_seed (int): Random seed for stochastic components.
+        config (dict): Loaded configuration dictionary.
+        feature_names (list[str]): Region name strings.
+        log (logging.Logger): Logger instance.
+
+    Returns:
+        tuple: (avg_proba, n_plateau, best_params, feature_union,
+                feature_intersection, feature_frequency) where avg_proba
+                is shape (n_test, 2).
+    """
+    mean_scores = gscv.cv_results_["mean_test_score"]
+    std_scores = gscv.cv_results_["std_test_score"]
+
+    best_idx = np.argmax(mean_scores)
+    best_std = float(std_scores[best_idx])
+    threshold = mean_scores[best_idx] - best_std
+    plateau_mask = mean_scores >= threshold
+
+    # Get indices of plateau combos, sorted by score descending.
+    plateau_indices = np.where(plateau_mask)[0]
+    plateau_indices = plateau_indices[np.argsort(mean_scores[plateau_indices])[::-1]]
+
+    # Cap at MAX_PLATEAU_SIZE.
+    if len(plateau_indices) > MAX_PLATEAU_SIZE:
+        log.info(
+            "    Plateau capped: %d -> %d combos",
+            len(plateau_indices), MAX_PLATEAU_SIZE,
+        )
+        plateau_indices = plateau_indices[:MAX_PLATEAU_SIZE]
+
+    n_plateau = len(plateau_indices)
+    log.info(
+        "    Plateau: %d of %d combos (threshold=%.4f, best=%.4f, best_std=%.4f)",
+        n_plateau, len(mean_scores), threshold,
+        float(mean_scores[best_idx]), best_std,
+    )
+
+    all_proba = []
+    all_features = []
+
+    for rank, idx in enumerate(plateau_indices):
+        params = {
+            k.replace("param_", ""): v
+            for k, v in gscv.cv_results_.items()
+            if k.startswith("param_") and not isinstance(v[idx], type(np.ma.masked))
+        }
+        params = {k: v[idx] for k, v in params.items()}
+
+        pipe = build_stage2_pipeline(
+            base_pipeline_name, random_state=repeat_seed, config=config,
+        )
+        pipe.set_params(**params)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            pipe.fit(X_train_s2, y_train_s2)
+
+        proba = pipe.predict_proba(X_test)
+        all_proba.append(proba)
+
+        # Extract selected features.
+        if "selector" in pipe.named_steps:
+            selector = pipe.named_steps["selector"]
+            selected = {feature_names[i] for i in selector.indices_}
+        else:
+            # Standalone EN: features with non-zero coefficients.
+            clf = pipe.named_steps["clf"]
+            nonzero_mask = np.any(clf.coef_ != 0, axis=0)
+            # Account for the scaler step (features are in original order).
+            selected = {feature_names[i] for i, nz in enumerate(nonzero_mask) if nz}
+
+        all_features.append(selected)
+
+        if rank < 3 or rank == n_plateau - 1:
+            log.info(
+                "      [%d/%d] score=%.4f, n_features=%d, params=%s",
+                rank + 1, n_plateau, float(mean_scores[idx]),
+                len(selected), params,
+            )
+
+    avg_proba = np.mean(all_proba, axis=0)
+
+    # Compute feature union, intersection, and frequency.
+    feature_union = set()
+    feature_intersection = all_features[0].copy() if all_features else set()
+    feature_frequency = {}
+
+    for feat_set in all_features:
+        feature_union |= feat_set
+        feature_intersection &= feat_set
+        for f in feat_set:
+            feature_frequency[f] = feature_frequency.get(f, 0) + 1
+
+    best_params = gscv.cv_results_["params"][best_idx]
+    log.info(
+        "    Plateau features: union=%d, intersection=%d",
+        len(feature_union), len(feature_intersection),
+    )
+
+    return (avg_proba, n_plateau, best_params, feature_union,
+            feature_intersection, feature_frequency)
 
 
 def run_stage2_k_ensemble(X_train_s2, y_train_s2, X_test, feature_names,
@@ -286,10 +407,10 @@ def compute_metrics_excluding_mislabels(y_true_labels, y_pred_combined,
     return round(ba_excl, 6), n_excluded
 
 
-"""Hierarchical Nested CV v2 Runner"""
+"""Hierarchical Nested CV Runner"""
 
 
-def run_single_repeat_v2(X, y, le, feature_names, sample_names,
+def run_single_repeat(X, y, le, feature_names, sample_names,
                          stage2_pipeline_name, repeat_seed, stage2_grid,
                          config, log, ckpt_path=None, prior_folds=None,
                          details_dir=None):
@@ -305,7 +426,7 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
         le (LabelEncoder): Fitted encoder (HER2+=0, HR+=1, Triple Neg=2).
         feature_names (list[str]): Region name strings.
         sample_names (list[str]): Sample column names matching row order of X.
-        stage2_pipeline_name (str): One of the V2_PIPELINE_NAMES.
+        stage2_pipeline_name (str): One of the PIPELINE_NAMES.
         repeat_seed (int): Random seed for this repeat.
         stage2_grid (dict): Hyperparameter grid for Stage 2 (or None for
             ensemble pipelines).
@@ -397,8 +518,50 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
         s2_cv_results = None
         s2_best_inner = None
         s2_best_inner_std = None
+        pens_n_features_intersection = None
+        pens_feature_frequency = None
+        is_plateau_ensemble = stage2_pipeline_name in PLATEAU_ENSEMBLE_BASE
 
-        if stage2_pipeline_name in V2_GRIDSEARCH_PIPELINES:
+        if is_plateau_ensemble:
+            # Plateau ensemble: run GridSearchCV with the base pipeline,
+            # then retrain all combos within one mean-std of the best.
+            base_name = PLATEAU_ENSEMBLE_BASE[stage2_pipeline_name]
+            base_grid = config["grids"][stage2_pipeline_name]
+            proba_s2, _, s2_cv_results, _, en_converged = (
+                run_stage2_gridsearch(
+                    X_train_s2, y_train_s2, X_test, base_name,
+                    base_grid, inner_folds, repeat_seed, config, log,
+                )
+            )
+            # Build a minimal gscv-like object to pass cv_results_.
+            class _GscvResults:
+                pass
+            gscv_holder = _GscvResults()
+            gscv_holder.cv_results_ = s2_cv_results
+
+            (proba_s2, n_plateau, best_plateau_params, feat_union,
+             feat_inter, feat_freq) = run_plateau_ensemble(
+                gscv_holder, base_name, X_train_s2, y_train_s2,
+                X_test, repeat_seed, config, feature_names, log,
+            )
+            s2_best_params = {
+                "ensemble": "plateau",
+                "n_plateau": n_plateau,
+                "best": best_plateau_params,
+            }
+            s2_n_features = len(feat_union)
+            s2_features = sorted(feat_union)
+            pens_n_features_intersection = len(feat_inter)
+            pens_feature_frequency = feat_freq
+
+            # Extract inner CV score for the best configuration.
+            gscv_mean_scores = s2_cv_results["mean_test_score"]
+            gscv_std_scores = s2_cv_results["std_test_score"]
+            best_gscv_idx = np.argmax(gscv_mean_scores)
+            s2_best_inner = float(gscv_mean_scores[best_gscv_idx])
+            s2_best_inner_std = float(gscv_std_scores[best_gscv_idx])
+
+        elif stage2_pipeline_name in GRIDSEARCH_PIPELINES:
             # Standard GridSearchCV path.
             proba_s2, best_s2, s2_cv_results, s2_best_params, en_converged = (
                 run_stage2_gridsearch(
@@ -406,7 +569,8 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
                     stage2_grid, inner_folds, repeat_seed, config, log,
                 )
             )
-            s2_selector = best_s2.named_steps["selector"]
+            if "selector" in best_s2.named_steps:
+                s2_selector = best_s2.named_steps["selector"]
             # Extract inner CV score for the best configuration.
             gscv_mean_scores = s2_cv_results["mean_test_score"]
             gscv_std_scores = s2_cv_results["std_test_score"]
@@ -434,11 +598,12 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
             s2_best_params = {"ensemble": "kens+en_nmc"}
             s2_cv_results = en_cv_results_ens
 
-        s2_n_features = len(s2_selector.indices_) if s2_selector else 0
-        s2_features = (
-            [feature_names[i] for i in s2_selector.indices_]
-            if s2_selector else []
-        )
+        if not is_plateau_ensemble:
+            s2_n_features = len(s2_selector.indices_) if s2_selector else 0
+            s2_features = (
+                [feature_names[i] for i in s2_selector.indices_]
+                if s2_selector else []
+            )
 
         # --- Diagnostic: Stage 2 accuracy on true HR+/TN test samples ---
         mask_test_hrt = np.isin(y_test, [hr_idx, tn_idx])
@@ -540,6 +705,11 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
             "stage2_n_features": s2_n_features,
             "stage1_features": ",".join(s1_features),
             "stage2_features": ",".join(s2_features) if s2_features else "",
+            "stage2_n_features_intersection": pens_n_features_intersection,
+            "stage2_feature_frequency": (
+                json.dumps(pens_feature_frequency)
+                if pens_feature_frequency is not None else None
+            ),
             "n_test": len(y_test),
             "n_train_s2": int(mask_train_s2.sum()),
             "n_routed_to_s2": n_routed_s2,
@@ -577,7 +747,7 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
             )
             fold_dir.mkdir(parents=True, exist_ok=True)
 
-            if stage2_pipeline_name in V2_GRIDSEARCH_PIPELINES and s2_cv_results is not None:
+            if stage2_pipeline_name in GRIDSEARCH_PIPELINES and s2_cv_results is not None:
                 save_inner_cv_results(fold_dir, fold_idx, s2_cv_results)
                 if s2_selector is not None:
                     save_fold_features_hierarchical(
@@ -597,6 +767,10 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
                 df_en = df_en[[c for c in keep if c in df_en.columns]]
                 df_en.to_csv(en_fold_path, index=False)
 
+            elif is_plateau_ensemble and s2_cv_results is not None:
+                # Save inner CV results for the plateau ensemble.
+                save_inner_cv_results(fold_dir, fold_idx, s2_cv_results)
+
         log.info(
             "  Fold %d: s1=%.4f (t=%.2f)  s2=%.4f  combined=%.4f  "
             "auroc=%.4f  excl=%.4f (%d)  (%.1fs)",
@@ -613,14 +787,14 @@ def run_single_repeat_v2(X, y, le, feature_names, sample_names,
 
 
 def parse_args():
-    """Parse command-line arguments for the v2 hierarchical CV runner.
+    """Parse command-line arguments for the hierarchical CV runner.
 
     Returns:
         argparse.Namespace: Parsed arguments.
     """
     parser = argparse.ArgumentParser(
         description=(
-            "Hierarchical nested CV v2 runner. Stage 1 (KW+RF k=5) separates "
+            "Hierarchical nested CV runner. Stage 1 (KW+RF k=5) separates "
             "HER2+. Stage 2 (--pipeline) discriminates HR+ from Triple Neg. "
             "Supports 7 pipeline variants including k-ensemble and pipeline "
             "ensemble. One (pipeline, repeat) per invocation."
@@ -630,7 +804,7 @@ def parse_args():
         "--pipeline",
         type=str,
         required=True,
-        choices=V2_PIPELINE_NAMES,
+        choices=PIPELINE_NAMES,
         help="Stage 2 pipeline variant to evaluate.",
     )
     parser.add_argument(
@@ -642,10 +816,10 @@ def parse_args():
     parser.add_argument(
         "--config",
         type=str,
-        default="local_v2",
+        default="local",
         help=(
             "Config file path or bare name. Bare names resolve to "
-            "config_files/<name>.yaml. (default: local_v2)."
+            "config_files/<name>.yaml. (default: local)."
         ),
     )
     parser.add_argument(
@@ -684,7 +858,7 @@ def parse_args():
 
 
 def main():
-    """Entry point: run hierarchical nested CV v2 with checkpointing.
+    """Entry point: run hierarchical nested CV with checkpointing.
 
     Stage 1 is always KW+RF on binary HER2+ vs rest labels with a fixed
     threshold of 0.5. Stage 2 uses the pipeline specified by --pipeline.
@@ -695,9 +869,9 @@ def main():
     config = load_config(args.config)
 
     # Set up run directory and logging.
-    tag = f"v2_{args.pipeline}_r{args.repeat}"
+    tag = f"{args.pipeline}_r{args.repeat}"
     fig_dir, data_dir, log_dir, run_dir = get_run_dirs_no_replace(
-        args.name, "hierarchical_nested_cv_v2",
+        args.name, "hierarchical_nested_cv",
     )
     log, console = setup_logging(
         "hierarchical_nested_cv_runner", tag=tag, log_dir=log_dir,
@@ -777,12 +951,12 @@ def main():
         )
 
     # Per-fold diagnostic output directory.
-    details_dir = run_dir / "hierarchical_nested_cv_v2" / "fold_details"
+    details_dir = run_dir / "hierarchical_nested_cv" / "fold_details"
 
-    # Run hierarchical nested CV v2.
+    # Run hierarchical nested CV.
     job_start = time.perf_counter()
 
-    fold_results = run_single_repeat_v2(
+    fold_results = run_single_repeat(
         X, y, le, feature_names, sample_names,
         args.pipeline, args.repeat,
         stage2_grid, config, log,

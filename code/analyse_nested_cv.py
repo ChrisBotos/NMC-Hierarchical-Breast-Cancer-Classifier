@@ -45,8 +45,8 @@ if str(CODE_DIR) not in sys.path:
     sys.path.insert(0, str(CODE_DIR))
 
 from utils.config_loader import load_config
-from utils.constants import PIPELINE_COLORS, PIPELINE_LABELS, V2_PIPELINE_NAMES
-from utils.cv_config import PIPELINE_NAMES
+from utils.constants import PIPELINE_COLORS, PIPELINE_LABELS, PIPELINE_NAMES
+from utils.cv_config import FLAT_PIPELINE_NAMES
 from utils.logging_setup import setup_logging
 from utils.paths import _find_or_create_run_dir, get_run_dirs, save_config
 from utils.plotting import annotate_heatmap, apply_plot_style, draw_significance_brackets
@@ -61,24 +61,25 @@ rich.traceback.install()
 def get_pipeline_order(phase, all_results):
     """Determine canonical pipeline ordering based on phase and available data.
 
-    For v2 hierarchical phases, uses V2_PIPELINE_NAMES ordering. Falls back
-    to V2 ordering if any v2-only pipeline names are found in the data.
-    Otherwise uses the original 4-pipeline ordering.
+    For hierarchical phases, uses PIPELINE_NAMES ordering. Falls back
+    to hierarchical ordering if any hierarchical-only pipeline names are found
+    in the data. Otherwise uses the original 4-pipeline ordering.
 
     Args:
         phase (str): Phase directory name (e.g. 'nested_cv_2x2',
-            'hierarchical_nested_cv_v2').
+            'hierarchical_nested_cv').
         all_results (pd.DataFrame): Loaded fold results with pipeline column.
 
     Returns:
         tuple: Canonical pipeline name ordering.
     """
     actual_pipelines = set(all_results["pipeline"].unique())
-    v2_only = {"kw_nmc_kens", "nmc_ensemble", "kw_nmc_kgrid"}
+    hierarchical_only = {"kw_nmc_kens", "nmc_ensemble", "kw_nmc_kgrid"}
 
-    if phase == "hierarchical_nested_cv_v2" or actual_pipelines & v2_only:
-        return V2_PIPELINE_NAMES
-    return PIPELINE_NAMES
+    if phase in ("hierarchical_nested_cv", "hierarchical_nested_cv_v2") \
+            or actual_pipelines & hierarchical_only:
+        return PIPELINE_NAMES
+    return FLAT_PIPELINE_NAMES
 
 
 """Data Loading and Aggregation"""
@@ -1360,7 +1361,7 @@ def parse_args():
         default="nested_cv_2x2",
         help=(
             "Phase directory name inside the run directory that contains "
-            "the fold result CSVs. Use 'hierarchical_nested_cv_2x2' for "
+            "the fold result CSVs. Use 'hierarchical_nested_cv' for "
             "hierarchical runs. (default: nested_cv_2x2)."
         ),
     )

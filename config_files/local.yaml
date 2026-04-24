@@ -1,5 +1,5 @@
-# Local development configuration.
-# Small grids and few repeats for quick feedback on a laptop.
+# Local v2 configuration for quick testing of hierarchical nested CV v2.
+# Small grids and 3 repeats for laptop feedback.
 
 cv:
   n_repeats: 3
@@ -8,9 +8,24 @@ cv:
   scoring: balanced_accuracy
 
 pipelines:
-  names: [kw_nmc, kw_rf, en_nmc, en_rf, standalone_en]
+  names: [kw_nmc, en_nmc, kw_rf, en_rf, kw_nmc_kens, nmc_ensemble, kw_nmc_kgrid, standalone_en, kw_nmc_pens, standalone_en_pens, en_nmc_pens]
   rf_n_estimators: 500
   rf_class_weight: balanced
+  nmc_class_weight: balanced
+
+# Stage 1 threshold calibration parameters.
+stage1:
+  threshold_range: [0.3, 0.5, 0.7]
+  inner_folds: 5
+
+# K-ensemble parameters (pipelines kw_nmc_kens and nmc_ensemble).
+k_ensemble:
+  k_values: [15, 20, 30, 50]
+
+# Suspected mislabel samples for sensitivity analysis.
+suspected_mislabels:
+  indices: [2, 4]
+  names: ["Array.67", "Array.22"]
 
 grids:
   kw_nmc:
@@ -29,9 +44,20 @@ grids:
     selector__top_k: [5, 20]
     clf__max_features: ["sqrt", "log2"]
     clf__min_samples_leaf: [1, 2]
+  kw_nmc_kgrid:
+    selector__k: [15, 20, 30, 50]
   standalone_en:
     clf__C: [0.001, 0.01, 0.1, 1.0, 10.0]
     clf__l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+  kw_nmc_pens:
+    selector__k: [5, 20]
+  standalone_en_pens:
+    clf__C: [0.001, 0.01, 0.1, 1.0, 10.0]
+    clf__l1_ratio: [0.1, 0.3, 0.5, 0.7, 0.9]
+  en_nmc_pens:
+    selector__C: [0.01, 0.1, 1.0, 10.0]
+    selector__l1_ratio: [0.1, 0.5, 0.9]
+    selector__top_k: [5, 20]
 
 preprocessing:
   merge_threshold: 0.8
