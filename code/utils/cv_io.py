@@ -1,7 +1,8 @@
 """Shared I/O helpers for nested cross-validation runners.
 
-Provides data loading, checkpoint management, and input path resolution
-used by both the flat and hierarchical CV runner scripts.
+Provides data loading, checkpoint management, input path resolution,
+and per-fold diagnostic saving used by both the flat and hierarchical
+CV runner scripts.
 """
 
 import json
@@ -156,3 +157,115 @@ def resolve_merged_input(run_name, input_path):
 
     # Legacy fallback.
     return PROJECT_DIR / "results" / "data" / "preprocessing_phase" / "train_merged.tsv"
+
+
+def get_selector_scores(selector):
+    """Extract feature scores from a fitted KW or EN selector.
+
+    KruskalWallisSelector stores H-statistics in `scores_`, while
+    ElasticNetSelector stores summed absolute coefficients in
+    `importances_`. This helper normalises the interface.
+
+    Args:
+        selector: A fitted KruskalWallisSelector or ElasticNetSelector.
+
+    Returns:
+        np.ndarray: Per-feature scores of shape (n_features,).
+    """
+    if hasattr(selector, "scores_"):
+        return selector.scores_
+    if hasattr(selector, "importances_"):
+        return selector.importances_
+    raise AttributeError(
+        f"Selector {type(selector).__name__} has neither "
+        f"'scores_' nor 'importances_' attribute."
+    )
+
+
+def save_inner_cv_results(fold_dir, fold_idx, cv_results):
+    """Save GridSearchCV cv_results_ to a CSV file.
+
+    Args:
+        fold_dir (Path): Directory for this pipeline/repeat combination.
+        fold_idx (int): 1-based outer fold index.
+        cv_results (dict): The cv_results_ attribute from GridSearchCV.
+    """
+    df = pd.DataFrame(cv_results)
+    # Keep only the most useful columns, in a readable order.
+    keep_cols = []
+    # Parameter columns.
+    param_cols = sorted(c for c in df.columns if c.startswith("param_"))
+    keep_cols.extend(param_cols)
+    # Score summary columns.
+    for col in ["mean_test_score", "std_test_score", "rank_test_score"]:
+        if col in df.columns:
+            keep_cols.append(col)
+    # Per-split scores.
+    split_cols = sorted(
+        (c for c in df.columns if c.startswith("split") and "test_score" in c),
+        key=lambda c: int(c.split("split")[1].split("_")[0]),
+    )
+    keep_cols.extend(split_cols)
+    # Timing columns.
+    for col in ["mean_fit_time", "mean_score_time"]:
+        if col in df.columns:
+            keep_cols.append(col)
+
+    df = df[[c for c in keep_cols if c in df.columns]]
+    out_path = fold_dir / f"fold{fold_idx}_inner_cv.csv"
+    df.to_csv(out_path, index=False)
+
+
+def save_fold_features_flat(fold_dir, fold_idx, feature_names, selector):
+    """Save full feature rankings for a flat (single-stage) fold.
+
+    Args:
+        fold_dir (Path): Directory for this pipeline/repeat combination.
+        fold_idx (int): 1-based outer fold index.
+        feature_names (list[str]): All region name strings.
+        selector: The fitted selector from the best estimator.
+    """
+    scores = get_selector_scores(selector)
+    selected_set = set(selector.indices_.tolist())
+
+    df = pd.DataFrame({
+        "feature_name": feature_names,
+        "score": np.round(scores, 6),
+        "selected": [i in selected_set for i in range(len(feature_names))],
+    })
+    # Sort by score descending for readability.
+    df = df.sort_values("score", ascending=False).reset_index(drop=True)
+
+    out_path = fold_dir / f"fold{fold_idx}_features.csv"
+    df.to_csv(out_path, index=False)
+
+
+def save_fold_features_hierarchical(fold_dir, fold_idx, feature_names,
+                                    stage1_selector, stage2_selector):
+    """Save full feature rankings for both stages of a hierarchical fold.
+
+    Args:
+        fold_dir (Path): Directory for this pipeline/repeat combination.
+        fold_idx (int): 1-based outer fold index.
+        feature_names (list[str]): All region name strings.
+        stage1_selector: Fitted KruskalWallisSelector from Stage 1.
+        stage2_selector: Fitted selector (KW or EN) from Stage 2.
+    """
+    s1_scores = get_selector_scores(stage1_selector)
+    s1_selected = set(stage1_selector.indices_.tolist())
+
+    s2_scores = get_selector_scores(stage2_selector)
+    s2_selected = set(stage2_selector.indices_.tolist())
+
+    df = pd.DataFrame({
+        "feature_name": feature_names,
+        "stage1_kw_score": np.round(s1_scores, 6),
+        "stage1_selected": [i in s1_selected for i in range(len(feature_names))],
+        "stage2_score": np.round(s2_scores, 6),
+        "stage2_selected": [i in s2_selected for i in range(len(feature_names))],
+    })
+    # Sort by stage2 score descending as the primary interest.
+    df = df.sort_values("stage2_score", ascending=False).reset_index(drop=True)
+
+    out_path = fold_dir / f"fold{fold_idx}_features.csv"
+    df.to_csv(out_path, index=False)

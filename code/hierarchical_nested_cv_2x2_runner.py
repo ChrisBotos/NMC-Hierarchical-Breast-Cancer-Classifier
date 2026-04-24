@@ -61,6 +61,8 @@ from utils.cv_io import (
     load_cv_data,
     resolve_merged_input,
     save_checkpoint,
+    save_fold_features_hierarchical,
+    save_inner_cv_results,
 )
 from utils.logging_setup import setup_logging
 from utils.paths import DATA_DIR, get_run_dirs_no_replace, save_config
@@ -73,7 +75,8 @@ rich.traceback.install()
 
 def run_single_repeat(X, y, le, feature_names, stage2_pipeline_name,
                       repeat_seed, stage2_grid, config, log,
-                      ckpt_path=None, prior_folds=None):
+                      ckpt_path=None, prior_folds=None,
+                      details_dir=None):
     """Run hierarchical outer CV for one Stage 2 pipeline and one repeat.
 
     Stage 1 (HER2+ vs rest): always uses KW+RF with binary labels.
@@ -100,6 +103,9 @@ def run_single_repeat(X, y, le, feature_names, stage2_pipeline_name,
         log (logging.Logger): Logger instance.
         ckpt_path (Path or None): Checkpoint file path.
         prior_folds (list[dict] or None): Previously completed folds.
+        details_dir (Path or None): Root directory for per-fold diagnostic
+            files. If provided, inner CV results and feature rankings are
+            saved into fold_details/<pipeline>/r<seed>/ subdirectories.
 
     Returns:
         list[dict]: One dict per outer fold with hierarchical results.
@@ -280,6 +286,19 @@ def run_single_repeat(X, y, le, feature_names, stage2_pipeline_name,
                 pipeline_key="stage2_pipeline",
             )
 
+        # Save detailed per-fold diagnostics (inner CV and feature scores).
+        if details_dir is not None:
+            fold_dir = (
+                details_dir / stage2_pipeline_name / f"r{repeat_seed}"
+            )
+            fold_dir.mkdir(parents=True, exist_ok=True)
+            save_inner_cv_results(fold_dir, fold_idx, stage2_gscv.cv_results_)
+            save_fold_features_hierarchical(
+                fold_dir, fold_idx, feature_names,
+                stage1_selector=s1_selector,
+                stage2_selector=s2_selector,
+            )
+
         log.info(
             "  Fold %d: s1=%.4f  s2=%.4f  combined=%.4f  auroc=%.4f  "
             "s1_k=%d  s2_k=%d  routed=%d/%d  (%.1fs)",
@@ -437,6 +456,9 @@ def main():
         n_cls = int((y == cls_idx).sum())
         log.info("  %s: %d samples", cls_name, n_cls)
 
+    # Per-fold diagnostic output directory.
+    details_dir = run_dir / "hierarchical_nested_cv_2x2" / "fold_details"
+
     # Run hierarchical nested CV.
     job_start = time.perf_counter()
 
@@ -444,6 +466,7 @@ def main():
         X, y, le, feature_names, args.pipeline, args.repeat,
         stage2_grid, config, log,
         ckpt_path=ckpt, prior_folds=prior_folds,
+        details_dir=details_dir,
     )
 
     job_elapsed = time.perf_counter() - job_start

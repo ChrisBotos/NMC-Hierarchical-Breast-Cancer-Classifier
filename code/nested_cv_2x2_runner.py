@@ -59,6 +59,8 @@ from utils.cv_io import (
     load_cv_data,
     resolve_merged_input,
     save_checkpoint,
+    save_fold_features_flat,
+    save_inner_cv_results,
 )
 from utils.logging_setup import setup_logging
 from utils.paths import DATA_DIR, get_run_dirs_no_replace, save_config
@@ -71,7 +73,7 @@ rich.traceback.install()
 
 def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
                       param_grid, config, log, ckpt_path=None,
-                      prior_folds=None):
+                      prior_folds=None, details_dir=None):
     """Run outer CV for one pipeline and one repeat seed.
 
     Constructs a fresh pipeline per repeat so stochastic components
@@ -98,6 +100,9 @@ def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
             saving. If None, no checkpoint is written.
         prior_folds (list[dict] or None): Previously completed fold results
             loaded from a checkpoint. These folds are skipped.
+        details_dir (Path or None): Root directory for per-fold diagnostic
+            files. If provided, inner CV results and feature rankings are
+            saved into fold_details/<pipeline>/r<seed>/ subdirectories.
 
     Returns:
         list[dict]: One dict per outer fold with evaluation results.
@@ -193,6 +198,15 @@ def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
         # Save checkpoint after each fold so progress survives crashes.
         if ckpt_path is not None:
             save_checkpoint(ckpt_path, fold_results, pipeline_name, repeat_seed)
+
+        # Save detailed per-fold diagnostics (inner CV and feature scores).
+        if details_dir is not None:
+            fold_dir = details_dir / pipeline_name / f"r{repeat_seed}"
+            fold_dir.mkdir(parents=True, exist_ok=True)
+            save_inner_cv_results(fold_dir, fold_idx, grid_search.cv_results_)
+            save_fold_features_flat(
+                fold_dir, fold_idx, feature_names, selector,
+            )
 
         log.info(
             "  Fold %d: bal_acc=%.4f  auroc=%.4f  inner_best=%.4f  "
@@ -342,12 +356,16 @@ def main():
     log.info("Loaded %d samples, %d features.", X.shape[0], X.shape[1])
     log.info("Classes: %s", le.classes_.tolist())
 
+    # Per-fold diagnostic output directory.
+    details_dir = run_dir / "nested_cv_2x2" / "fold_details"
+
     # Run the nested CV for this (pipeline, repeat).
     job_start = time.perf_counter()
 
     fold_results = run_single_repeat(
         X, y, le, feature_names, args.pipeline, args.repeat, param_grid,
         config, log, ckpt_path=ckpt, prior_folds=prior_folds,
+        details_dir=details_dir,
     )
 
     job_elapsed = time.perf_counter() - job_start
