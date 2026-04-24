@@ -1,0 +1,78 @@
+========================================
+Hierarchical CV - Job 220 of 400
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  kw_nmc_kens
+Repeat:   20 / 50
+Config:   /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml
+Run:      server_run_v2
+Node:     node3
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-24 22:07:30
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline kw_nmc_kens --repeat 20 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml --name server_run_v2
+INFO     Run: 2026-04-24_server_run_v2                                          
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapsho
+         t_hierarchical.yaml                                                    
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)            
+INFO     Stage 2: kw_nmc_kens (HR+ vs Triple Neg)                               
+INFO     Repeat seed: 20                                                        
+INFO     Stage 2: no GridSearchCV (ensemble pipeline)                           
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]          
+INFO           k=15: mean_max_prob=0.6783                                       
+INFO           k=20: mean_max_prob=0.7133                                       
+INFO           k=30: mean_max_prob=0.7365                                       
+INFO           k=50: mean_max_prob=0.7233                                       
+INFO       Fold 1: s1=1.0000 (t=0.50)  s2=0.8333  combined=0.8889  auroc=0.9618 
+         excl=0.8889 (0)  (1.0s)                                                
+INFO           k=15: mean_max_prob=0.6482                                       
+INFO           k=20: mean_max_prob=0.6620                                       
+INFO           k=30: mean_max_prob=0.6976                                       
+INFO           k=50: mean_max_prob=0.7413                                       
+INFO       Fold 2: s1=1.0000 (t=0.50)  s2=0.6786  combined=0.7857  auroc=0.9237 
+         excl=0.8190 (1)  (1.0s)                                                
+INFO           k=15: mean_max_prob=0.6525                                       
+INFO           k=20: mean_max_prob=0.6518                                       
+INFO           k=30: mean_max_prob=0.6535                                       
+INFO           k=50: mean_max_prob=0.6590                                       
+INFO       Fold 3: s1=1.0000 (t=0.50)  s2=0.5833  combined=0.7222  auroc=0.8765 
+         excl=0.7222 (0)  (1.0s)                                                
+INFO           k=15: mean_max_prob=0.7139                                       
+INFO           k=20: mean_max_prob=0.7256                                       
+INFO           k=30: mean_max_prob=0.7210                                       
+INFO           k=50: mean_max_prob=0.7242                                       
+INFO       Fold 4: s1=1.0000 (t=0.50)  s2=0.8571  combined=0.9048  auroc=0.9780 
+         excl=0.9444 (1)  (1.0s)                                                
+INFO           k=15: mean_max_prob=0.6848                                       
+INFO           k=20: mean_max_prob=0.6716                                       
+INFO           k=30: mean_max_prob=0.6558                                       
+INFO           k=50: mean_max_prob=0.6643                                       
+INFO       Fold 5: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9341 
+         excl=0.8095 (0)  (1.0s)                                                
+  v2_kw_nmc_kens r20 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:05
+INFO                                                                            
+INFO     Summary for v2_kw_nmc_kens repeat 20:                                  
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.7333 (+/- 0.1012)                        
+INFO       Combined (3-class):       0.8222 (+/- 0.0675)                        
+INFO       Combined (excl mislabels): 0.8368 (+/- 0.0755)                       
+INFO       Combined fold scores: [0.8889, 0.7857, 0.7222, 0.9048, 0.8095]       
+INFO       Total time: 5.1s                                                     
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_n
+         ested_cv/data/fold_results_kw_nmc_kens_r20.csv                         
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-24 22:07:36
+Elapsed:  0h 0m 6s
+Exit:     0
+========================================
+[HNCV-TASK-DONE] array=16123 task=219 stage2_pipeline=kw_nmc_kens repeat=20 exit=0 elapsed=6s

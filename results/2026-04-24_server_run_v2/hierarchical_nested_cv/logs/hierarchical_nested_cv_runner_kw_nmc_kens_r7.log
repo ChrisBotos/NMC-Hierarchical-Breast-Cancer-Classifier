@@ -1,0 +1,48 @@
+Run: 2026-04-24_server_run_v2
+Config: /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)
+Stage 2: kw_nmc_kens (HR+ vs Triple Neg)
+Repeat seed: 7
+Stage 2: no GridSearchCV (ensemble pipeline)
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
+      k=15: mean_max_prob=0.6975
+      k=20: mean_max_prob=0.7044
+      k=30: mean_max_prob=0.6767
+      k=50: mean_max_prob=0.6822
+  Fold 1: s1=1.0000 (t=0.50)  s2=0.8571  combined=0.9048  auroc=0.9389  excl=0.9444 (1)  (1.0s)
+      k=15: mean_max_prob=0.7034
+      k=20: mean_max_prob=0.6981
+      k=30: mean_max_prob=0.7072
+      k=50: mean_max_prob=0.6946
+  Fold 2: s1=1.0000 (t=0.50)  s2=0.9167  combined=0.9444  auroc=0.9924  excl=0.9444 (0)  (1.0s)
+      k=15: mean_max_prob=0.7163
+      k=20: mean_max_prob=0.7129
+      k=30: mean_max_prob=0.7294
+      k=50: mean_max_prob=0.7217
+  Fold 3: s1=1.0000 (t=0.50)  s2=0.6667  combined=0.7778  auroc=0.9554  excl=0.7778 (0)  (1.0s)
+      k=15: mean_max_prob=0.6786
+      k=20: mean_max_prob=0.6826
+      k=30: mean_max_prob=0.7054
+      k=50: mean_max_prob=0.7185
+  Fold 4: s1=1.0000 (t=0.50)  s2=0.8571  combined=0.9048  auroc=0.9597  excl=0.9048 (0)  (1.0s)
+      k=15: mean_max_prob=0.6957
+      k=20: mean_max_prob=0.6911
+      k=30: mean_max_prob=0.6687
+      k=50: mean_max_prob=0.6965
+  Fold 5: s1=1.0000 (t=0.50)  s2=0.5714  combined=0.7143  auroc=0.9048  excl=0.7460 (1)  (1.0s)
+
+Summary for v2_kw_nmc_kens repeat 7:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.7738 (+/- 0.1317)
+  Combined (3-class):       0.8492 (+/- 0.0878)
+  Combined (excl mislabels): 0.8635 (+/- 0.0848)
+  Combined fold scores: [0.9048, 0.9444, 0.7778, 0.9048, 0.7143]
+  Total time: 5.0s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv/data/fold_results_kw_nmc_kens_r7.csv
+Checkpoint removed (job complete).

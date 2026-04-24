@@ -1,0 +1,58 @@
+========================================
+Hierarchical CV - Job 365 of 400
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  standalone_en
+Repeat:   15 / 50
+Config:   /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml
+Run:      server_run_v2
+Node:     node2
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-24 22:52:43
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline standalone_en --repeat 15 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml --name server_run_v2
+INFO     Run: 2026-04-24_server_run_v2                                          
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapsho
+         t_hierarchical.yaml                                                    
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)            
+INFO     Stage 2: standalone_en (HR+ vs Triple Neg)                             
+INFO     Repeat seed: 15                                                        
+INFO     Stage 2 grid size: 50 combinations                                     
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]          
+INFO       Fold 1: s1=1.0000 (t=0.50)  s2=0.8333  combined=0.8889  auroc=0.9963 
+         excl=0.8889 (0)  (34.0s)                                               
+INFO       Fold 2: s1=1.0000 (t=0.50)  s2=0.8333  combined=0.8889  auroc=0.9310 
+         excl=0.9333 (1)  (35.9s)                                               
+INFO       Fold 3: s1=1.0000 (t=0.50)  s2=0.6250  combined=0.7500  auroc=0.9296 
+         excl=0.7500 (0)  (35.6s)                                               
+INFO       Fold 4: s1=1.0000 (t=0.50)  s2=0.5714  combined=0.7143  auroc=0.8315 
+         excl=0.7143 (0)  (33.2s)                                               
+INFO       Fold 5: s1=1.0000 (t=0.50)  s2=0.5714  combined=0.7143  auroc=0.9121 
+         excl=0.7302 (1)  (34.3s)                                               
+  v2_standalone_en r15 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:02:53
+INFO                                                                            
+INFO     Summary for v2_standalone_en repeat 15:                                
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.6869 (+/- 0.1211)                        
+INFO       Combined (3-class):       0.7913 (+/- 0.0808)                        
+INFO       Combined (excl mislabels): 0.8033 (+/- 0.0898)                       
+INFO       Combined fold scores: [0.8889, 0.8889, 0.75, 0.7143, 0.7143]         
+INFO       Total time: 173.0s                                                   
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_n
+         ested_cv/data/fold_results_standalone_en_r15.csv                       
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-24 22:55:38
+Elapsed:  0h 2m 55s
+Exit:     0
+========================================
+[HNCV-TASK-DONE] array=16123 task=364 stage2_pipeline=standalone_en repeat=15 exit=0 elapsed=175s

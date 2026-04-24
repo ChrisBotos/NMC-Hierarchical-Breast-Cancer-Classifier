@@ -1,0 +1,58 @@
+========================================
+Hierarchical CV - Job 175 of 400
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  en_rf
+Repeat:   25 / 50
+Config:   /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml
+Run:      server_run_v2
+Node:     node2
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-24 18:48:59
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline en_rf --repeat 25 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml --name server_run_v2
+INFO     Run: 2026-04-24_server_run_v2                                          
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapsho
+         t_hierarchical.yaml                                                    
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)            
+INFO     Stage 2: en_rf (HR+ vs Triple Neg)                                     
+INFO     Repeat seed: 25                                                        
+INFO     Stage 2 grid size: 800 combinations                                    
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]          
+INFO       Fold 1: s1=1.0000 (t=0.50)  s2=0.6905  combined=0.7937  auroc=0.9008 
+         excl=0.8333 (1)  (2862.7s)                                             
+INFO       Fold 2: s1=1.0000 (t=0.50)  s2=0.7738  combined=0.8492  auroc=0.9542 
+         excl=0.8492 (0)  (2859.3s)                                             
+INFO       Fold 3: s1=1.0000 (t=0.50)  s2=0.6042  combined=0.7361  auroc=0.8998 
+         excl=0.7917 (1)  (2859.3s)                                             
+INFO       Fold 4: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9451 
+         excl=0.8095 (0)  (2836.5s)                                             
+INFO       Fold 5: s1=1.0000 (t=0.50)  s2=0.6429  combined=0.7619  auroc=0.9121 
+         excl=0.7619 (0)  (2885.5s)                                             
+  v2_en_rf r25 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 3:58:23
+INFO                                                                            
+INFO     Summary for v2_en_rf repeat 25:                                        
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.6851 (+/- 0.0585)                        
+INFO       Combined (3-class):       0.7901 (+/- 0.0390)                        
+INFO       Combined (excl mislabels): 0.8091 (+/- 0.0307)                       
+INFO       Combined fold scores: [0.7937, 0.8492, 0.7361, 0.8095, 0.7619]       
+INFO       Total time: 14303.4s                                                 
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_n
+         ested_cv/data/fold_results_en_rf_r25.csv                               
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-24 22:47:24
+Elapsed:  3h 58m 25s
+Exit:     0
+========================================
+[HNCV-TASK-DONE] array=16123 task=174 stage2_pipeline=en_rf repeat=25 exit=0 elapsed=14305s

@@ -1,0 +1,58 @@
+========================================
+Hierarchical CV - Job 92 of 400
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  en_nmc
+Repeat:   42 / 50
+Config:   /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml
+Run:      server_run_v2
+Node:     node1
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-24 18:23:45
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline en_nmc --repeat 42 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml --name server_run_v2
+INFO     Run: 2026-04-24_server_run_v2                                          
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapsho
+         t_hierarchical.yaml                                                    
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)            
+INFO     Stage 2: en_nmc (HR+ vs Triple Neg)                                    
+INFO     Repeat seed: 42                                                        
+INFO     Stage 2 grid size: 200 combinations                                    
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]          
+INFO       Fold 1: s1=1.0000 (t=0.50)  s2=0.7738  combined=0.8492  auroc=0.9734 
+         excl=0.9048 (1)  (177.8s)                                              
+INFO       Fold 2: s1=1.0000 (t=0.50)  s2=0.6786  combined=0.7857  auroc=0.9432 
+         excl=0.7857 (0)  (177.8s)                                              
+INFO       Fold 3: s1=1.0000 (t=0.50)  s2=0.7083  combined=0.8056  auroc=0.9325 
+         excl=0.8056 (0)  (178.6s)                                              
+INFO       Fold 4: s1=1.0000 (t=0.50)  s2=0.8571  combined=0.9048  auroc=0.9890 
+         excl=0.9048 (0)  (166.1s)                                              
+INFO       Fold 5: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9121 
+         excl=0.8492 (1)  (170.1s)                                              
+  v2_en_nmc r42 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:14:30
+INFO                                                                            
+INFO     Summary for v2_en_nmc repeat 42:                                       
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.7464 (+/- 0.0634)                        
+INFO       Combined (3-class):       0.8310 (+/- 0.0423)                        
+INFO       Combined (excl mislabels): 0.8500 (+/- 0.0492)                       
+INFO       Combined fold scores: [0.8492, 0.7857, 0.8056, 0.9048, 0.8095]       
+INFO       Total time: 870.5s                                                   
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_n
+         ested_cv/data/fold_results_en_nmc_r42.csv                              
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-24 18:38:17
+Elapsed:  0h 14m 32s
+Exit:     0
+========================================
+[HNCV-TASK-DONE] array=16123 task=91 stage2_pipeline=en_nmc repeat=42 exit=0 elapsed=872s

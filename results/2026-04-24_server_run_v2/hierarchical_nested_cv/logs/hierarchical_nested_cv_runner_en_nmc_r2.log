@@ -1,9 +1,9 @@
 Run: 2026-04-24_server_run_v2
-Config: /mnt/d/Coursework/TB-Project/config_files/local.yaml
+Config: /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml
 Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)
 Stage 2: en_nmc (HR+ vs Triple Neg)
 Repeat seed: 2
-Stage 2 grid size: 24 combinations
+Stage 2 grid size: 200 combinations
 Loading data...
 Loaded 100 samples, 273 features.
 Classes: ['HER2+', 'HR+', 'Triple Neg']
@@ -11,18 +11,18 @@ Classes: ['HER2+', 'HR+', 'Triple Neg']
   HR+: 36 samples
   Triple Neg: 32 samples
 Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22')]
-  Fold 1: s1=1.0000 (t=0.50)  s2=0.5476  combined=0.6984  auroc=0.8776  excl=0.6984 (0)  (17.8s)
-  Fold 2: s1=1.0000 (t=0.50)  s2=0.8452  combined=0.8968  auroc=0.9847  excl=0.8968 (0)  (20.3s)
-  Fold 3: s1=1.0000 (t=0.50)  s2=0.6875  combined=0.7917  auroc=0.8919  excl=0.7917 (0)  (19.0s)
-  Fold 4: s1=1.0000 (t=0.50)  s2=0.5714  combined=0.7143  auroc=0.9048  excl=0.7143 (0)  (17.9s)
-  Fold 5: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9341  excl=0.8889 (2)  (19.6s)
+  Fold 1: s1=1.0000 (t=0.50)  s2=0.5476  combined=0.6984  auroc=0.8776  excl=0.6984 (0)  (211.9s)
+  Fold 2: s1=1.0000 (t=0.50)  s2=0.7619  combined=0.8413  auroc=0.9695  excl=0.8413 (0)  (221.4s)
+  Fold 3: s1=1.0000 (t=0.50)  s2=0.5417  combined=0.6944  auroc=0.8393  excl=0.6944 (0)  (217.5s)
+  Fold 4: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9048  excl=0.8095 (0)  (200.0s)
+  Fold 5: s1=1.0000 (t=0.50)  s2=0.7857  combined=0.8571  auroc=0.9560  excl=0.9444 (2)  (217.1s)
 
 Summary for v2_en_nmc repeat 2:
   Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
-  Stage 2 (HR+ vs TN):      0.6732 (+/- 0.1073)
-  Combined (3-class):       0.7821 (+/- 0.0716)
-  Combined (excl mislabels): 0.7980 (+/- 0.0837)
-  Combined fold scores: [0.6984, 0.8968, 0.7917, 0.7143, 0.8095]
-  Total time: 94.7s
-Fold results saved to /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv/data/fold_results_en_nmc_r2.csv
+  Stage 2 (HR+ vs TN):      0.6702 (+/- 0.1051)
+  Combined (3-class):       0.7802 (+/- 0.0701)
+  Combined (excl mislabels): 0.7976 (+/- 0.0939)
+  Combined fold scores: [0.6984, 0.8413, 0.6944, 0.8095, 0.8571]
+  Total time: 1068.0s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv/data/fold_results_en_nmc_r2.csv
 Checkpoint removed (job complete).
