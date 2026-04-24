@@ -53,3 +53,23 @@ Pooled plateau: 15 of 200 combos from 250 fold files (best=0.7476, std=0.0547, t
       [1/15] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
       [2/15] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
       [3/15] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+      [15/15] n_features=50, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+    Plateau features: union=86, intersection=16
+  Fold 4: s1=1.0000 (t=0.50)  s2=0.5000  combined=0.6667  auroc=0.8791  excl=0.6905 (1)  (4.6s)
+    Retraining 15 plateau models
+      [1/15] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+      [2/15] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+      [3/15] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+      [15/15] n_features=50, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+    Plateau features: union=95, intersection=17
+  Fold 5: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9634  excl=0.8492 (1)  (4.5s)
+
+Summary for v2_en_nmc_pens repeat 27:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.7185 (+/- 0.1170)
+  Combined (3-class):       0.8123 (+/- 0.0780)
+  Combined (excl mislabels): 0.8250 (+/- 0.0701)
+  Combined fold scores: [0.8413, 0.8968, 0.8472, 0.6667, 0.8095]
+  Total time: 23.7s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv/data/fold_results_en_nmc_pens_r27.csv
+Checkpoint removed (job complete).
