@@ -1,0 +1,59 @@
+========================================
+Hierarchical CV - Job 748 of 1000
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  en_rf
+Repeat:   1148 (seed_start=1001, offset=147)
+Config:   /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml
+Run:      final_hierarchical
+Node:     node2
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-25 15:58:38
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline en_rf --repeat 1148 --config /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml --name final_hierarchical
+INFO     Run: 2026-04-25_final_hierarchical                                     
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_sn
+         apshot_hierarchical.yaml                                               
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)            
+INFO     Stage 2: en_rf (HR+ vs Triple Neg)                                     
+INFO     Repeat seed: 1148                                                      
+INFO     Stage 2 grid size: 800 combinations                                    
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22'), (45,     
+         'Array.113')]                                                          
+INFO       Fold 1: s1=1.0000 (t=0.50)  s2=0.9167  combined=0.9444  auroc=0.9771 
+         excl=0.9444 (0)  (2877.0s)                                             
+INFO       Fold 2: s1=1.0000 (t=0.50)  s2=0.5476  combined=0.6984  auroc=0.9008 
+         excl=0.7222 (1)  (2816.6s)                                             
+INFO       Fold 3: s1=1.0000 (t=0.50)  s2=0.6042  combined=0.7361  auroc=0.9182 
+         excl=0.7361 (0)  (2815.3s)                                             
+INFO       Fold 4: s1=1.0000 (t=0.50)  s2=0.8571  combined=0.9048  auroc=0.9817 
+         excl=0.9048 (0)  (2835.6s)                                             
+INFO       Fold 5: s1=1.0000 (t=0.50)  s2=0.5000  combined=0.6667  auroc=0.8315 
+         excl=0.7238 (2)  (2799.7s)                                             
+  en_rf r1148 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 3:55:44
+INFO                                                                            
+INFO     Summary for en_rf repeat 1148:                                         
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.6851 (+/- 0.1691)                        
+INFO       Combined (3-class):       0.7901 (+/- 0.1127)                        
+INFO       Combined (excl mislabels): 0.8063 (+/- 0.0975)                       
+INFO       Combined fold scores: [0.9444, 0.6984, 0.7361, 0.9048, 0.6667]       
+INFO       Total time: 14144.2s                                                 
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/hierarchi
+         cal_nested_cv/data/fold_results_en_rf_r1148.csv                        
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-25 19:54:24
+Elapsed:  3h 55m 46s
+Exit:     0
+========================================
+[HNCV-TASK-DONE] array=16682 task=747 stage2_pipeline=en_rf repeat=1148 exit=0 elapsed=14146s

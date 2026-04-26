@@ -1,0 +1,60 @@
+{
+  "data_exploration_phase": {
+    "timestamp": "2026-04-25T02:39:32.937068",
+    "command": "/data/cbotos/TB-Project/code/data_exploration_phase.py --name final_hierarchical",
+    "phase_name": "eda",
+    "tag": ""
+  },
+  "preprocessing_phase": {
+    "timestamp": "2026-04-25T02:39:55.633595",
+    "command": "/data/cbotos/TB-Project/code/preprocessing_phase.py --name final_hierarchical",
+    "merge_threshold": 0.8
+  },
+  "data_exploration_phase_merged": {
+    "timestamp": "2026-04-25T02:39:58.707590",
+    "command": "/data/cbotos/TB-Project/code/data_exploration_phase.py --input /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/preprocessing/data/train_merged.tsv --tag merged --name final_hierarchical",
+    "phase_name": "eda_merged",
+    "tag": "merged"
+  },
+  "compare_explorations": {
+    "timestamp": "2026-04-25T02:40:06.128604",
+    "command": "/data/cbotos/TB-Project/code/compare_explorations.py --name final_hierarchical --label-a Raw (2834 regions) --label-b Merged (273 segments)"
+  },
+  "submit_hierarchical_nested_cv": {
+    "timestamp": "2026-04-25T02:41:36+03:00",
+    "run_name": "final_hierarchical",
+    "config_file": "/data/cbotos/TB-Project/config_files/server.yaml",
+    "frozen_config": "/data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml",
+    "repeats_per_pipeline": 200,
+    "seed_start": 1001,
+    "seed_range": "1001-1200",
+    "stage1": "kw_rf k=5 (fixed, threshold calibrated)",
+    "stage2_pipelines": [
+      "kw_nmc",
+      "en_nmc",
+      "kw_rf",
+      "en_rf",
+      "standalone_en",
+      "nmc_ensemble",
+      "kw_nmc_pens",
+      "standalone_en_pens",
+      "en_nmc_pens",
+      "nmc_pens_ensemble"
+    ],
+    "skipped_pipelines": [],
+    "total_jobs": 2000,
+    "slurm": {
+      "mem": "4G",
+      "time": "2-00:00:00",
+      "cpus_per_task": 1,
+      "max_concurrent_jobs": 50
+    }
+  },
+  "hierarchical_nested_cv_runner": {
+    "timestamp": "2026-04-26T00:03:16.765356",
+    "command": "/data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline nmc_pens_ensemble --repeat 1069 --config /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml --name final_hierarchical",
+    "stage2_pipeline": "nmc_pens_ensemble",
+    "repeat": 1069,
+    "config_file": "/data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml"
+  }
+}

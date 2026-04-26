@@ -1,0 +1,59 @@
+========================================
+Hierarchical CV - Job 286 of 1000
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  en_nmc
+Repeat:   1086 (seed_start=1001, offset=85)
+Config:   /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml
+Run:      final_hierarchical
+Node:     node1
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-25 04:00:24
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline en_nmc --repeat 1086 --config /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml --name final_hierarchical
+INFO     Run: 2026-04-25_final_hierarchical                                     
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_sn
+         apshot_hierarchical.yaml                                               
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)            
+INFO     Stage 2: en_nmc (HR+ vs Triple Neg)                                    
+INFO     Repeat seed: 1086                                                      
+INFO     Stage 2 grid size: 800 combinations                                    
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22'), (45,     
+         'Array.113')]                                                          
+INFO       Fold 1: s1=1.0000 (t=0.50)  s2=0.6786  combined=0.7857  auroc=0.9542 
+         excl=0.7857 (0)  (854.9s)                                              
+INFO       Fold 2: s1=1.0000 (t=0.50)  s2=0.7024  combined=0.8016  auroc=0.9313 
+         excl=0.8571 (1)  (823.1s)                                              
+INFO       Fold 3: s1=1.0000 (t=0.50)  s2=0.7083  combined=0.8056  auroc=0.9707 
+         excl=0.8056 (0)  (817.5s)                                              
+INFO       Fold 4: s1=1.0000 (t=0.50)  s2=0.7857  combined=0.8571  auroc=0.9487 
+         excl=0.8968 (1)  (849.8s)                                              
+INFO       Fold 5: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9341 
+         excl=0.8492 (1)  (864.0s)                                              
+  en_nmc r1086 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 1:10:09
+INFO                                                                            
+INFO     Summary for en_nmc repeat 1086:                                        
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.7179 (+/- 0.0360)                        
+INFO       Combined (3-class):       0.8119 (+/- 0.0240)                        
+INFO       Combined (excl mislabels): 0.8389 (+/- 0.0393)                       
+INFO       Combined fold scores: [0.7857, 0.8016, 0.8056, 0.8571, 0.8095]       
+INFO       Total time: 4209.7s                                                  
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/hierarchi
+         cal_nested_cv/data/fold_results_en_nmc_r1086.csv                       
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-25 05:10:35
+Elapsed:  1h 10m 11s
+Exit:     0
+========================================
+[HNCV-TASK-DONE] array=16682 task=285 stage2_pipeline=en_nmc repeat=1086 exit=0 elapsed=4211s

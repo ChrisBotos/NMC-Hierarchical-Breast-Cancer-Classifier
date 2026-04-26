@@ -1,0 +1,59 @@
+========================================
+Hierarchical CV - Job 933 of 1000
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  standalone_en
+Repeat:   1133 (seed_start=1001, offset=132)
+Config:   /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml
+Run:      final_hierarchical
+Node:     node1
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-25 22:58:14
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline standalone_en --repeat 1133 --config /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml --name final_hierarchical
+INFO     Run: 2026-04-25_final_hierarchical                                     
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_sn
+         apshot_hierarchical.yaml                                               
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)            
+INFO     Stage 2: standalone_en (HR+ vs Triple Neg)                             
+INFO     Repeat seed: 1133                                                      
+INFO     Stage 2 grid size: 50 combinations                                     
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22'), (45,     
+         'Array.113')]                                                          
+INFO       Fold 1: s1=1.0000 (t=0.50)  s2=0.6071  combined=0.7381  auroc=0.9274 
+         excl=0.7714 (1)  (35.7s)                                               
+INFO       Fold 2: s1=1.0000 (t=0.50)  s2=0.7024  combined=0.8016  auroc=0.9618 
+         excl=0.8016 (0)  (34.5s)                                               
+INFO       Fold 3: s1=1.0000 (t=0.50)  s2=0.7083  combined=0.8056  auroc=0.9082 
+         excl=0.8413 (1)  (35.5s)                                               
+INFO       Fold 4: s1=1.0000 (t=0.50)  s2=0.9286  combined=0.9524  auroc=0.9853 
+         excl=0.9524 (0)  (35.9s)                                               
+INFO       Fold 5: s1=1.0000 (t=0.50)  s2=0.7857  combined=0.8571  auroc=0.9560 
+         excl=0.8889 (1)  (35.3s)                                               
+  standalone_en r1133 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:02:56
+INFO                                                                            
+INFO     Summary for standalone_en repeat 1133:                                 
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.7464 (+/- 0.1072)                        
+INFO       Combined (3-class):       0.8310 (+/- 0.0715)                        
+INFO       Combined (excl mislabels): 0.8511 (+/- 0.0642)                       
+INFO       Combined fold scores: [0.7381, 0.8016, 0.8056, 0.9524, 0.8571]       
+INFO       Total time: 176.9s                                                   
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/hierarchi
+         cal_nested_cv/data/fold_results_standalone_en_r1133.csv                
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-25 23:01:12
+Elapsed:  0h 2m 58s
+Exit:     0
+========================================
+[HNCV-TASK-DONE] array=16682 task=932 stage2_pipeline=standalone_en repeat=1133 exit=0 elapsed=178s

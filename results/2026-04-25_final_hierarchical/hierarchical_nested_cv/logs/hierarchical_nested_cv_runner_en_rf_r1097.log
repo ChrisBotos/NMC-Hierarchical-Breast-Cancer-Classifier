@@ -1,0 +1,28 @@
+Run: 2026-04-25_final_hierarchical
+Config: /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)
+Stage 2: en_rf (HR+ vs Triple Neg)
+Repeat seed: 1097
+Stage 2 grid size: 800 combinations
+Loading data...
+Loaded 100 samples, 273 features.
+Classes: ['HER2+', 'HR+', 'Triple Neg']
+  HER2+: 32 samples
+  HR+: 36 samples
+  Triple Neg: 32 samples
+Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22'), (45, 'Array.113')]
+  Fold 1: s1=1.0000 (t=0.50)  s2=0.7738  combined=0.8492  auroc=0.9124  excl=0.9444 (2)  (2881.1s)
+  Fold 2: s1=1.0000 (t=0.50)  s2=0.6190  combined=0.7460  auroc=0.9011  excl=0.7905 (1)  (2844.3s)
+  Fold 3: s1=1.0000 (t=0.50)  s2=0.6250  combined=0.7500  auroc=0.8661  excl=0.7500 (0)  (2827.7s)
+  Fold 4: s1=1.0000 (t=0.50)  s2=0.7857  combined=0.8571  auroc=0.9560  excl=0.8571 (0)  (2818.8s)
+  Fold 5: s1=1.0000 (t=0.50)  s2=0.7857  combined=0.8571  auroc=0.9707  excl=0.8571 (0)  (2834.9s)
+
+Summary for en_rf repeat 1097:
+  Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+  Stage 2 (HR+ vs TN):      0.7179 (+/- 0.0784)
+  Combined (3-class):       0.8119 (+/- 0.0523)
+  Combined (excl mislabels): 0.8398 (+/- 0.0664)
+  Combined fold scores: [0.8492, 0.746, 0.75, 0.8571, 0.8571]
+  Total time: 14207.1s
+Fold results saved to /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/hierarchical_nested_cv/data/fold_results_en_rf_r1097.csv
+Checkpoint removed (job complete).

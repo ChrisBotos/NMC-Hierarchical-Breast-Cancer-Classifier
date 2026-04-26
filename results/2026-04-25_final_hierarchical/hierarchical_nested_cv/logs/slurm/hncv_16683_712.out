@@ -1,0 +1,177 @@
+========================================
+Hierarchical CV - Job 713 of 800
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  en_nmc_pens
+Repeat:   1113 (seed_start=1001, offset=112)
+Config:   /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml
+Run:      final_hierarchical
+Node:     node1
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-25 23:59:44
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline en_nmc_pens --repeat 1113 --config /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml --name final_hierarchical
+INFO     Run: 2026-04-25_final_hierarchical                                     
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_sn
+         apshot_hierarchical.yaml                                               
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)            
+INFO     Stage 2: en_nmc_pens (HR+ vs Triple Neg)                               
+INFO     Repeat seed: 1113                                                      
+INFO     Stage 2: no GridSearchCV (ensemble pipeline)                           
+INFO     Loading data...                                                        
+INFO     Loaded 100 samples, 273 features.                                      
+INFO     Classes: ['HER2+', 'HR+', 'Triple Neg']                                
+INFO       HER2+: 32 samples                                                    
+INFO       HR+: 36 samples                                                      
+INFO       Triple Neg: 32 samples                                               
+INFO     Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22'), (45,     
+         'Array.113')]                                                          
+INFO     Pooled plateau capped: 298 -> 15 combos                                
+INFO     Pooled plateau: 15 of 800 combos from 1000 fold files (best=0.7432,    
+         std=0.0496, threshold=0.6935)                                          
+INFO       Plateau combo 1: score=0.7432, params={'clf__shrink_threshold': None,
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO       Plateau combo 2: score=0.7428, params={'clf__shrink_threshold': 0.2, 
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO       Plateau combo 3: score=0.7426, params={'clf__shrink_threshold': 0.1, 
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO       Plateau combo 4: score=0.7417, params={'clf__shrink_threshold': 0.2, 
+         'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k':  
+         50}                                                                    
+INFO       Plateau combo 5: score=0.7411, params={'clf__shrink_threshold': 0.1, 
+         'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k':  
+         50}                                                                    
+INFO       Plateau combo 6: score=0.7391, params={'clf__shrink_threshold': 0.5, 
+         'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k':  
+         50}                                                                    
+INFO       Plateau combo 7: score=0.7388, params={'clf__shrink_threshold': None,
+         'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k':  
+         50}                                                                    
+INFO       Plateau combo 8: score=0.7388, params={'clf__shrink_threshold': 0.5, 
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO       Plateau combo 9: score=0.7387, params={'clf__shrink_threshold': 0.2, 
+         'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 
+         50}                                                                    
+INFO       Plateau combo 10: score=0.7386, params={'clf__shrink_threshold': 0.1,
+         'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k':  
+         50}                                                                    
+INFO       Plateau combo 11: score=0.7386, params={'clf__shrink_threshold': 0.2,
+         'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k':  
+         50}                                                                    
+INFO       Plateau combo 12: score=0.7385, params={'clf__shrink_threshold':     
+         None, 'selector__C': 0.16681, 'selector__l1_ratio': 0.1,               
+         'selector__top_k': 50}                                                 
+INFO       Plateau combo 13: score=0.7380, params={'clf__shrink_threshold': 0.2,
+         'selector__C': 0.16681, 'selector__l1_ratio': 0.1, 'selector__top_k':  
+         50}                                                                    
+INFO       Plateau combo 14: score=0.7376, params={'clf__shrink_threshold': 0.1,
+         'selector__C': 0.16681, 'selector__l1_ratio': 0.1, 'selector__top_k':  
+         50}                                                                    
+INFO       Plateau combo 15: score=0.7376, params={'clf__shrink_threshold': 0.1,
+         'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 
+         50}                                                                    
+INFO         Retraining 15 plateau models                                       
+INFO           [1/15] n_features=50, params={'clf__shrink_threshold': None,     
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [2/15] n_features=50, params={'clf__shrink_threshold': 0.2,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [3/15] n_features=50, params={'clf__shrink_threshold': 0.1,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [15/15] n_features=50, params={'clf__shrink_threshold': 0.1,     
+         'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 
+         50}                                                                    
+INFO         Plateau features: union=86, intersection=23                        
+INFO       Fold 1: s1=1.0000 (t=0.50)  s2=0.6190  combined=0.7460  auroc=0.9466 
+         excl=0.7460 (0)  (1.8s)                                                
+INFO         Retraining 15 plateau models                                       
+INFO           [1/15] n_features=50, params={'clf__shrink_threshold': None,     
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [2/15] n_features=50, params={'clf__shrink_threshold': 0.2,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [3/15] n_features=50, params={'clf__shrink_threshold': 0.1,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [15/15] n_features=50, params={'clf__shrink_threshold': 0.1,     
+         'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 
+         50}                                                                    
+INFO         Plateau features: union=77, intersection=27                        
+INFO       Fold 2: s1=1.0000 (t=0.50)  s2=0.6905  combined=0.7937  auroc=0.9466 
+         excl=0.8381 (1)  (1.9s)                                                
+INFO         Retraining 15 plateau models                                       
+INFO           [1/15] n_features=50, params={'clf__shrink_threshold': None,     
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [2/15] n_features=50, params={'clf__shrink_threshold': 0.2,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [3/15] n_features=50, params={'clf__shrink_threshold': 0.1,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [15/15] n_features=50, params={'clf__shrink_threshold': 0.1,     
+         'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 
+         50}                                                                    
+INFO         Plateau features: union=82, intersection=26                        
+INFO       Fold 3: s1=1.0000 (t=0.50)  s2=0.7292  combined=0.8194  auroc=0.9365 
+         excl=0.8492 (1)  (1.9s)                                                
+INFO         Retraining 15 plateau models                                       
+INFO           [1/15] n_features=50, params={'clf__shrink_threshold': None,     
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [2/15] n_features=50, params={'clf__shrink_threshold': 0.2,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [3/15] n_features=50, params={'clf__shrink_threshold': 0.1,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [15/15] n_features=50, params={'clf__shrink_threshold': 0.1,     
+         'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 
+         50}                                                                    
+INFO         Plateau features: union=96, intersection=24                        
+INFO       Fold 4: s1=1.0000 (t=0.50)  s2=0.8571  combined=0.9048  auroc=0.9853 
+         excl=0.9444 (1)  (1.7s)                                                
+INFO         Retraining 15 plateau models                                       
+INFO           [1/15] n_features=50, params={'clf__shrink_threshold': None,     
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [2/15] n_features=50, params={'clf__shrink_threshold': 0.2,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [3/15] n_features=50, params={'clf__shrink_threshold': 0.1,      
+         'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k':
+         50}                                                                    
+INFO           [15/15] n_features=50, params={'clf__shrink_threshold': 0.1,     
+         'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 
+         50}                                                                    
+INFO         Plateau features: union=88, intersection=26                        
+INFO       Fold 5: s1=1.0000 (t=0.50)  s2=0.8571  combined=0.9048  auroc=0.9634 
+         excl=0.9048 (0)  (1.7s)                                                
+  en_nmc_pens r1113 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:08
+INFO                                                                            
+INFO     Summary for en_nmc_pens repeat 1113:                                   
+INFO       Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)                        
+INFO       Stage 2 (HR+ vs TN):      0.7506 (+/- 0.0939)                        
+INFO       Combined (3-class):       0.8337 (+/- 0.0626)                        
+INFO       Combined (excl mislabels): 0.8565 (+/- 0.0673)                       
+INFO       Combined fold scores: [0.746, 0.7937, 0.8194, 0.9048, 0.9048]        
+INFO       Total time: 9.0s                                                     
+INFO     Fold results saved to                                                  
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/hierarchi
+         cal_nested_cv/data/fold_results_en_nmc_pens_r1113.csv                  
+INFO     Checkpoint removed (job complete).                                     
+========================================
+Finished: 2026-04-26 00:00:01
+Elapsed:  0h 0m 17s
+Exit:     0
+========================================
+[HNCV-TASK-DONE] array=16683 task=712 stage2_pipeline=en_nmc_pens repeat=1113 exit=0 elapsed=17s

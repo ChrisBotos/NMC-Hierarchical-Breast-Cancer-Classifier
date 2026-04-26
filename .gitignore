@@ -50,6 +50,7 @@ results/**/*
 !results/2026-04-22_server_run_flat_nested_CV/**
 !results/2026-04-22_server_run_hierarchical_nested_CV/**
 !results/2026-04-24_server_run_v2/**
+!results/2026-04-25_final_hierarchical/**
 
 # ===== Model artifacts =====
 model/model.pkl

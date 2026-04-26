@@ -1,0 +1,43 @@
+========================================
+Hierarchical CV - Job 26 of 800
+Stage 1:  kw_rf k=5 (fixed, threshold calibrated)
+Stage 2:  nmc_ensemble
+Repeat:   1026 (seed_start=1001, offset=25)
+Config:   /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml
+Run:      final_hierarchical
+Node:     node2
+CPUs:     1
+Memory:   4096MB
+Work dir: /data/cbotos/TB-Project
+Start:    2026-04-25 23:54:49
+========================================
+Running: python3 /data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline nmc_ensemble --repeat 1026 --config /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml --name final_hierarchical
+INFO     Run: 2026-04-25_final_hierarchical                                     
+INFO     Config:                                                                
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_sn
+         apshot_hierarchical.yaml                                               
+INFO     Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)            
+INFO     Stage 2: nmc_ensemble (HR+ vs Triple Neg)                              
+INFO     Repeat seed: 1026                                                      
+INFO     Post-hoc ensemble: averaging nmc_ensemble components ('kw_nmc',        
+         'en_nmc')                                                              
+INFO     Loaded component: kw_nmc (5 rows)                                      
+INFO     Loaded component: en_nmc (5 rows)                                      
+INFO       Fold 1: combined=0.8492  s2=0.7738  auroc=0.9618  (0.0s)             
+INFO       Fold 2: combined=0.7857  s2=0.6786  auroc=0.9161  (0.0s)             
+INFO       Fold 3: combined=0.8611  s2=0.7917  auroc=0.9365  (0.0s)             
+INFO       Fold 4: combined=0.8095  s2=0.7143  auroc=0.9194  (0.0s)             
+INFO       Fold 5: combined=0.9048  s2=0.8571  auroc=0.9670  (0.0s)             
+INFO     Ensemble fold results saved to                                         
+         /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/hierarchi
+         cal_nested_cv/data/fold_results_nmc_ensemble_r1026.csv                 
+INFO     Summary for nmc_ensemble repeat 1026:                                  
+INFO       Combined (3-class): 0.8421 (+/- 0.0414)                              
+INFO       Stage 2 (HR+ vs TN): 0.7631 (+/- 0.0621)                             
+INFO     Total time: 0.2s                                                       
+========================================
+Finished: 2026-04-25 23:58:30
+Elapsed:  0h 3m 41s
+Exit:     0
+========================================
+[HNCV-TASK-DONE] array=16683 task=25 stage2_pipeline=nmc_ensemble repeat=1026 exit=0 elapsed=221s

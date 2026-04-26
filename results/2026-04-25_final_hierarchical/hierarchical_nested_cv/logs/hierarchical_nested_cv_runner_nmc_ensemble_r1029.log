@@ -1,0 +1,18 @@
+Run: 2026-04-25_final_hierarchical
+Config: /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml
+Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)
+Stage 2: nmc_ensemble (HR+ vs Triple Neg)
+Repeat seed: 1029
+Post-hoc ensemble: averaging nmc_ensemble components ('kw_nmc', 'en_nmc')
+Loaded component: kw_nmc (5 rows)
+Loaded component: en_nmc (5 rows)
+  Fold 1: combined=0.8571  s2=0.7857  auroc=0.9695  (0.0s)
+  Fold 2: combined=0.9524  s2=0.9286  auroc=0.9771  (0.0s)
+  Fold 3: combined=0.8472  s2=0.7708  auroc=0.9777  (0.0s)
+  Fold 4: combined=0.9048  s2=0.8571  auroc=0.9670  (0.0s)
+  Fold 5: combined=0.6667  s2=0.5000  auroc=0.8315  (0.0s)
+Ensemble fold results saved to /data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/hierarchical_nested_cv/data/fold_results_nmc_ensemble_r1029.csv
+Summary for nmc_ensemble repeat 1029:
+  Combined (3-class): 0.8456 (+/- 0.0970)
+  Stage 2 (HR+ vs TN): 0.7685 (+/- 0.1455)
+Total time: 0.3s
