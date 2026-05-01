@@ -505,6 +505,83 @@ def run_nadeau_bengio_tests(all_results, config, log,
     return nadeau_bengio_test(pivot, present, k, n_samples=100, log=log)
 
 
+def run_bootstrap_ci_tests(per_repeat, log,
+                           pipeline_order=PIPELINE_NAMES,
+                           metric="mean_balanced_accuracy",
+                           n_bootstrap=10000, alpha=0.05, seed=42):
+    """Paired bootstrap confidence intervals on mean differences.
+
+    For each pair of pipelines, computes the mean of paired differences
+    and a bootstrap 95% CI. If the CI excludes zero, the pipelines are
+    distinguishable.
+
+    Args:
+        per_repeat (pd.DataFrame): Per-repeat mean scores with columns
+            pipeline, repeat, and the metric column.
+        log (logging.Logger): Logger instance.
+        pipeline_order (tuple): Canonical pipeline ordering.
+        metric (str): Column name in per_repeat to compare.
+        n_bootstrap (int): Number of bootstrap resamples.
+        alpha (float): Significance level for CI (default 0.05 for 95% CI).
+        seed (int): Random seed for reproducibility.
+
+    Returns:
+        pd.DataFrame or None: Pairwise bootstrap results with columns:
+            pipeline_a, pipeline_b, mean_diff, ci_lower, ci_upper,
+            bootstrap_se, distinguishable.
+    """
+    wide = per_repeat.pivot(
+        index="repeat", columns="pipeline", values=metric,
+    )
+    present = [p for p in pipeline_order if p in wide.columns]
+    if len(present) < 2:
+        return None
+
+    rng = np.random.default_rng(seed)
+    rows = []
+
+    log.info(
+        "=== Paired Bootstrap CIs (%d resamples, %d%% CI) ===",
+        n_bootstrap, int((1 - alpha) * 100),
+    )
+
+    for i, a in enumerate(present):
+        for b in present[i + 1:]:
+            clean = wide[[a, b]].dropna()
+            diffs = clean[a].values - clean[b].values
+            observed_mean = diffs.mean()
+            n = len(diffs)
+
+            # Bootstrap the mean difference.
+            boot_means = np.empty(n_bootstrap)
+            for bi in range(n_bootstrap):
+                idx = rng.integers(0, n, size=n)
+                boot_means[bi] = diffs[idx].mean()
+
+            ci_lo = np.percentile(boot_means, 100 * alpha / 2)
+            ci_hi = np.percentile(boot_means, 100 * (1 - alpha / 2))
+            boot_se = boot_means.std()
+            distinguishable = (ci_lo > 0) or (ci_hi < 0)
+
+            rows.append({
+                "pipeline_a": a,
+                "pipeline_b": b,
+                "mean_diff": round(observed_mean, 6),
+                "ci_lower": round(ci_lo, 6),
+                "ci_upper": round(ci_hi, 6),
+                "bootstrap_se": round(boot_se, 6),
+                "distinguishable": distinguishable,
+            })
+            log.info(
+                "  %s vs %s: diff=%+.4f, 95%% CI=[%+.4f, %+.4f], SE=%.4f %s",
+                PIPELINE_LABELS.get(a, a), PIPELINE_LABELS.get(b, b),
+                observed_mean, ci_lo, ci_hi, boot_se,
+                "*" if distinguishable else "",
+            )
+
+    return pd.DataFrame(rows) if rows else None
+
+
 """Plotting"""
 
 
@@ -1648,16 +1725,18 @@ def main():
     per_repeat = compute_per_repeat_means(all_results)
     log.info("Computed per-repeat means for %d pipeline-repeat pairs.", len(per_repeat))
 
-    # Detect hierarchical mode. Primary metric is always combined 3-class BA,
-    # because that is the competition scoring metric and paper headline.
-    # BA2 (Stage 2 only) is reported as a secondary diagnostic.
+    # Detect hierarchical mode. Since Stage 1 is perfect (BA=1.0), combined
+    # 3-class BA is inflated and masks real differences. Use BA2 (Stage 2
+    # only, HR+ vs TN) as the primary comparison metric instead.
     is_hierarchical = "stage2_bal_acc" in all_results.columns
-    metric = "mean_balanced_accuracy"
-    fold_metric = "balanced_accuracy"
     if is_hierarchical:
-        metric_label = "Combined 3-class balanced accuracy"
-        log.info("Hierarchical mode detected: using combined 3-class BA as primary metric.")
+        metric = "mean_stage2_bal_acc"
+        fold_metric = "stage2_bal_acc"
+        metric_label = "Stage 2 balanced accuracy (HR+ vs Triple Negative)"
+        log.info("Hierarchical mode detected: using BA2 (Stage 2) as primary metric.")
     else:
+        metric = "mean_balanced_accuracy"
+        fold_metric = "balanced_accuracy"
         metric_label = "Mean balanced accuracy (across 5 outer folds)"
         log.info("Flat mode: using combined balanced accuracy as primary metric.")
 
@@ -1676,31 +1755,31 @@ def main():
             row["median_bal_acc"], int(row["n_repeats"]),
         )
 
-    # For hierarchical runs, also report BA2 (Stage 2 only) as secondary diagnostic.
+    # For hierarchical runs, also report combined 3-class BA as secondary diagnostic.
     if is_hierarchical:
-        summary_ba2 = compute_summary_statistics(
-            per_repeat, metric="mean_stage2_bal_acc",
+        summary_combined = compute_summary_statistics(
+            per_repeat, metric="mean_balanced_accuracy",
         )
-        summary_ba2_path = data_dir / "summary_statistics_ba2.csv"
-        summary_ba2.to_csv(summary_ba2_path)
-        log.info("Stage 2 BA (BA2, HR+ vs TN, secondary diagnostic):")
+        summary_combined_path = data_dir / "summary_statistics_combined_ba.csv"
+        summary_combined.to_csv(summary_combined_path)
+        log.info("Combined 3-class BA (secondary diagnostic, inflated by perfect Stage 1):")
         for pipeline in summary.index:
-            if pipeline in summary_ba2.index:
-                row_ba2 = summary_ba2.loc[pipeline]
-                row_comb = summary.loc[pipeline]
+            if pipeline in summary_combined.index:
+                row_comb = summary_combined.loc[pipeline]
+                row_ba2 = summary.loc[pipeline]
                 log.info(
-                    "  %s: combined_BA=%.4f, BA2=%.4f",
+                    "  %s: BA2=%.4f, combined_BA=%.4f",
                     PIPELINE_LABELS.get(pipeline, pipeline),
-                    row_comb["mean_bal_acc"], row_ba2["mean_bal_acc"],
+                    row_ba2["mean_bal_acc"], row_comb["mean_bal_acc"],
                 )
-        log.info("Saved BA2 summary: %s", summary_ba2_path)
+        log.info("Saved combined BA summary: %s", summary_combined_path)
 
     log.info("Saved primary summary statistics: %s", summary_path)
 
     """Step 3b: Sensitivity Analysis Summary (mislabel exclusion)"""
 
-    # Always use combined BA for sensitivity analysis (matches primary metric).
-    excl_col_name = "combined_bal_acc_excl"
+    # Use whichever metric matches the primary metric for the sensitivity analysis.
+    excl_col_name = "stage2_bal_acc_excl" if is_hierarchical else "combined_bal_acc_excl"
     if excl_col_name in all_results.columns:
         excl_col = all_results[excl_col_name].dropna()
         if len(excl_col) > 0:
@@ -1808,10 +1887,24 @@ def main():
         nb_df.to_csv(nb_path, index=False)
         log.info("Saved Nadeau-Bengio tests: %s", nb_path)
 
+    """Step 6b: Paired Bootstrap Confidence Intervals"""
+
+    boot_df = run_bootstrap_ci_tests(
+        per_repeat, log, pipeline_order=pipeline_order, metric=metric,
+    )
+    if boot_df is not None:
+        boot_path = data_dir / "pairwise_bootstrap_ci.csv"
+        boot_df.to_csv(boot_path, index=False)
+        n_dist = boot_df["distinguishable"].sum()
+        log.info(
+            "Saved bootstrap CIs: %s (%d/%d pairs distinguishable)",
+            boot_path, n_dist, len(boot_df),
+        )
+
     """Step 7: Identify Winner"""
 
     winner = summary.index[0]
-    winner_label = "BA"
+    winner_label = "BA2" if is_hierarchical else "BA"
     log.info(
         "Winning pipeline: %s (mean %s = %.4f)",
         PIPELINE_LABELS.get(winner, winner),

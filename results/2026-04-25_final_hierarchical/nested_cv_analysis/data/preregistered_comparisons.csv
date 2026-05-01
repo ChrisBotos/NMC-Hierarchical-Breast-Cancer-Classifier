@@ -1,0 +1,4 @@
+pipeline_a,pipeline_b,comparison_type,statistic,p_value,p_corrected,significant
+kw_nmc,en_nmc,preregistered,8389.0,0.054980304178818815,0.054980304178818815,False
+kw_rf,en_rf,preregistered,4149.0,9.925634828441268e-13,9.925634828441268e-13,True
+standalone_en,standalone_en_pens,preregistered_pens,8165.5,0.1542023772308961,0.1542023772308961,False

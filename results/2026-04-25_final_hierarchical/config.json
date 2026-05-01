@@ -56,5 +56,18 @@
     "stage2_pipeline": "nmc_pens_ensemble",
     "repeat": 1069,
     "config_file": "/data/cbotos/TB-Project/results/2026-04-25_final_hierarchical/config_snapshot_hierarchical.yaml"
+  },
+  "analyse_nested_cv": {
+    "timestamp": "2026-04-26T14:00:33.634361",
+    "command": "code/analyse_nested_cv.py --name final_hierarchical --phase hierarchical_nested_cv",
+    "config_file": "/mnt/d/Coursework/TB-Project/config_files/local.yaml",
+    "n_fold_files": 2000,
+    "n_total_folds": 10000,
+    "n_pipelines": 10,
+    "n_repeats": 200,
+    "primary_metric": "stage2_bal_acc",
+    "winning_pipeline": "en_nmc_pens",
+    "winning_mean_bal_acc": 0.759282749,
+    "friedman_p": 1.7785510300550747e-81
   }
 }
