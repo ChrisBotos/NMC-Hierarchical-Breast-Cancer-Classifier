@@ -9,8 +9,8 @@ from rich.logging import RichHandler
 from utils.paths import PROJECT_DIR
 
 
-def setup_logging(script_name, tag="", log_dir=None):
-    """Configure root logger with a rich console handler and a file handler.
+def setup_logging(script_name, tag="", log_dir=None, console=None):
+    """Configure logging with a rich console handler and a file handler.
 
     Clears any pre-existing handlers so the function can be called more
     than once in the same process (e.g. when the orchestrator re-imports
@@ -22,6 +22,8 @@ def setup_logging(script_name, tag="", log_dir=None):
         tag (str): Optional suffix appended to the log file name.
         log_dir (Path | None): Directory for the log file. When None,
             falls back to the default results/logs/ location.
+        console (Console | None): Rich console instance to use for the
+            console handler. A new one is created when None.
 
     Returns:
         tuple[logging.Logger, Console]: (logger, rich console).
@@ -35,19 +37,33 @@ def setup_logging(script_name, tag="", log_dir=None):
     suffix = f"_{tag}" if tag else ""
     log_file = log_dir / f"{script_name}{suffix}.log"
 
-    console = Console()
+    if console is None:
+        console = Console()
 
-    # Remove any existing handlers to allow re-initialisation.
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
+    # Clear existing handlers to allow re-initialisation.
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    for handler in root.handlers[:]:
+        root.removeHandler(handler)
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(message)s",
-        handlers=[
-            RichHandler(console=console, show_time=False, show_path=False),
-            logging.FileHandler(log_file, mode="w"),
-        ],
+    # File handler with timestamps for complete logging.
+    file_handler = logging.FileHandler(log_file, mode="w")
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     )
+    file_handler.setLevel(logging.INFO)
+    root.addHandler(file_handler)
+
+    # Rich console handler for formatted interactive output.
+    rich_handler = RichHandler(
+        console=console,
+        show_time=False,
+        show_path=False,
+        markup=True,
+        rich_tracebacks=True,
+    )
+    rich_handler.setLevel(logging.INFO)
+    root.addHandler(rich_handler)
+
     logger = logging.getLogger(script_name)
     return logger, console
