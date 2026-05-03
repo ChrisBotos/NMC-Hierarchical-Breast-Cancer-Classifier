@@ -1,0 +1,324 @@
+================================================================================
+PAPER PLAN - CATS Group 9
+Breast cancer subtype classification from aCGH copy-number profiles
+================================================================================
+
+CONSTRAINTS
+-----------
+- 5-6 pages A4, Bioinformatics journal style (two-column)
+- Abstract: max 200 words, structured (Motivation / Results / Availability)
+- Discussion + Conclusion: max half page
+- 2-4 figures/tables TOTAL (not each - combined)
+- Every figure/table must be referenced and explained in main text
+- All axes, labels, lines, points explained in captions
+- Author contribution statement using CRediT taxonomy (PLOS ONE style)
+- Must explain changes made after draft submission to improve accuracy
+- Must identify single best biomarker region and report its standalone accuracy
+- CV scheme must be justified and make sense
+- Peer-reviewed by 4 other students on: context, research question, methods,
+  contents/results, tables/figures
+- Final grade uses MSc thesis rubric (fail to excellent, 3.0 to 9.0)
+- No plagiarism - read and reformulate, cite primary sources
+- Write for a fellow MSc student, not the teachers
+- Mix active/passive voice, consistent tense within sections
+
+RESEARCH QUESTION
+-----------------
+Wessels et al. (2005) demonstrated that simple classifiers with univariate
+feature filtering outperform complex pipelines on continuous expression data.
+When classifying breast cancer molecular subtypes (HER2+, HR+, Triple Negative)
+from discrete, high-dimensional aCGH copy-number profiles with limited sample
+size, does this principle hold, and how do feature redundancy and multi-class
+structure affect classifier selection?
+
+GOALS
+-----
+- Answer the research question with evidence from both flat and hierarchical
+  experiments
+- Show that the answer DEPENDS on problem structure: RF > NMC flat, NMC > RF
+  hierarchical
+- Demonstrate that the hierarchical decomposition is not just an engineering
+  trick but reveals the true structure of the classification problem
+- Show that correlation-based merging is a principled preprocessing step
+  inspired by CGHregions
+- Identify chr17q12 (ERBB2/HER2 amplicon) as the best single biomarker
+- Report honest accuracy estimates with appropriate statistical tests
+- Produce 2-4 gorgeous, publication-quality figures that tell the story
+
+STORYLINE
+---------
+The paper reads as a discovery narrative: we set out to test Wessels' principle,
+found an unexpected result, investigated why, and discovered that the answer
+depends on how you decompose the multi-class problem.
+
+Act 1: Setup (Introduction)
+  - Wessels says simple wins. Does it hold for discrete aCGH data?
+
+Act 2: First experiment (flat 2x2) seems to CONTRADICT Wessels
+  - RF (complex) beats NMC (simple). Wessels was wrong?
+
+Act 3: Investigation reveals the 3-class structure is the confounder
+  - HER2+ is trivially separable (100% recall everywhere)
+  - The real problem is HR+ vs TN, buried under HER2+ dominance
+  - KW ranking dominated by chr17 ERBB2 signal, masking chr12q/chr5q HR+/TN signal
+
+Act 4: Hierarchical decomposition RESTORES Wessels' prediction
+  - Stage 1 (HER2+ vs rest): trivial, fixed KW+RF k=5
+  - Stage 2 (HR+ vs TN): NMC > RF (reversal!)
+  - With the trivial class removed, the simple classifier wins - exactly as
+    Wessels predicted
+
+Act 5: Resolution
+  - Wessels was right, but only after proper problem decomposition
+  - Multi-class structure and feature redundancy interact to mask the true
+    classifier dynamics
+
+================================================================================
+SECTION-BY-SECTION PLAN (keyword bullet points)
+================================================================================
+
+ABSTRACT (max 200 words)
+------------------------
+Motivation:
+  - breast cancer subtypes, treatment implications
+  - aCGH discrete CN profiles, limited sample size (n=100)
+  - Wessels' principle: simple classifiers match complex on expression data
+  - unknown whether this holds for discrete aCGH data
+
+Results:
+  - flat 2x2: RF > NMC, contradicting Wessels
+  - HER2+ perfectly separable, masks real problem
+  - hierarchical decomposition: NMC > RF for HR+/TN (reversal)
+  - Wessels' principle holds after problem decomposition
+  - best single biomarker: chr17q12 ERBB2 amplicon
+  - final model: hierarchical EN+NMC, BA ~0.83
+
+Availability:
+  - code, model, predictions available
+
+INTRODUCTION
+------------
+Para 1 - Breast cancer heterogeneity:
+  - heterogeneous disease, molecular subtypes drive treatment
+  - HER2+, HR+, Triple Negative - different prognosis and therapy
+  - cite Perou (2000) intrinsic subtypes, Sorlie (2001) clinical implications
+  - cite Slamon (1987) HER2 amplification clinical relevance
+
+Para 2 - Genomic profiling for classification:
+  - array CGH measures DNA copy-number across genome
+  - cite Pinkel & Albertson (2005) aCGH technology review
+  - discrete CN calls: loss (-1), normal (0), gain (1), amplification (2)
+  - preprocessing pipeline: segmentation (CBS, Venkatraman & Olshen 2007),
+    calling (CGHcall, van de Wiel 2007)
+  - 244K platform, hg18/NCBI36 coordinates
+  - goal: classify subtypes from CN profiles alone
+
+Para 3 - Prior work on classifier selection:
+  - Wessels et al. (2005): simple classifiers + univariate filtering match
+    complex pipelines on continuous expression data
+  - tested on van 't Veer (2002) breast cancer expression data
+  - key insight: with limited samples, complex models overfit
+  - Haury et al. (2011): feature selection stability matters, univariate
+    filters are competitive
+  - gap: Wessels tested on continuous expression data, not discrete aCGH CN
+
+Para 4 - Research question and approach:
+  - state research question explicitly
+  - 2x2 experimental design: (KW, EN) x (NMC, RF)
+  - nested stratified repeated k-fold CV
+  - label-free region merging inspired by CGHregions (van de Wiel &
+    van Wieringen 2007)
+  - hierarchical decomposition as methodological innovation
+
+METHODS
+-------
+Subsection: Data description
+  - 100 labelled training samples, 57 unlabelled validation
+  - 244K aCGH platform, segmented into 2834 genomic regions
+  - CN calls: -1, 0, 1, 2
+  - class distribution: 32 HER2+, 36 HR+, 32 TN (balanced)
+  - hg18/NCBI36 coordinates
+
+Subsection: Label-free region merging
+  - motivation: adjacent spatial autocorrelation r=0.92 within 0.1 Mb
+  - cite CGHregions (van de Wiel & van Wieringen 2007)
+  - algorithm: greedy one-pass per chromosome, merge adjacent if r > 0.8
+  - threshold justification: 91% of adjacent pairs have r > 0.8 (same CN event)
+  - result: 2834 regions -> 273 consensus segments (90% reduction)
+  - label-free: uses only CN correlation, no class labels -> no leakage
+  - representation: median CN of constituent regions per sample
+  - signal preservation: top KW features unchanged, PCA structure preserved
+
+Subsection: 2x2 experimental design
+  - table: (KW, EN) x (NMC, RF)
+  - KW: Kruskal-Wallis H-statistic ranking, top-k selection, cite KW (1952)
+    - why appropriate: non-parametric, handles ordinal CN, 3-class natively
+    - hyperparameter: k (tuned via inner CV)
+  - EN: Elastic Net logistic regression, cite Zou & Hastie (2005)
+    - L1+L2 penalty, grouping effect for correlated features
+    - hyperparameters: C, l1_ratio (tuned via inner CV)
+  - NMC: Nearest Mean Classifier (centroid-based)
+    - zero hyperparameters, linear boundary
+    - directly referenced by Wessels et al.
+  - RF: Random Forest, cite Breiman (2001)
+    - 500 trees, fixed hyperparameters (not tuned - avoid inner CV overfit)
+    - non-linear, captures interactions
+
+Subsection: Hierarchical classifier
+  - motivation: HER2+ recall = 100% in all flat pipelines -> trivially separable
+  - 2-class KW ranking surfaces different features (chr12q, chr5q vs chr17)
+  - Stage 1: HER2+ vs rest, KW+RF k=5, fixed (no tuning needed)
+  - Stage 2: HR+ vs TN, one of the 4 pipeline variants
+  - Stage 1 always perfect (BA=1.0 in all folds)
+
+Subsection: Cross-validation scheme
+  - nested stratified repeated 5-fold CV
+  - outer loop: unbiased BA estimation (200 repeats x 5 folds = 1000 evals)
+  - inner loop: hyperparameter tuning (5-fold on outer train)
+  - feature selection INSIDE each outer fold (cite Ambroise & McLachlan 2002)
+  - scoring metric: balanced accuracy
+  - FIGURE: workflow diagram showing nested CV + hierarchical architecture
+
+Subsection: Statistical comparison
+  - Friedman test for overall pipeline differences
+  - Nadeau-Bengio corrected t-test for formal pairwise claims
+  - paired bootstrap CIs as pragmatic distinguishability measure
+  - cite Nadeau & Bengio (2003), Bouckaert & Frank (2004)
+
+RESULTS
+-------
+Subsection: Flat 2x2 experiment (50 repeats)
+  - TABLE: 4 pipelines, mean BA, std, median, mean features selected
+  - KW+RF best (0.791), KW+NMC worst (0.631)
+  - RF >> NMC regardless of feature selector (+16 pp for KW)
+  - feature selector matters less: KW vs EN only 2 pp difference
+  - Nadeau-Bengio: only KW+NMC vs KW+RF significant
+  - APPARENT conclusion: Wessels was wrong - RF wins
+
+Subsection: HER2+ dominance and the case for hierarchical decomposition
+  - HER2+ recall = 100% across all 4 pipelines
+  - real bottleneck: HR+ vs TN confusion (TN recall 0.62-0.64)
+  - 3-class KW ranking dominated by chr17 ERBB2 (11/30 top features)
+  - 2-class (HR+ vs TN only) KW ranking: zero chr17 features, dominated by
+    chr12q (23/30) and chr5q (7/30)
+  - biological signal for the hard problem is buried by the trivial class
+
+Subsection: Hierarchical classifier results (200 repeats)
+  - TABLE: 5 base pipelines + plateau variants, BA2, combined BA
+  - NMC > RF reversal: pooled Wilcoxon p=1e-16
+  - EN+NMC best base (0.729), EN+NMC(plateau) best overall (0.759)
+  - Nadeau-Bengio: all pairwise n.s. (conservative correction)
+  - bootstrap CIs: 38/45 pairs distinguishable
+  - convergence plot: rankings stable from ~75 repeats
+
+Subsection: Plateau ensembling and the underfitting rescue
+  - EN+NMC base: 0.729 -> EN+NMC plateau: 0.759 (+3 pp)
+  - explanation: inner CV on n~11 cannot reliably rank 800 EN+NMC combos
+  - plateau ensemble averages over near-optimal configs, stabilising
+  - gain scales with grid size (800 combos -> +3 pp, 32 combos -> +1.4 pp)
+  - leakage analysis: leave-one-repeat-out plateau overlap 14.9/15 -> minimal
+
+Subsection: Single best biomarker region
+  - chr17q12 (ERBB2/TCAP locus), KW H=73.9, p=9e-17
+  - standalone accuracy: perfectly separates HER2+ from rest
+  - cannot distinguish HR+ vs TN alone (different genomic signal)
+  - biological context: ERBB2 amplification is the defining event of HER2+
+    subtype, cite Slamon (1987)
+
+Subsection: Improvements after draft submission
+  - draft -> final changes: describe what was changed and why
+  - hierarchical architecture as main improvement
+  - plateau ensembling for deployment stability
+  - accuracy estimate update
+
+DISCUSSION + CONCLUSION (max half page)
+---------------------------------------
+Para 1 - Answering the research question:
+  - Wessels' principle DOES hold, but only after problem decomposition
+  - the flat result (RF > NMC) was an artefact of the trivially separable
+    HER2+ class inflating RF's advantage
+  - in the decomposed HR+/TN problem, NMC significantly beats RF
+  - this extends Wessels' finding: multi-class structure interacts with
+    classifier selection
+
+Para 2 - Issues affecting results:
+  - limited sample size (n=100, only 68 for Stage 2)
+  - discrete CN calls lose continuous signal
+  - ~10 consistently misclassified samples (possible mislabels or biological
+    discordance)
+  - performance ceiling set by data, not classifier (BA2 ~0.76)
+  - merging threshold (r=0.8) not sensitive but chosen from data
+
+Para 3 - Best single biomarker:
+  - chr17q12 ERBB2 amplicon is the strongest single biomarker
+  - separates HER2+ perfectly but uninformative for HR+ vs TN
+  - for HR+/TN, the best signal is on chr12q and chr5q
+
+Para 4 - Future research:
+  - integrate with expression data for multi-omic classification
+  - investigate the ~10 hard samples for biological discordance
+  - test hierarchical decomposition on larger aCGH cohorts
+  - explore whether the NMC advantage extends to other discrete genomic data
+
+FIGURES AND TABLES PLAN (2-4 total)
+------------------------------------
+Option A (3 figures + 1 table):
+  Fig 1: Workflow diagram - nested CV + hierarchical architecture
+         (methods figure, shows the full pipeline visually)
+  Fig 2: Violin/box plot comparing flat vs hierarchical BA distributions
+         (the key result - shows the reversal)
+  Table 1: Main results table - all pipelines, BA, per-class recall
+  Fig 3: Genome-wide feature importance or confusion matrix heatmap
+
+Option B (2 figures + 2 tables):
+  Fig 1: Workflow diagram
+  Table 1: Flat 2x2 results (BA, per-class recall)
+  Table 2: Hierarchical results (BA2, combined BA, per-class recall)
+  Fig 2: Violin plot or convergence plot
+
+PREFERRED: Option A - three figures for visual impact + one dense results table.
+
+CITATIONS TO INCLUDE
+---------------------
+MUST cite (from assignment guides):
+  [x] Wessels et al. (2005) - research question anchor
+  [x] van de Wiel et al. (2011) - aCGH preprocessing
+  [x] van de Wiel et al. (2007) - CGHcall
+  [x] van de Wiel & van Wieringen (2007) - CGHregions (merging inspiration)
+  [x] Venkatraman & Olshen (2007) - CBS segmentation
+  [x] Haury et al. (2011) - feature selection stability
+  [x] van 't Veer et al. (2002) - breast cancer expression classification
+
+Additional recommended:
+  [x] Perou et al. (2000) - intrinsic subtypes
+  [x] Sorlie et al. (2001) - subtype clinical implications
+  [x] Slamon et al. (1987) - HER2/neu amplification
+  [x] Pinkel & Albertson (2005) - aCGH technology
+  [x] Ambroise & McLachlan (2002) - selection bias / feature leakage
+  [x] Zou & Hastie (2005) - Elastic Net
+  [x] Kruskal & Wallis (1952) - KW test
+  [x] Breiman (2001) - Random Forest
+  [x] Nadeau & Bengio (2003) - corrected CV test
+  [x] Hastie et al. (2009) - Elements of Statistical Learning
+  [x] Wilson et al. (2017) - good practices in scientific computing
+  [x] Pedregosa et al. (2011) - scikit-learn
+  [x] Chin et al. (2006) - genomic aberrations in breast cancer
+  [x] TCGA (2012) - comprehensive molecular portraits
+  [x] Brodersen et al. (2010) - balanced accuracy
+
+COMMON MISTAKES TO AVOID
+--------------------------
+- Do NOT put titles on figures (use captions instead)
+- Do NOT use bare relative paths in methodology descriptions
+- Do NOT copy text from references - read and reformulate
+- Do NOT use vague language ("lots of", "good accuracy") - be precise
+- Do NOT forget to explain what changes were made after draft submission
+- Do NOT make the discussion too long (max half page)
+- Do NOT include more than 4 figures/tables total
+- Do NOT use em dashes - use hyphens
+- Do NOT forget to reference every figure/table in the main text
+- Ensure reproducibility: report all parameters, seeds, grid values
+- Report per-class recall alongside balanced accuracy
+- Explain WHY NMC beats RF in hierarchical (not just that it does)
+- Distinguish between Wilcoxon (anti-conservative) and Nadeau-Bengio
+  (conservative) when reporting statistical significance

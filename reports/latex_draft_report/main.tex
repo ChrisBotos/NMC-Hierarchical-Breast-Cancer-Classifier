@@ -1,0 +1,155 @@
+% =============================================================================
+% CATS Group 9 - Draft Research Paper
+% Breast cancer subtype classification from aCGH copy-number profiles.
+% Bioinformatics journal style (OUP).
+% =============================================================================
+%
+% To compile:
+%   pdflatex main.tex
+%   bibtex main
+%   pdflatex main.tex
+%   pdflatex main.tex
+%
+% Or with latexmk:
+%   latexmk -pdf main.tex
+%
+% NOTE: If you have oup-authoring-template.cls installed (via TeX Live or
+% from CTAN), replace the documentclass line below with:
+%   \documentclass[unnumsec,webpdf,contemporary,large,namedate]{oup-authoring-template}
+% and uncomment the OUP-specific blocks marked [OUP].
+% =============================================================================
+
+\documentclass[11pt,a4paper,twocolumn]{article}
+
+% ---- Packages ----
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage[round,authoryear]{natbib}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{authblk}
+
+% ---- Figure path ----
+\graphicspath{{figures/}}
+
+% ---- Hyperref setup ----
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!60!black
+}
+
+% ---- Bibliography style ----
+\bibliographystyle{abbrvnat}
+
+% ---- Title ----
+\title{Hierarchical classification of breast cancer molecular subtypes from
+       discrete aCGH copy-number profiles: when problem decomposition
+       reverses classifier selection}
+
+% ---- Authors ----
+\author[1]{Alexandros Michailidis}
+\author[1]{Antonie Wagner}
+\author[1]{Christos Botos}
+\author[1]{Yan Qiao}
+\affil[1]{Computer Science and Bioinformatics Master's Programmes,
+          Vrije Universiteit Amsterdam, The Netherlands}
+
+\date{}
+
+% =============================================================================
+\begin{document}
+\maketitle
+
+% ---- Abstract ----
+\begin{abstract}
+\noindent
+\textbf{Motivation:}
+% Breast cancer subtypes (HER2+, HR+, Triple Negative) respond differently
+% to treatment. Array CGH provides discrete copy-number profiles that can
+% be used for molecular subtype classification. Wessels et al. (2005) showed
+% that simple classifiers with univariate filtering match complex pipelines
+% on expression data - does this hold for discrete aCGH data?
+%
+\textbf{Results:}
+% TODO: Fill in after results are finalised.
+%
+\textbf{Availability:}
+% Code and data available at [repository URL].
+\end{abstract}
+
+% =============================================================================
+\section{Introduction}
+\label{sec:introduction}
+
+% TODO: Write introduction following the funnel structure.
+% See paper_plan.txt for detailed bullet points.
+
+% =============================================================================
+\section{Methods}
+\label{sec:methods}
+
+\subsection{Data description}
+\label{sec:data}
+
+\subsection{Label-free region merging}
+\label{sec:merging}
+
+\subsection{Experimental design}
+\label{sec:design}
+
+\subsubsection{Flat 2x2 pipeline comparison}
+\label{sec:flat}
+
+\subsubsection{Hierarchical classifier}
+\label{sec:hierarchical}
+
+\subsection{Cross-validation scheme}
+\label{sec:cv}
+
+\subsection{Statistical comparison}
+\label{sec:stats}
+
+% =============================================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{Flat 2x2 experiment}
+\label{sec:results-flat}
+
+\subsection{Hierarchical classifier}
+\label{sec:results-hierarchical}
+
+\subsection{Single best biomarker region}
+\label{sec:biomarker}
+
+\subsection{Improvements after draft submission}
+\label{sec:improvements}
+
+% =============================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+% =============================================================================
+% ---- Author contributions (CRediT) ----
+\section*{Author contributions}
+
+% TODO: Fill in using CRediT taxonomy roles.
+
+% ---- References ----
+\bibliography{references}
+
+\end{document}
