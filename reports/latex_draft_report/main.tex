@@ -56,9 +56,8 @@
 \bibliographystyle{abbrvnat}
 
 % ---- Title ----
-\title{Hierarchical classification of breast cancer molecular subtypes from
-       discrete aCGH copy-number profiles: when problem decomposition
-       reverses classifier selection}
+\title{Hierarchical classification of breast cancer molecular subtypes
+       from discrete aCGH copy-number profiles}
 
 % ---- Authors ----
 \author[1]{Alexandros Michailidis}
@@ -102,26 +101,253 @@
 \section{Methods}
 \label{sec:methods}
 
+% ---------------------------------------------------------------------------
+% WRITING GUIDE FOR TEAMMATES:
+%
+% This section is written in final-draft prose to serve as a tonal reference.
+% Note the following stylistic choices, which must be consistent across the
+% entire paper:
+%
+%   - Mixed active/passive voice (not "we did X, we did Y, we did Z").
+%   - Past tense for what was done, present tense for what is generally true.
+%   - Every paragraph has a CLAIM sentence followed by EVIDENCE/DETAIL.
+%   - Transitions between paragraphs connect ideas, not just list next topic.
+%   - Precise numbers throughout; no "several", "many", "good".
+%   - Hyphens only, never em dashes.
+%   - Citations integrated into the argument, not dropped at sentence ends.
+%   - Methods must allow reproduction: report grids, seeds, software versions.
+% ---------------------------------------------------------------------------
+
 \subsection{Data description}
 \label{sec:data}
+
+The dataset consists of 100 breast cancer samples profiled on a 244K-probe
+array CGH platform \citep{pinkel2005array}. Raw probe-level intensities were
+preprocessed into segmented copy-number calls using circular binary
+segmentation \citep{venkatraman2007cbs} and the CGHcall algorithm
+\citep{vandewiel2007cghcall}, following the pipeline described by
+\citet{vandewiel2011preprocessing}. The resulting data matrix contains 2834
+genomic regions, each assigned a discrete copy-number state per sample: loss
+($-1$), normal ($0$), gain ($+1$), or amplification ($+2$). All coordinates
+use the hg18/NCBI Build~36 reference assembly.
+
+Three molecular subtypes serve as class labels: HER2-positive (HER2+,
+$n=32$), hormone receptor-positive (HR+, $n=36$), and triple-negative (TN,
+$n=32$). The classes are approximately balanced. An additional 57 unlabelled
+samples from the same platform constitute the held-out validation set. All
+analyses were implemented in Python~3.10 using scikit-learn
+\citep{pedregosa2011sklearn}.
 
 \subsection{Label-free region merging}
 \label{sec:merging}
 
+Spatially adjacent regions on the same chromosome exhibit strong
+autocorrelation in their copy-number profiles: the median Pearson correlation
+between neighbouring regions within 0.1~Mb is $r = 0.92$ across all 100
+samples. This redundancy inflates the feature space without adding
+discriminative information. To address it, a label-free merging step was
+applied before any supervised analysis, following the approach of the
+CGHregions method \citep{vanwieringen2007cghregions}, which performs the same
+type of correlation-based dimension reduction for array CGH data.
+
+The merging algorithm proceeds as a greedy one-pass walk per chromosome.
+Starting from the first region, adjacent regions are appended to a growing
+chain as long as each new neighbour's raw copy-number profile correlates with
+the previous region at Pearson $r > 0.8$ across all 100 samples. When a pair
+fails this threshold, the chain is finalised as a single consensus segment and
+a new chain begins. Each consensus segment is represented by the median
+copy-number value of its constituent regions for each sample. No gap bridging
+is performed: a region that breaks the chain is kept as a separate segment,
+preserving genuine breakpoints.
+
+The threshold of $r > 0.8$ was chosen based on the distribution of adjacent
+correlations: 91.1\% of same-chromosome neighbouring pairs exceed this value,
+corresponding to probes that span the same copy-number event, while only 4.4\%
+fall below $r = 0.7$, marking genuinely distinct regions. Merging reduced the
+feature space from 2834 regions to 273 consensus segments (90.4\% reduction)
+while preserving all major discriminative signals: the top-ranked
+Kruskal-Wallis features, PCA variance structure, and t-SNE cluster topology
+remained unchanged after merging. A sensitivity analysis across merging
+thresholds ($r = 0.7$, $0.8$, $0.9$, and no merging) confirmed that Stage~2
+balanced accuracy is insensitive to the exact threshold within the $0.7$--$0.9$
+range (differences $< 2$~percentage points, not significant), while omitting
+merging entirely reduced accuracy by 7~percentage points ($p = 0.008$).
+
+Because this operation uses only the pairwise correlation structure of
+copy-number values and never accesses class labels, it can safely be applied
+once on the full training set before cross-validation splits. The merged
+feature definitions are informed by test-fold copy-number values in a strict
+sense, but the operation is label-free, and the correlation structure of 80
+samples is nearly identical to that of 100 given the strong adjacent
+autocorrelation. This is consistent with the CGHregions approach, which also
+performs global preprocessing before supervised analysis, and is distinct from
+the selection bias described by \citet{ambroise2002selection}, which arises
+specifically from label-dependent feature selection outside cross-validation
+folds. The merging map was saved as part of the model artifact so that the same
+segment boundaries could be applied to the validation data during prediction.
+
 \subsection{Experimental design}
 \label{sec:design}
 
-\subsubsection{Flat 2x2 pipeline comparison}
-\label{sec:flat}
+The classifier comparison follows a $2 \times 2$ factorial design crossing two
+feature selection methods with two classifiers. This design directly tests the
+recommendation of \citet{wessels2005protocol}, who found that simple classifiers
+with univariate filtering match or outperform complex pipelines on continuous
+expression data.
+
+\subsubsection{Feature selection methods}
+\label{sec:features}
+
+The univariate method ranks the 273 merged segments by their Kruskal-Wallis
+$H$-statistic \citep{kruskalwallis1952}, computed across the three subtype
+groups, and selects the top $k$. This non-parametric rank-based test respects
+the ordinal structure of the discrete copy-number values and handles the
+three-class comparison natively without requiring pairwise tests. The number of
+selected features $k \in \{5, 10, 15, 20, 30, 50, 75, 100\}$ is tuned via the
+inner cross-validation loop.
+
+The multivariate method uses elastic net-penalised multinomial logistic
+regression \citep{zou2005elasticnet}, which fits all features simultaneously.
+The combined L1 and L2 penalty shrinks irrelevant coefficients to zero while
+assigning similar weights to correlated features (the grouping effect), producing
+more stable feature sets than pure LASSO at this sample size. Features with
+non-zero coefficients are retained, and the top $k$ by absolute coefficient
+magnitude are selected, with $k \in \{5, 10, 20, 50\}$. The regularisation
+strength $C \in \{10^{-3}, \ldots, 10^{2}\}$ (10 values, log-spaced) and L1
+ratio $\lambda \in \{0.1, 0.3, 0.5, 0.7, 0.9\}$ are tuned jointly via the
+inner loop, yielding $10 \times 5 \times 4 = 200$ candidate configurations per
+inner fold.
+
+\subsubsection{Classifiers}
+\label{sec:classifiers}
+
+The simple classifier is the nearest mean classifier (NMC), which assigns each
+sample to the class whose training-set centroid is closest in Euclidean distance.
+NMC has a linear decision boundary and, in its basic form, zero hyperparameters.
+An optional shrinkage threshold
+$\delta \in \{\text{None}, 0.1, 0.2, 0.5\}$ was tuned in the inner loop,
+regularising centroid estimates toward the grand mean. NMC is directly
+referenced by \citet{wessels2005protocol} as the prototypical simple classifier.
+
+The complex classifier is a random forest (RF) of 500 trees
+\citep{breiman2001random}, with balanced class weights. Two hyperparameters
+were tuned via the inner loop: the fraction of features considered per split
+($\texttt{max\_features} \in \{\text{``sqrt''}, 0.3\}$) and the minimum leaf
+size ($\texttt{min\_samples\_leaf} \in \{1, 5\}$), yielding 4 configurations.
+The remaining RF hyperparameters were fixed at scikit-learn defaults to limit
+the inner search space at $n = 100$.
+
+\subsubsection{The four pipelines}
+\label{sec:pipelines}
+
+Crossing the two feature selectors with the two classifiers produces four
+pipelines. For the KW-based pipelines, the inner loop searches $8 \times 4 =
+32$ (KW+NMC) or $8 \times 4 = 32$ (KW+RF) hyperparameter configurations. For
+the elastic net-based pipelines, it searches $200 \times 4 = 800$
+configurations. This asymmetry in grid size becomes relevant when interpreting
+the plateau ensembling results (Section~\ref{sec:plateau}).
 
 \subsubsection{Hierarchical classifier}
 \label{sec:hierarchical}
 
+Analysis of the flat experiment revealed that all four pipelines classified
+HER2+ samples with perfect recall, while HR+ and triple-negative samples were
+frequently confused (Section~\ref{sec:results-flat}). A dedicated
+Kruskal-Wallis ranking computed on only the HR+ and TN samples surfaced a
+completely different set of discriminative features - dominated by chr12q
+(23 of the top 30) and chr5q (7 of 30) rather than the chr17 ERBB2 locus that
+dominates the three-class ranking. This observation motivated a two-stage
+hierarchical architecture.
+
+Stage~1 classifies each sample as HER2+ or non-HER2+ using a fixed KW+RF
+pipeline with $k = 5$ and a probability threshold of $0.5$. The five selected
+features span the chr17q12 ERBB2 amplicon (the strongest with
+$H = 73.9$, $p = 9 \times 10^{-17}$) and adjacent chr17 loci
+($H = 22$--$26$). Because HER2+ samples exhibit amplification (CN $= 2$) at
+these loci while non-HER2+ samples show loss or normal (CN $\leq 0$), the
+binary problem is trivially separable. Stage~1 is therefore not tuned: no
+inner cross-validation is performed, and the threshold is fixed at $0.5$
+rather than optimised, because the flat ROC curve offers no meaningful gradient
+for threshold selection.
+
+Stage~2 receives only the non-HER2+ samples and classifies them as HR+ or TN
+using one of the four pipeline variants. Feature selection and hyperparameter
+tuning in Stage~2 operate on the binary HR+/TN ranking, using only the
+non-HER2+ training samples from each outer fold. This ensures that Stage~2
+accesses the chr12q and chr5q signal that the three-class ranking obscures.
+
 \subsection{Cross-validation scheme}
 \label{sec:cv}
 
+All pipelines were evaluated using nested stratified repeated $k$-fold
+cross-validation, following the protocol of \citet{wessels2005protocol} and
+the information-leakage safeguards described by \citet{ambroise2002selection}.
+The outer loop uses 5-fold stratified splits repeated across multiple random
+seeds, with each fold preserving the $32/36/32$ class proportions. The flat
+experiment used 50 repeats (250 outer folds total); the hierarchical experiment
+used 200 repeats (1000 outer folds) with seeds 1001--1200 to avoid overlap.
+
+Within each outer fold, an inner 5-fold cross-validation on the outer training
+set tunes the hyperparameters of the active pipeline. Feature selection is
+performed inside each inner fold: the Kruskal-Wallis ranking or elastic net
+coefficients are computed on the inner training partition only, and the selected
+features are used to train and evaluate the classifier on the inner validation
+partition. The hyperparameter configuration with the highest mean inner balanced
+accuracy is selected, and the pipeline is retrained on the full outer training
+set using those hyperparameters. The retrained model is then evaluated on the
+held-out outer test fold, producing one balanced accuracy score. The mean and
+standard deviation across all outer folds provide the final performance estimate
+for each pipeline.
+
+Balanced accuracy - the macro-average of per-class recalls, giving equal weight
+to each subtype regardless of sample size
+\citep{brodersen2010balanced} - serves as both the inner-loop optimisation
+objective and the outer-loop evaluation metric. An overview of the full
+evaluation pipeline, including the hierarchical two-stage architecture, is shown
+in Figure~\ref{fig:workflow}.
+
 \subsection{Statistical comparison}
 \label{sec:stats}
+
+Pipeline differences were assessed using three complementary approaches. A
+Friedman test established whether any overall differences exist among the
+pipelines. Pairwise comparisons used the Nadeau-Bengio corrected $t$-test
+\citep{nadeaubengio2003}, which accounts for the non-independence of
+overlapping folds in repeated cross-validation by inflating the variance
+estimate. This test is conservative at high repeat counts but is the
+appropriate choice for formal significance claims, as standard paired tests
+treat correlated folds as independent and severely overstate significance
+\citep{bouckaert2004evaluating}.
+
+As a complementary measure, paired bootstrap confidence intervals (10,000
+resamples) on per-repeat mean differences were computed. These intervals use
+the raw magnitude of differences, are robust to non-normality, and provide a
+pragmatic assessment of whether two pipelines are distinguishable in
+expectation. Pairs whose 95\% bootstrap CI excludes zero are reported as
+distinguishable; this is a weaker claim than statistical significance under
+Nadeau-Bengio correction.
+
+\subsection{Final model training and deployment}
+\label{sec:final-model}
+
+The final submitted model uses the hierarchical EN+NMC pipeline with plateau
+ensembling (Section~\ref{sec:plateau}). It was retrained on all 100 labelled
+training samples using the set of near-optimal hyperparameter configurations
+identified from pooled inner cross-validation scores. No hyperparameters were
+re-tuned during this final training step: the plateau membership and ensemble
+composition were determined entirely from the nested cross-validation
+experiment.
+
+The accuracy estimate for the 57-sample validation set was derived from
+outer-fold per-class recalls rather than from balanced accuracy directly.
+Because balanced accuracy is a macro-average of recalls rather than a sample-level
+accuracy, the expected number of correct predictions depends on the validation
+set's class proportions, which are unknown. Using the training proportions
+($32/36/32$) as a proxy, the expected correct count is
+$\sum_c (\hat{r}_c \times n_c / N) \times 57$, where $\hat{r}_c$ is the
+outer-fold recall for class $c$. Under alternative plausible proportions, this
+estimate ranges from 46 to 48; the submitted estimate of 48 assumes
+training-set proportions.
 
 % =============================================================================
 \section{Results}
@@ -133,8 +359,14 @@
 \subsection{Hierarchical classifier}
 \label{sec:results-hierarchical}
 
+\subsection{Plateau ensembling}
+\label{sec:plateau}
+
 \subsection{Single best biomarker region}
 \label{sec:biomarker}
+
+\subsection{Accuracy estimate derivation}
+\label{sec:estimate}
 
 \subsection{Improvements after draft submission}
 \label{sec:improvements}
