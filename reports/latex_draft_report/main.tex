@@ -113,9 +113,15 @@
 %   - Every paragraph has a CLAIM sentence followed by EVIDENCE/DETAIL.
 %   - Transitions between paragraphs connect ideas, not just list next topic.
 %   - Precise numbers throughout; no "several", "many", "good".
-%   - Hyphens only, never em dashes.
+%   - NO dashes as parenthetical asides (no "X - which means Y - does Z").
+%     Use parentheses, commas, or restructured sentences instead. The
+%     space-hyphen-space pattern reads as an AI tic; avoid it entirely.
 %   - Citations integrated into the argument, not dropped at sentence ends.
 %   - Methods must allow reproduction: report grids, seeds, software versions.
+%   - Uncertainty is acknowledged with specific reasons, not hedge words.
+%     Avoid "might", "possibly", "could potentially". Prefer: "X holds under
+%     assumption Y; if Y fails, the claim weakens to Z." See the merging
+%     leakage defense (Section 3.2) for a worked example.
 % ---------------------------------------------------------------------------
 
 \subsection{Data description}
@@ -167,11 +173,13 @@ fall below $r = 0.7$, marking genuinely distinct regions. Merging reduced the
 feature space from 2834 regions to 273 consensus segments (90.4\% reduction)
 while preserving all major discriminative signals: the top-ranked
 Kruskal-Wallis features, PCA variance structure, and t-SNE cluster topology
-remained unchanged after merging. A sensitivity analysis across merging
-thresholds ($r = 0.7$, $0.8$, $0.9$, and no merging) confirmed that Stage~2
-balanced accuracy is insensitive to the exact threshold within the $0.7$--$0.9$
-range (differences $< 2$~percentage points, not significant), while omitting
-merging entirely reduced accuracy by 7~percentage points ($p = 0.008$).
+remained unchanged after merging. A preliminary sensitivity analysis (10 repeats, KW+NMC pipeline) across merging
+thresholds ($r = 0.7$, $0.8$, $0.9$, and no merging) indicated that Stage~2
+balanced accuracy varies by fewer than 2~percentage points across the
+$0.7$--$0.9$ range, while omitting merging entirely reduced accuracy by
+approximately 7~percentage points (Wilcoxon signed-rank $p = 0.008$; this test
+does not correct for fold overlap, so the $p$-value should be interpreted as
+directional evidence rather than a formal significance claim).
 
 Because this operation uses only the pairwise correlation structure of
 copy-number values and never accesses class labels, it can safely be applied
@@ -254,7 +262,7 @@ Analysis of the flat experiment revealed that all four pipelines classified
 HER2+ samples with perfect recall, while HR+ and triple-negative samples were
 frequently confused (Section~\ref{sec:results-flat}). A dedicated
 Kruskal-Wallis ranking computed on only the HR+ and TN samples surfaced a
-completely different set of discriminative features - dominated by chr12q
+completely different set of discriminative features, dominated by chr12q
 (23 of the top 30) and chr5q (7 of 30) rather than the chr17 ERBB2 locus that
 dominates the three-class ranking. This observation motivated a two-stage
 hierarchical architecture.
@@ -265,10 +273,12 @@ features span the chr17q12 ERBB2 amplicon (the strongest with
 $H = 73.9$, $p = 9 \times 10^{-17}$) and adjacent chr17 loci
 ($H = 22$--$26$). Because HER2+ samples exhibit amplification (CN $= 2$) at
 these loci while non-HER2+ samples show loss or normal (CN $\leq 0$), the
-binary problem is trivially separable. Stage~1 is therefore not tuned: no
-inner cross-validation is performed, and the threshold is fixed at $0.5$
-rather than optimised, because the flat ROC curve offers no meaningful gradient
-for threshold selection.
+binary problem is trivially separable. Stage~1 is therefore not tuned: no inner cross-validation is performed, and
+the probability threshold is fixed a priori at $0.5$ (the natural midpoint for
+binary probability outputs). Inner-fold ROC analysis confirmed that all
+thresholds in a wide range around $0.5$ achieve identical classification,
+consistent with complete class separation; any value between approximately
+$0.1$ and $0.9$ would produce the same result.
 
 Stage~2 receives only the non-HER2+ samples and classifies them as HR+ or TN
 using one of the four pipeline variants. Feature selection and hyperparameter
@@ -284,8 +294,9 @@ cross-validation, following the protocol of \citet{wessels2005protocol} and
 the information-leakage safeguards described by \citet{ambroise2002selection}.
 The outer loop uses 5-fold stratified splits repeated across multiple random
 seeds, with each fold preserving the $32/36/32$ class proportions. The flat
-experiment used 50 repeats (250 outer folds total); the hierarchical experiment
-used 200 repeats (1000 outer folds) with seeds 1001--1200 to avoid overlap.
+experiment used 50 repeats (250 outer folds total, seeds 1--50); the
+hierarchical experiment used 200 repeats (1000 outer folds, seeds 1001--1200)
+to avoid overlap with the flat experiment.
 
 Within each outer fold, an inner 5-fold cross-validation on the outer training
 set tunes the hyperparameters of the active pipeline. Feature selection is
@@ -299,12 +310,44 @@ held-out outer test fold, producing one balanced accuracy score. The mean and
 standard deviation across all outer folds provide the final performance estimate
 for each pipeline.
 
-Balanced accuracy - the macro-average of per-class recalls, giving equal weight
-to each subtype regardless of sample size
-\citep{brodersen2010balanced} - serves as both the inner-loop optimisation
+Balanced accuracy, defined as the macro-average of per-class recalls
+\citep{brodersen2010balanced}, serves as both the inner-loop optimisation
 objective and the outer-loop evaluation metric. An overview of the full
 evaluation pipeline, including the hierarchical two-stage architecture, is shown
 in Figure~\ref{fig:workflow}.
+
+\subsection{Plateau ensembling}
+\label{sec:plateau-method}
+
+In nested cross-validation with large hyperparameter grids, the inner loop
+must rank many configurations using a small validation set (approximately 11
+samples per inner fold in this study). When the number of near-optimal
+configurations is large relative to the validation set size, the single-best
+selection is dominated by noise: different folds select different
+``winners'' from a performance plateau, and the deployed configuration is
+effectively random within the plateau.
+
+Plateau ensembling addresses this by deploying all near-optimal configurations
+rather than a single best. The procedure is as follows. First, inner
+cross-validation scores from all outer folds are pooled across the full
+experiment (all repeats). Each hyperparameter configuration receives a mean
+pooled score. The plateau threshold is defined as the best pooled mean minus
+one pooled standard deviation, and all configurations scoring above this
+threshold are retained, up to a cap of 15. At prediction time, each retained
+configuration produces a class probability vector, and the final prediction is
+the class with the highest mean probability across the ensemble.
+
+The threshold formula (best mean minus one standard deviation) and the cap of
+15 were fixed before any outer-fold test scores were observed. The plateau
+membership is identified from inner cross-validation scores only. However,
+because the plateau is pooled across all repeats, a subtle indirect dependence
+exists: each repeat's inner scores contribute to the pooled plateau that is then
+evaluated on that repeat's outer test folds. A leave-one-repeat-out analysis
+showed that removing any single repeat changed the plateau membership by fewer
+than 1 of 15 configurations on average, indicating that this dependence is
+negligible in practice. The plateau gain may nonetheless be modestly inflated
+relative to a truly held-out evaluation; we report it without attempting to
+quantify this inflation precisely.
 
 \subsection{Statistical comparison}
 \label{sec:stats}
@@ -331,12 +374,12 @@ Nadeau-Bengio correction.
 \label{sec:final-model}
 
 The final submitted model uses the hierarchical EN+NMC pipeline with plateau
-ensembling (Section~\ref{sec:plateau}). It was retrained on all 100 labelled
-training samples using the set of near-optimal hyperparameter configurations
-identified from pooled inner cross-validation scores. No hyperparameters were
-re-tuned during this final training step: the plateau membership and ensemble
-composition were determined entirely from the nested cross-validation
-experiment.
+ensembling (Section~\ref{sec:plateau-method}). It was retrained on all 100
+labelled training samples using the set of near-optimal hyperparameter
+configurations identified from pooled inner cross-validation scores. No
+hyperparameters were re-tuned during this final training step: the plateau
+membership and ensemble composition were determined entirely from the nested
+cross-validation experiment.
 
 The accuracy estimate for the 57-sample validation set was derived from
 outer-fold per-class recalls rather than from balanced accuracy directly.
@@ -361,6 +404,11 @@ training-set proportions.
 
 \subsection{Plateau ensembling}
 \label{sec:plateau}
+% NOTE: The plateau ensembling METHOD is defined in Section 3.6
+% (sec:plateau-method). This Results subsection reports the empirical gains
+% and the scaling relationship with grid size. Do not re-define the procedure
+% here; refer back to the Methods definition.
+
 
 \subsection{Single best biomarker region}
 \label{sec:biomarker}
@@ -374,6 +422,24 @@ training-set proportions.
 % =============================================================================
 \section{Discussion}
 \label{sec:discussion}
+
+% ---------------------------------------------------------------------------
+% CONDITIONALITY CLAIM (from rev 4 plan - paste for teammates):
+%
+% The key claim for this section is CONDITIONALITY, not vindication:
+%
+%   "Wessels' principle is conditional on multi-class structure. On the full
+%    3-class aCGH classification problem, RF outperforms NMC, contradicting
+%    Wessels' finding on expression data. On the decomposed binary HR+/TN
+%    subproblem, NMC outperforms RF, consistent with Wessels. This sensitivity
+%    to multi-class structure was not tested in the original study and
+%    represents a nuance to the original recommendation."
+%
+% Do NOT write "Wessels was right after all" or "our results validate Wessels."
+% The flat result directly contradicts Wessels; the hierarchical result
+% supports him on a different (easier, binary) problem. The honest framing
+% is that the answer depends on problem decomposition.
+% ---------------------------------------------------------------------------
 
 % =============================================================================
 % ---- Author contributions (CRediT) ----
