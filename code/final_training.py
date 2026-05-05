@@ -168,3 +168,22 @@ pred_df.to_csv(
     index=False,
     header=['"Sample"', '"Subgroup"']
 )
+# %%
+import joblib
+import json
+with open(RESULTS_DIR / "2026-04-25_final_hierarchical/preprocessing/data/merge_map.json") as f:
+    merge_map = json.load(f)
+
+model_dict = {
+    "stage1_pipeline": stage1_pipe,
+    "stage2_pipelines": stage2_models,
+    "label_encoder_stage2": le_s2,
+    "feature_names": feature_names,
+    "merge_map": merge_map
+}
+
+import joblib
+
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
+
+joblib.dump(model_dict, MODEL_DIR / "model.pkl")
