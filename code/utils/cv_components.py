@@ -133,7 +133,6 @@ class ElasticNetSelector(BaseEstimator, TransformerMixin):
         model = LogisticRegression(
             penalty="elasticnet",
             solver="saga",
-            multi_class="multinomial",
             C=self.C,
             l1_ratio=self.l1_ratio,
             max_iter=self.max_iter,
