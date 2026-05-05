@@ -85,12 +85,12 @@ Wessels et al.\ (2005) showed simple classifiers match complex ones on expressio
 unknown whether this holds for discrete aCGH with limited samples ($n=100$).
 
 \textbf{Results:}
-Flat 2x2 experiment: RF outperforms NMC, apparently contradicting Wessels.
+Flat $2 \times 2$ experiment: RF outperforms NMC, apparently contradicting Wessels.
 HER2+ perfectly separable (masks real HR+/TN problem).
 Hierarchical decomposition: NMC outperforms RF for HR+/TN (reversal).
 Wessels' principle is conditional on multi-class structure.
 Best biomarker: chr17q12 ERBB2 amplicon.
-Final model: hierarchical EN+NMC with plateau ensembling, Stage~2 BA $= 0.76$, combined 3-class BA $= 0.84$.
+Final model: hierarchical EN+NMC with plateau ensembling, BA2 $= 0.76$, combined 3-class BA $= 0.84$.
 Validation estimate: 48/57 correct (per-class recall weighted by training proportions).
 
 \textbf{Availability:}
@@ -147,9 +147,9 @@ Code and predictions in submission archive.
   \item \textbf{Threshold justification:} 91\% of adjacent pairs exceed $r = 0.8$; only 4.4\% below $r = 0.7$
   \item \textbf{Result:} 2834 regions $\to$ 273 segments (90.4\% reduction)
   \item \textbf{Signal preservation:} top KW features, PCA structure, t-SNE topology unchanged
-  \item \textbf{Sensitivity:} flat 3-class BA varies $<2$ pp across $r \in \{0.7, 0.8, 0.9\}$; no merging $-7$ pp worse ($p = 0.008$, Wilcoxon signed-rank, directional only)
+  \item \textbf{Sensitivity:} flat 3-class BA varies $<2$ pp across $r \in \{0.7, 0.8, 0.9\}$; no merging $-7$ pp worse ($p = 0.008$, paired Wilcoxon signed-rank on per-repeat means, one-sided)
   \item \textbf{Leakage defense:} label-free (no class info used), applied before CV
-  \item \textbf{Stability:} correlation structure of 80 samples $\approx$ 100 samples given strong autocorrelation
+  \item \textbf{Stability:} correlation structure of 80 samples (outer training fold) $\approx$ 100 samples given strong autocorrelation
   \item \textbf{Precedent:} consistent with CGHregions global preprocessing; distinct from \cite{ambroise2002selection} label-dependent leakage
   \item \textbf{Deployment:} merging map saved in model artifact, applied to validation data at prediction time
 \end{itemize}
@@ -172,7 +172,7 @@ Code and predictions in submission archive.
   \item \textbf{EN:} Elastic net multinomial logistic regression \citep{zou2005elasticnet}
   \item \textbf{EN properties:} L1+L2 penalty -- sparsity + grouping effect for correlated features
   \item \textbf{EN top-$k$:} select top $k \in \{5, 10, 20, 50\}$ by absolute coefficient
-  \item \textbf{EN grid:} $C \in \{10^{-3}, \ldots, 10^{2}\}$ (10 log-spaced), $\lambda_1 \in \{0.1, 0.3, 0.5, 0.7, 0.9\}$
+  \item \textbf{EN grid:} $C \in \{10^{-3}, \ldots, 10^{2}\}$ (10 log-spaced), L1 ratio $\in \{0.1, 0.3, 0.5, 0.7, 0.9\}$
   \item \textbf{EN configs:} $10 \times 5 \times 4 = 200$ per fold
 \end{itemize}
 
@@ -226,14 +226,14 @@ Code and predictions in submission archive.
   \item \textbf{Leakage prevention:} feature selection INSIDE each inner fold
   \item \textbf{Metric:} balanced accuracy (macro-averaged recall) \citep{brodersen2010balanced}
   \item \textbf{Flow:} best inner config selected $\to$ retrain on full outer train $\to$ evaluate on outer test fold
-  \item \textbf{Overview:} see Figure~\ref{fig:workflow}
+  \item \textbf{Overview:} see Figure~1 % TODO: add \label{fig:workflow} when figure is included
 \end{itemize}
 
 \subsection{Plateau ensembling}
 \label{sec:plateau-method}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item \textbf{Problem:} inner CV on $n \approx 11$ cannot reliably rank 800 configs; single-best is noise-dominated
+  \item \textbf{Problem:} inner CV test folds of $n \approx 11$ (Stage 2) cannot reliably rank 800 configs; single-best is noise-dominated
   \item \textbf{Solution:} deploy all near-optimal configs instead of single best
   \item \textbf{Pooling:} pool inner CV scores across all outer folds and repeats
   \item \textbf{Threshold:} best pooled mean $-$ 1 pooled std; retain up to 15 configs
@@ -251,7 +251,7 @@ Code and predictions in submission archive.
   \item \textbf{Pairwise:} Nadeau-Bengio corrected $t$-test \citep{nadeaubengio2003} for formal significance (accounts for fold overlap)
   \item \textbf{Pragmatic:} bootstrap CIs (10,000 resamples) on per-repeat mean differences for distinguishability
   \item \textbf{Justification:} \cite{bouckaert2004evaluating} -- standard paired tests overstate significance for repeated CV
-  \item \textbf{Exclusion:} Wilcoxon not used (treats folds as independent, anti-conservative)
+  \item \textbf{Exclusion:} Wilcoxon not used for pipeline comparison (treats CV folds as independent, anti-conservative)
 \end{itemize}
 
 \subsection{Final model training}
@@ -262,7 +262,7 @@ Code and predictions in submission archive.
   \item \textbf{Retraining:} on all 100 labelled samples
   \item \textbf{Plateau membership:} from nested CV (no re-tuning)
   \item \textbf{Validation preprocessing:} merging map applied for consistent segment boundaries
-  \item \textbf{Estimate formula:} $\sum_c (\hat{r}_c \times n_c / N) \times 57$ using training proportions as proxy (not BA $\times$ 57)
+  \item \textbf{Estimate formula:} $\sum_c (\hat{r}_c \times n_c / N) \times 57$ where $N = 100$, using training proportions as proxy (not BA $\times$ 57)
   \item \textbf{Sensitivity:} estimate ranges 46--48 under alternative plausible proportions; submit 48
 \end{itemize}
 
@@ -319,7 +319,7 @@ Code and predictions in submission archive.
 \label{sec:estimate}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item \textbf{Formula:} $\sum_c (\hat{r}_c \times n_c / N) \times 57$ -- weighted accuracy, not BA $\times$ 57
+  \item \textbf{Formula:} $\sum_c (\hat{r}_c \times n_c / N) \times 57$ where $N = 100$ -- weighted accuracy, not BA $\times$ 57
   \item \textbf{Calculation:} $(0.32 \times 1.00 + 0.36 \times 0.78 + 0.32 \times 0.74) \times 57 = 47.8 \to 48$
   \item \textbf{Sensitivity:} uniform proportions $\to$ 48, skewed $\to$ 46; submit 48
 \end{itemize}
