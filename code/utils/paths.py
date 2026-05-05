@@ -4,7 +4,11 @@ All paths are derived from the location of this file so scripts work
 from any working directory.
 """
 
-import fcntl
+
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 import json
 import shutil
 import sys
@@ -144,7 +148,8 @@ def save_config(run_dir, script_name, **kwargs):
     lock_path = run_dir / ".config.json.lock"
 
     with open(lock_path, "w") as lock_f:
-        fcntl.flock(lock_f, fcntl.LOCK_EX)
+        if fcntl:
+            fcntl.flock(lock_f, fcntl.LOCK_EX)
 
         if config_path.exists():
             with open(config_path) as f:
