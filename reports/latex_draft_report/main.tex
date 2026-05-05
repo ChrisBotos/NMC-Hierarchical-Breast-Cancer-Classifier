@@ -102,21 +102,21 @@ Code and predictions in submission archive.
 \label{sec:introduction}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item Breast cancer is heterogeneous; molecular subtypes drive treatment
-  \item HER2+, HR+, Triple Negative -- different prognosis and therapy
-  \item \cite{perou2000molecular} intrinsic subtypes; \cite{sorlie2001gene} clinical implications; \cite{slamon1987her2} HER2 amplification
-  \item Array CGH measures genome-wide CN changes \citep{pinkel2005array}
-  \item Discrete CN calls: loss ($-1$), normal ($0$), gain ($+1$), amplification ($+2$)
-  \item Preprocessing: CBS segmentation \citep{venkatraman2007cbs}, CGHcall \citep{vandewiel2007cghcall}, overview \citep{vandewiel2011preprocessing}
-  \item Goal: classify subtypes from CN profiles alone (n=100 train, 57 validation)
-  \item \cite{wessels2005protocol}: simple classifiers + univariate filtering match complex on expression data
-  \item Tested on van 't Veer (2002) breast cancer data; key insight: complex models overfit at small n
-  \item \cite{haury2011influence}: univariate filters competitive, stability matters
-  \item Gap: Wessels used continuous expression, not discrete aCGH
-  \item Gap: multi-class structure effect on simple-vs-complex balance untested
+  \item \textbf{Heterogeneity:} breast cancer molecular subtypes drive treatment decisions
+  \item \textbf{Subtypes:} HER2+, HR+, Triple Negative -- different prognosis and therapy
+  \item \textbf{Literature:} \cite{perou2000molecular} intrinsic subtypes; \cite{sorlie2001gene} clinical implications; \cite{slamon1987her2} HER2 amplification
+  \item \textbf{aCGH:} array CGH measures genome-wide CN changes \citep{pinkel2005array}
+  \item \textbf{Discrete CN calls:} loss ($-1$), normal ($0$), gain ($+1$), amplification ($+2$)
+  \item \textbf{Preprocessing:} CBS segmentation \citep{venkatraman2007cbs}, CGHcall \citep{vandewiel2007cghcall}, overview \citep{vandewiel2011preprocessing}
+  \item \textbf{Goal:} classify subtypes from CN profiles alone ($n=100$ train, 57 validation)
+  \item \textbf{Wessels:} \cite{wessels2005protocol} simple classifiers + univariate filtering match complex on expression data
+  \item \textbf{Key insight:} tested on van 't Veer (2002) breast cancer data; complex models overfit at small $n$
+  \item \textbf{Haury:} \cite{haury2011influence} univariate filters competitive, stability matters
+  \item \textbf{Gap 1:} Wessels used continuous expression, not discrete aCGH
+  \item \textbf{Gap 2:} multi-class structure effect on simple-vs-complex balance untested
   \item \textbf{RQ:} Does Wessels' principle hold for discrete aCGH classification, and how do feature redundancy and multi-class structure affect classifier selection?
-  \item Approach: 2x2 factorial design, nested CV, hierarchical extension
-  \item Preview: the answer depends on problem decomposition
+  \item \textbf{Approach:} 2x2 factorial design, nested CV, hierarchical extension
+  \item \textbf{Preview:} the answer depends on problem decomposition
 \end{itemize}
 
 % =============================================================================
@@ -127,39 +127,39 @@ Code and predictions in submission archive.
 \label{sec:data}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item 100 labelled samples, 244K-probe aCGH platform
-  \item Preprocessed into 2834 genomic regions with discrete CN calls
-  \item Classes: HER2+ ($n=32$), HR+ ($n=36$), TN ($n=32$) -- approximately balanced
-  \item 57 unlabelled validation samples, same platform
-  \item Coordinates: hg18/NCBI Build 36
-  \item Implemented in Python 3.10, scikit-learn \citep{pedregosa2011sklearn}
+  \item \textbf{Training set:} 100 labelled samples, 244K-probe aCGH platform
+  \item \textbf{Features:} 2834 genomic regions with discrete CN calls
+  \item \textbf{Classes:} HER2+ ($n=32$), HR+ ($n=36$), TN ($n=32$) -- approximately balanced
+  \item \textbf{Validation set:} 57 unlabelled samples, same platform
+  \item \textbf{Coordinates:} hg18/NCBI Build 36
+  \item \textbf{Implementation:} Python 3.10, scikit-learn \citep{pedregosa2011sklearn}
 \end{itemize}
 
 \subsection{Label-free region merging}
 \label{sec:merging}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item Adjacent regions highly correlated: median $r = 0.92$ within 0.1 Mb
-  \item Redundancy inflates feature space without adding discriminative info
-  \item Inspired by CGHregions \citep{vanwieringen2007cghregions} -- same type of correlation-based reduction for aCGH
-  \item Algorithm: greedy one-pass per chromosome, merge adjacent if Pearson $r > 0.8$
-  \item Representation: median CN of constituent regions per sample
-  \item Threshold justification: 91\% of adjacent pairs exceed $r = 0.8$; only 4.4\% below $r = 0.7$
-  \item Result: 2834 regions $\to$ 273 segments (90.4\% reduction)
-  \item Signal preservation: top KW features, PCA structure, t-SNE topology unchanged
-  \item Sensitivity: BA varies $<2$ pp across $r \in \{0.7, 0.8, 0.9\}$; no merging $-7$ pp worse ($p = 0.008$, Wilcoxon signed-rank, directional only)
+  \item \textbf{Correlation:} adjacent regions highly correlated, median $r = 0.92$ within 0.1 Mb
+  \item \textbf{Problem:} redundancy inflates feature space without adding discriminative info
+  \item \textbf{Prior work:} inspired by CGHregions \citep{vanwieringen2007cghregions} -- same type of correlation-based reduction for aCGH
+  \item \textbf{Algorithm:} greedy one-pass per chromosome, merge adjacent if Pearson $r > 0.8$
+  \item \textbf{Representation:} median CN of constituent regions per sample
+  \item \textbf{Threshold justification:} 91\% of adjacent pairs exceed $r = 0.8$; only 4.4\% below $r = 0.7$
+  \item \textbf{Result:} 2834 regions $\to$ 273 segments (90.4\% reduction)
+  \item \textbf{Signal preservation:} top KW features, PCA structure, t-SNE topology unchanged
+  \item \textbf{Sensitivity:} flat 3-class BA varies $<2$ pp across $r \in \{0.7, 0.8, 0.9\}$; no merging $-7$ pp worse ($p = 0.008$, Wilcoxon signed-rank, directional only)
   \item \textbf{Leakage defense:} label-free (no class info used), applied before CV
-  \item Correlation structure of 80 samples $\approx$ 100 samples given strong autocorrelation
-  \item Consistent with CGHregions global preprocessing; distinct from \cite{ambroise2002selection} label-dependent leakage
-  \item Merging map saved in model artifact, applied to validation data at prediction time
+  \item \textbf{Stability:} correlation structure of 80 samples $\approx$ 100 samples given strong autocorrelation
+  \item \textbf{Precedent:} consistent with CGHregions global preprocessing; distinct from \cite{ambroise2002selection} label-dependent leakage
+  \item \textbf{Deployment:} merging map saved in model artifact, applied to validation data at prediction time
 \end{itemize}
 
 \subsection{Experimental design}
 \label{sec:design}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item $2 \times 2$ factorial: (KW, EN) feature selection $\times$ (NMC, RF) classifier
-  \item Directly tests \cite{wessels2005protocol} recommendation
+  \item \textbf{Design:} $2 \times 2$ factorial -- (KW, EN) feature selection $\times$ (NMC, RF) classifier
+  \item \textbf{Rationale:} directly tests \cite{wessels2005protocol} recommendation
 \end{itemize}
 
 \subsubsection{Feature selection}
@@ -167,13 +167,13 @@ Code and predictions in submission archive.
 
 \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{KW:} Kruskal-Wallis $H$-statistic ranking \citep{kruskalwallis1952}, select top $k$
-  \item Non-parametric, respects ordinal CN values, handles 3-class natively
-  \item $k \in \{5, 10, 15, 20, 30, 50, 75, 100\}$ tuned via inner CV
+  \item \textbf{KW properties:} non-parametric, respects ordinal CN values, handles 3-class natively
+  \item \textbf{KW grid:} $k \in \{5, 10, 15, 20, 30, 50, 75, 100\}$ tuned via inner CV
   \item \textbf{EN:} Elastic net multinomial logistic regression \citep{zou2005elasticnet}
-  \item L1+L2 penalty: sparsity + grouping effect for correlated features
-  \item Select top $k \in \{5, 10, 20, 50\}$ by absolute coefficient
-  \item $C \in \{10^{-3}, \ldots, 10^{2}\}$ (10 log-spaced), $\lambda_1 \in \{0.1, 0.3, 0.5, 0.7, 0.9\}$
-  \item Inner grid: $10 \times 5 \times 4 = 200$ configs per fold
+  \item \textbf{EN properties:} L1+L2 penalty -- sparsity + grouping effect for correlated features
+  \item \textbf{EN top-$k$:} select top $k \in \{5, 10, 20, 50\}$ by absolute coefficient
+  \item \textbf{EN grid:} $C \in \{10^{-3}, \ldots, 10^{2}\}$ (10 log-spaced), $\lambda_1 \in \{0.1, 0.3, 0.5, 0.7, 0.9\}$
+  \item \textbf{EN configs:} $10 \times 5 \times 4 = 200$ per fold
 \end{itemize}
 
 \subsubsection{Classifiers}
@@ -181,89 +181,89 @@ Code and predictions in submission archive.
 
 \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{NMC:} Nearest mean classifier -- assign to closest class centroid (Euclidean)
-  \item Linear boundary, zero base hyperparams; shrinkage $\delta \in \{\text{None}, 0.1, 0.2, 0.5\}$ tuned
-  \item Referenced by Wessels as prototypical simple classifier
+  \item \textbf{NMC tuning:} linear boundary, zero base hyperparams; shrinkage $\delta \in \{\text{None}, 0.1, 0.2, 0.5\}$
+  \item \textbf{NMC rationale:} referenced by Wessels as prototypical simple classifier
   \item \textbf{RF:} Random forest, 500 trees \citep{breiman2001random}, balanced class weights
-  \item Tuned: max\_features $\in \{\text{sqrt}, 0.3\}$, min\_samples\_leaf $\in \{1, 5\}$ (4 configs)
-  \item Non-linear, captures feature interactions
+  \item \textbf{RF tuning:} max\_features $\in \{\text{sqrt}, 0.3\}$, min\_samples\_leaf $\in \{1, 5\}$ (4 configs)
+  \item \textbf{RF rationale:} non-linear, captures feature interactions
 \end{itemize}
 
 \subsubsection{The four pipelines}
 \label{sec:pipelines}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item KW+NMC: $8 \times 4 = 32$ inner configs
-  \item KW+RF: $8 \times 4 = 32$ inner configs
-  \item EN+NMC: $200 \times 4 = 800$ inner configs
-  \item EN+RF: $200 \times 4 = 800$ inner configs
-  \item Grid size asymmetry relevant for plateau ensembling interpretation
+  \item \textbf{KW+NMC:} $8 \times 4 = 32$ inner configs
+  \item \textbf{KW+RF:} $8 \times 4 = 32$ inner configs
+  \item \textbf{EN+NMC:} $200 \times 4 = 800$ inner configs
+  \item \textbf{EN+RF:} $200 \times 4 = 800$ inner configs
+  \item \textbf{Note:} grid size asymmetry relevant for plateau ensembling interpretation
 \end{itemize}
 
 \subsection{Hierarchical classifier}
 \label{sec:hierarchical}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item Motivation: flat experiment $\to$ HER2+ recall = 1.00 in all pipelines; bottleneck is HR+/TN confusion
-  \item Dedicated HR+/TN KW ranking surfaces different features: chr12q (23/30), chr5q (7/30) instead of chr17 ERBB2
+  \item \textbf{Motivation:} flat experiment $\to$ HER2+ recall = 1.00 in all pipelines; bottleneck is HR+/TN confusion
+  \item \textbf{Feature shift:} dedicated HR+/TN KW ranking surfaces different features -- chr12q (23/30), chr5q (7/30) instead of chr17 ERBB2
   \item \textbf{Stage 1:} HER2+ vs rest, fixed KW+RF $k=5$, threshold 0.5 (no inner CV tuning)
-  \item Top features: chr17q12 ERBB2 amplicon ($H = 73.9$, $p = 9 \times 10^{-17}$) + adjacent chr17 loci ($H = 22$--$26$)
-  \item HER2+ shows CN $= 2$ at these loci; non-HER2+ shows CN $\leq 0$ -- trivially separable
-  \item BA = 1.000 in all 1000 outer folds; threshold 0.5 is in wide margin between class scores
+  \item \textbf{Stage 1 features:} chr17q12 ERBB2 amplicon ($H = 73.9$, $p = 9 \times 10^{-17}$) + adjacent chr17 loci ($H = 22$--$26$)
+  \item \textbf{Stage 1 separation:} HER2+ shows CN $= 2$ at these loci; non-HER2+ shows CN $\leq 0$ -- trivially separable
+  \item \textbf{Stage 1 performance:} Stage 1 BA = 1.000 in all 1000 outer folds; threshold 0.5 is in wide margin between class scores
   \item \textbf{Stage 2:} HR+ vs TN, one of the 4 pipeline variants with full inner CV tuning
-  \item Feature selection and tuning on non-HER2+ samples only per outer fold
-  \item Accesses chr12q/5q signal that 3-class ranking obscures
+  \item \textbf{Stage 2 scope:} feature selection and tuning on non-HER2+ samples only per outer fold
+  \item \textbf{Stage 2 benefit:} accesses chr12q/5q signal that 3-class ranking obscures
 \end{itemize}
 
 \subsection{Cross-validation scheme}
 \label{sec:cv}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item Nested stratified repeated 5-fold CV \citep{wessels2005protocol, ambroise2002selection}
-  \item Outer loop: unbiased BA estimation, preserves 32/36/32 proportions
-  \item Flat: 50 repeats $\times$ 5 folds = 250 evaluations (seeds 1--50)
-  \item Hierarchical: 200 repeats $\times$ 5 folds = 1000 evaluations (seeds 1001--1200)
-  \item Inner loop: 5-fold CV on outer training set for hyperparameter tuning
-  \item Feature selection INSIDE each inner fold (prevents leakage)
-  \item Metric: balanced accuracy (macro-averaged recall) \citep{brodersen2010balanced}
-  \item Best inner config selected $\to$ retrain on full outer train $\to$ evaluate on outer test fold
-  \item See Figure~\ref{fig:workflow} for overview
+  \item \textbf{Scheme:} nested stratified repeated 5-fold CV \citep{wessels2005protocol, ambroise2002selection}
+  \item \textbf{Outer loop:} unbiased BA estimation, preserves 32/36/32 proportions
+  \item \textbf{Flat scale:} 50 repeats $\times$ 5 folds = 250 evaluations (seeds 1--50)
+  \item \textbf{Hierarchical scale:} 200 repeats $\times$ 5 folds = 1000 evaluations (seeds 1001--1200)
+  \item \textbf{Inner loop:} 5-fold CV on outer training set for hyperparameter tuning
+  \item \textbf{Leakage prevention:} feature selection INSIDE each inner fold
+  \item \textbf{Metric:} balanced accuracy (macro-averaged recall) \citep{brodersen2010balanced}
+  \item \textbf{Flow:} best inner config selected $\to$ retrain on full outer train $\to$ evaluate on outer test fold
+  \item \textbf{Overview:} see Figure~\ref{fig:workflow}
 \end{itemize}
 
 \subsection{Plateau ensembling}
 \label{sec:plateau-method}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item Problem: inner CV on $n \approx 11$ cannot reliably rank 800 configs; single-best is noise-dominated
-  \item Solution: deploy all near-optimal configs instead of single best
-  \item Pool inner CV scores across all outer folds and repeats
-  \item Plateau threshold: best pooled mean $-$ 1 pooled std; retain up to 15 configs
-  \item Prediction: average class probabilities across plateau ensemble, pick argmax
-  \item Threshold and cap fixed before observing outer-fold test scores
-  \item Leave-one-repeat-out: removing any repeat changes plateau by $<1$ of 15 configs
-  \item Caveat: plateau gain may be modestly inflated by indirect inner/outer dependence; not quantified precisely
+  \item \textbf{Problem:} inner CV on $n \approx 11$ cannot reliably rank 800 configs; single-best is noise-dominated
+  \item \textbf{Solution:} deploy all near-optimal configs instead of single best
+  \item \textbf{Pooling:} pool inner CV scores across all outer folds and repeats
+  \item \textbf{Threshold:} best pooled mean $-$ 1 pooled std; retain up to 15 configs
+  \item \textbf{Prediction:} average class probabilities across plateau ensemble, pick argmax
+  \item \textbf{Safeguard:} threshold and cap fixed before observing outer-fold test scores
+  \item \textbf{Stability:} leave-one-repeat-out -- removing any repeat changes plateau by $<1$ of 15 configs
+  \item \textbf{Caveat:} plateau gain may be modestly inflated by indirect inner/outer dependence; not quantified precisely
 \end{itemize}
 
 \subsection{Statistical comparison}
 \label{sec:stats}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item Friedman test for overall pipeline differences
-  \item Nadeau-Bengio corrected $t$-test \citep{nadeaubengio2003} for formal pairwise significance (accounts for fold overlap)
-  \item Bootstrap CIs (10,000 resamples) on per-repeat mean differences for pragmatic distinguishability
-  \item \cite{bouckaert2004evaluating}: standard paired tests overstate significance for repeated CV
-  \item Do not use Wilcoxon (treats folds as independent, anti-conservative)
+  \item \textbf{Omnibus:} Friedman test for overall pipeline differences
+  \item \textbf{Pairwise:} Nadeau-Bengio corrected $t$-test \citep{nadeaubengio2003} for formal significance (accounts for fold overlap)
+  \item \textbf{Pragmatic:} bootstrap CIs (10,000 resamples) on per-repeat mean differences for distinguishability
+  \item \textbf{Justification:} \cite{bouckaert2004evaluating} -- standard paired tests overstate significance for repeated CV
+  \item \textbf{Exclusion:} Wilcoxon not used (treats folds as independent, anti-conservative)
 \end{itemize}
 
 \subsection{Final model training}
 \label{sec:final-model}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item Best pipeline: hierarchical EN+NMC with plateau ensembling
-  \item Retrained on all 100 labelled samples
-  \item Plateau membership from nested CV (no re-tuning)
-  \item Merging map applied to validation data for consistent segment boundaries
-  \item Accuracy estimate: $\sum_c (\hat{r}_c \times n_c / N) \times 57$ using training proportions as proxy
-  \item Sensitivity: estimate ranges 46--48 under alternative plausible proportions; submit 48
+  \item \textbf{Selected pipeline:} hierarchical EN+NMC with plateau ensembling
+  \item \textbf{Retraining:} on all 100 labelled samples
+  \item \textbf{Plateau membership:} from nested CV (no re-tuning)
+  \item \textbf{Validation preprocessing:} merging map applied for consistent segment boundaries
+  \item \textbf{Estimate formula:} $\sum_c (\hat{r}_c \times n_c / N) \times 57$ using training proportions as proxy (not BA $\times$ 57)
+  \item \textbf{Sensitivity:} estimate ranges 46--48 under alternative plausible proportions; submit 48
 \end{itemize}
 
 % =============================================================================
@@ -274,64 +274,64 @@ Code and predictions in submission archive.
 \label{sec:results-flat}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item KW+RF best (BA = 0.791), KW+NMC worst (BA = 0.631)
-  \item RF $\gg$ NMC regardless of feature selector (+16 pp for KW, +2.4 pp for EN)
-  \item Feature selector matters less: KW vs EN only $\sim$2 pp difference for RF
-  \item Nadeau-Bengio: only KW+NMC vs KW+RF significant after correction
-  \item HER2+ recall = 1.00 in all 4 pipelines
-  \item Bottleneck: TN recall = 0.62--0.64 (HR+/TN confusion)
-  \item Motivates hierarchical decomposition (next subsection)
+  \item \textbf{Best/worst:} KW+RF best (3-class BA = 0.791), KW+NMC worst (3-class BA = 0.631)
+  \item \textbf{Classifier effect:} RF $\gg$ NMC regardless of feature selector (+16 pp for KW, +2.4 pp for EN)
+  \item \textbf{Selector effect:} KW vs EN only $\sim$2 pp difference for RF -- selector matters less
+  \item \textbf{Significance:} Nadeau-Bengio -- only KW+NMC vs KW+RF significant after correction
+  \item \textbf{HER2+ recall} = 1.00 in all 4 pipelines (trivially separable)
+  \item \textbf{Bottleneck:} TN recall = 0.62--0.64 (HR+/TN confusion)
+  \item \textbf{Implication:} motivates hierarchical decomposition
 \end{itemize}
 
 \subsection{Hierarchical classifier}
 \label{sec:results-hierarchical}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item NMC $>$ RF reversal in Stage 2 (bootstrap CIs exclude zero)
-  \item EN+NMC(plateau) best: BA2 = 0.759, combined BA = 0.840
-  \item Nadeau-Bengio: all pairwise comparisons n.s.\ (conservative)
-  \item Bootstrap CIs: 38/45 pairs distinguishable at 95\%
-  \item TABLE 1: flat + hierarchical results combined (BA, BA2, per-class recalls, features)
-  \item FIGURE 2: violin/box plot, flat vs hierarchical BA, significance brackets
+  \item \textbf{Key reversal:} NMC $>$ RF in Stage 2 BA2 (bootstrap CIs exclude zero)
+  \item \textbf{Best pipeline:} EN+NMC(plateau) -- BA2 = 0.759, combined 3-class BA = 0.840
+  \item \textbf{Nadeau-Bengio:} all pairwise comparisons n.s.\ (conservative)
+  \item \textbf{Bootstrap CIs:} 38/45 pairs distinguishable at 95\%
+  \item \textbf{TABLE 1:} flat + hierarchical results combined (3-class BA, BA2, per-class recalls, features)
+  \item \textbf{FIGURE 2:} violin/box plot of BA2, flat vs hierarchical, significance brackets
 \end{itemize}
 
 \subsection{Plateau ensembling}
 \label{sec:plateau}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item EN+NMC base BA2 = 0.729 $\to$ plateau BA2 = 0.759 (+3.0 pp)
-  \item Gain scales with grid size: 800 configs $\to$ +3.0 pp; 32 configs $\to$ +1.4 pp
-  \item Mechanism: averaging stabilises noisy single-best selection
-  \item Leakage caveat: may be modestly inflated; leave-one-repeat-out suggests small effect
+  \item \textbf{Gain:} EN+NMC base BA2 = 0.729 $\to$ plateau BA2 = 0.759 (+3.0 pp)
+  \item \textbf{Grid-size scaling:} 800 configs $\to$ +3.0 pp; 32 configs $\to$ +1.4 pp
+  \item \textbf{Mechanism:} averaging stabilises noisy single-best selection
+  \item \textbf{Caveat:} may be modestly inflated; leave-one-repeat-out suggests small effect
 \end{itemize}
 
 \subsection{Single best biomarker region}
 \label{sec:biomarker}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item chr17q12 (ERBB2/TCAP locus), KW $H = 73.9$, $p = 9 \times 10^{-17}$
-  \item Perfectly separates HER2+ from rest (Stage 1 uses 5 features from this locus)
-  \item Cannot distinguish HR+ vs TN (different signal: chr12q, chr5q)
-  \item Biology: ERBB2 amplification defines HER2+ subtype, targeted by trastuzumab \citep{slamon1987her2}
+  \item \textbf{Locus:} chr17q12 (ERBB2/TCAP), KW $H = 73.9$, $p = 9 \times 10^{-17}$
+  \item \textbf{HER2+ separation:} perfect -- Stage 1 uses 5 features from this locus
+  \item \textbf{Limitation:} cannot distinguish HR+ vs TN (different signal: chr12q, chr5q)
+  \item \textbf{Biology:} ERBB2 amplification defines HER2+ subtype, targeted by trastuzumab \citep{slamon1987her2}
 \end{itemize}
 
 \subsection{Accuracy estimate}
 \label{sec:estimate}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item Formula: $\sum_c (\hat{r}_c \times n_c / N) \times 57$ (not BA $\times$ 57)
-  \item Using training proportions: $(0.32 \times 1.00 + 0.36 \times 0.78 + 0.32 \times 0.74) \times 57 = 47.8 \to 48$
-  \item Sensitivity: uniform $\to$ 48, skewed $\to$ 46; submit 48
+  \item \textbf{Formula:} $\sum_c (\hat{r}_c \times n_c / N) \times 57$ -- weighted accuracy, not BA $\times$ 57
+  \item \textbf{Calculation:} $(0.32 \times 1.00 + 0.36 \times 0.78 + 0.32 \times 0.74) \times 57 = 47.8 \to 48$
+  \item \textbf{Sensitivity:} uniform proportions $\to$ 48, skewed $\to$ 46; submit 48
 \end{itemize}
 
 \subsection{Improvements after draft}
 \label{sec:improvements}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item (a) Hierarchical architecture replacing flat 3-class
-  \item (b) Plateau ensembling for deployment stability
-  \item (c) Updated accuracy estimate with per-class formula
-  \item (d) Quantify improvement: draft BA $\to$ final BA, delta in expected correct
+  \item \textbf{(a) Hierarchical architecture:} replacing flat 3-class
+  \item \textbf{(b) Plateau ensembling:} for deployment stability
+  \item \textbf{(c) Estimate update:} per-class recall formula instead of BA $\times$ 57
+  \item \textbf{(d) Quantify improvement:} draft 3-class BA $\to$ final 3-class BA, delta in expected correct
   \item [TO BE FINALISED after draft feedback]
 \end{itemize}
 
@@ -350,15 +350,15 @@ Code and predictions in submission archive.
 % ---------------------------------------------------------------------------
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item Wessels' principle is CONDITIONAL on problem structure
-  \item 3-class: RF $>$ NMC (contradicts Wessels on expression data)
-  \item Binary HR+/TN: NMC $>$ RF (consistent with Wessels)
-  \item HER2+ acts as confounder: trivial separability inflates RF advantage in 3-class
-  \item Feature selector matters less than classifier in both settings (consistent with Wessels)
-  \item Limitations: $n=100$, only 68 for Stage 2, discrete CN loses fine-grained signal
-  \item $\sim$10 consistently misclassified samples, no KW features distinguish them -- suggests BA2 $\approx 0.76$ ceiling is irreducible noise in discrete representation
-  \item Best biomarker: chr17q12 ERBB2 for HER2+; chr12q/5q for HR+/TN
-  \item Future: multi-omic integration, larger cohorts, investigate misclassified samples
+  \item \textbf{Main finding:} Wessels' principle is CONDITIONAL on problem structure
+  \item \textbf{3-class result:} RF $>$ NMC (contradicts Wessels on expression data)
+  \item \textbf{Binary HR+/TN result:} NMC $>$ RF (consistent with Wessels)
+  \item \textbf{Explanation:} HER2+ acts as confounder -- trivial separability inflates RF advantage in 3-class
+  \item \textbf{Selector effect:} matters less than classifier in both settings (consistent with Wessels)
+  \item \textbf{Limitations:} $n=100$, only 68 for Stage 2, discrete CN loses fine-grained signal
+  \item \textbf{Performance ceiling:} $\sim$10 consistently misclassified samples, no KW features distinguish them -- suggests BA2 $\approx 0.76$ ceiling is irreducible noise in discrete representation
+  \item \textbf{Best biomarkers:} chr17q12 ERBB2 for HER2+; chr12q/5q for HR+/TN
+  \item \textbf{Future work:} multi-omic integration, larger cohorts, investigate misclassified samples
 \end{itemize}
 
 % =============================================================================
