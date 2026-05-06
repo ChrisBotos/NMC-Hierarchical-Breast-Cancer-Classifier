@@ -158,7 +158,7 @@ Code and predictions in submission archive.
 \label{sec:design}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item \textbf{Design:} $2 \times 2$ factorial -- (KW, EN) feature selection $\times$ (NMC, RF) classifier
+  \item \textbf{Design:} $2 \times 2$ factorial -- (KW, EN) feature selection $\times$ (NMC, RF) classifier (Figure~\ref{fig:workflow})
   \item \textbf{Rationale:} directly tests \cite{wessels2005protocol} recommendation
 \end{itemize}
 
@@ -212,6 +212,7 @@ Code and predictions in submission archive.
   \item \textbf{Stage 2:} HR+ vs TN, one of the 4 pipeline variants with full inner CV tuning
   \item \textbf{Stage 2 scope:} feature selection and tuning on non-HER2+ samples only per outer fold
   \item \textbf{Stage 2 benefit:} accesses chr12q/5q signal that 3-class ranking obscures
+  \item \textbf{Architecture overview:} Figure~\ref{fig:workflow} illustrates the full nested CV scheme with both stages
 \end{itemize}
 
 \subsection{Cross-validation scheme}
@@ -288,12 +289,12 @@ Code and predictions in submission archive.
 \label{sec:results-flat}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item \textbf{Best/worst:} KW+RF best (3-class BA = 0.791), KW+NMC worst (3-class BA = 0.631)
+  \item \textbf{Best/worst:} KW+RF best (3-class BA = 0.791), KW+NMC worst (3-class BA = 0.631); see Table~\ref{tab:results} for all pipelines
   \item \textbf{Classifier effect:} RF $\gg$ NMC regardless of feature selector (+16 pp for KW, +2.4 pp for EN)
   \item \textbf{Selector effect:} KW vs EN only $\sim$2 pp difference for RF -- selector matters less
   \item \textbf{Significance:} Nadeau-Bengio -- only KW+NMC vs KW+RF significant after correction
   \item \textbf{HER2+ recall} = 1.00 in all 4 pipelines (trivially separable)
-  \item \textbf{Bottleneck:} TN recall = 0.62--0.64 (HR+/TN confusion)
+  \item \textbf{Bottleneck:} TN recall = 0.51--0.64 (HR+/TN confusion); visible in Figure~\ref{fig:results}B (left confusion matrix)
   \item \textbf{Implication:} motivates hierarchical decomposition
 \end{itemize}
 
@@ -324,8 +325,8 @@ Code and predictions in submission archive.
 \label{sec:plateau}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item \textbf{Gain:} EN+NMC base BA2 = 0.729 $\to$ plateau BA2 = 0.759 (+3.0 pp)
-  \item \textbf{Grid-size scaling:} 800 configs $\to$ +3.0 pp; 32 configs $\to$ +1.4 pp
+  \item \textbf{Gain:} EN+NMC base BA2 = 0.724 $\to$ plateau BA2 = 0.751 (+2.7 pp); see Table~\ref{tab:results} rows ``Hier.\ (base)'' vs ``Hier.\ (plateau)''
+  \item \textbf{Grid-size scaling:} 800 configs $\to$ +2.7 pp; 32 configs $\to$ +1.1 pp
   \item \textbf{Mechanism:} averaging stabilises noisy single-best selection
   \item \textbf{Caveat:} may be modestly inflated; leave-one-repeat-out suggests small effect
 \end{itemize}
@@ -387,13 +388,13 @@ Code and predictions in submission archive.
 
 \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{Main finding:} Wessels' principle is CONDITIONAL on problem structure
-  \item \textbf{3-class result:} RF $>$ NMC (contradicts Wessels on expression data)
-  \item \textbf{Binary HR+/TN result:} NMC $>$ RF (consistent with Wessels)
+  \item \textbf{3-class result:} RF $>$ NMC (contradicts Wessels on expression data); see Figure~\ref{fig:results}A (left panel) and Table~\ref{tab:results}
+  \item \textbf{Binary HR+/TN result:} NMC $>$ RF (consistent with Wessels); see Figure~\ref{fig:results}A (right panel)
   \item \textbf{Explanation:} HER2+ acts as confounder -- trivial separability inflates RF advantage in 3-class
   \item \textbf{Selector effect:} matters less than classifier in both settings (consistent with Wessels)
   \item \textbf{Limitations:} $n=100$, only 68 for Stage 2, discrete CN loses fine-grained signal
   \item \textbf{Performance ceiling:} $\sim$10 consistently misclassified samples, no KW features distinguish them -- suggests BA2 $\approx 0.76$ ceiling is irreducible noise in discrete representation
-  \item \textbf{Best biomarkers:} chr17q12 ERBB2 for HER2+; chr12q/5q for HR+/TN
+  \item \textbf{Best biomarkers:} chr17q12 ERBB2 for HER2+; chr12q/5q for HR+/TN (Figure~\ref{fig:features}B)
   \item \textbf{Future work:} multi-omic integration, larger cohorts, investigate misclassified samples
 \end{itemize}
 

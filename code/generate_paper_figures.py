@@ -266,7 +266,7 @@ def generate_fig1():
     box(cc-bw/2, ym, bw, bh, gf, ge,
         ['REGION MERGING', 'Pearson r > 0.8 --> 273 segments'])
     box(cc-bw/2, yc, bw, bh, gf, ge,
-        ['OUTER CV', 'Repeated stratified 5-fold'])
+        ['OUTER CV', 'Repeated stratified 5-fold (R repeats)'])
     arrow(cc, yd, cc, ym+bh)
     arrow(cc, ym, cc, yc+bh)
 
@@ -274,7 +274,7 @@ def generate_fig1():
     box(cl-bw/2, yb, bw, bht, bf, be,
         ['FLAT 3-CLASS', '[KW / EN] x [NMC / RF]', 'Inner 5-fold CV tuning'])
     arrow(cc-bw/2, yc+bh*0.4, cl+bw/2, yb+bht, cs='arc3,rad=0.15')
-    ax.text(cl, yb-0.2, '4 pipelines, 250 folds',
+    ax.text(cl, yb-0.2, '4 pipelines, 50 repeats x 5 folds = 250',
             ha='center', va='top', fontsize=6, style='italic', color='#555555')
 
     # Hierarchical Stage 1.
@@ -288,7 +288,7 @@ def generate_fig1():
     arrow(cr, yb, cr, ys+bht)
     ax.text(cr+bw/2+0.15, (yb+ys+bht)/2, 'non-HER2+\nsamples',
             ha='left', va='center', fontsize=5.5, style='italic', color='#555555')
-    ax.text(cr, ys-0.2, '4 pipelines, 1000 folds',
+    ax.text(cr, ys-0.2, '4 pipelines, 200 repeats x 5 folds = 1000',
             ha='center', va='top', fontsize=6, style='italic', color='#555555')
 
     # Plateau.
@@ -323,26 +323,26 @@ def generate_fig1():
 # =========================================================================
 
 def generate_fig2():
-    """Generate the main results figure (Figure 2, full-width, 2 panels).
+    """Generate the main results figure (Figure 2, full-width, stacked panels).
 
-    Panel A: 3-class BA violin comparison (flat BA and hierarchical combined
-    BA on the same y-axis - both are 3-class balanced accuracy).
-    Panel B: Confusion matrices for best flat (KW+RF) and best hierarchical
-    (EN+NMC(P)) pipelines.
+    Panel A (top, full width): 3-class BA violin comparison (flat BA and
+    hierarchical combined BA on the same y-axis).
+    Panel B (bottom, full width): Confusion matrices for best flat (KW+RF)
+    and best hierarchical (EN+NMC(P)) pipelines, side by side with colorbar.
     """
     flat_df = load_flat_results()
     hier_df = load_hierarchical_results()
 
-    # ---- Panel A: 3-class BA violins ----
+    # ---- Compute data for both panels ----
     flat_means = per_repeat_means(flat_df, 'balanced_accuracy', 'pipeline')
     hier_means = per_repeat_means(hier_df, 'combined_bal_acc', 'stage2_pipeline')
 
-    fig = plt.figure(figsize=(7.0, 3.2))
-    gs = fig.add_gridspec(1, 2, width_ratios=[2.2, 1], wspace=0.35)
-    ax_a = fig.add_subplot(gs[0])
-    ax_b_left = fig.add_subplot(gs[1])
+    fig = plt.figure(figsize=(7.0, 6.2))
+    gs = fig.add_gridspec(2, 1, height_ratios=[1.1, 1], hspace=0.55)
 
-    # Build violin data for panel A.
+    # ---- Panel A: 3-class BA violins (top row, full width) ----
+    ax_a = fig.add_subplot(gs[0])
+
     # Three groups: flat (4), hierarchical base (4), hierarchical plateau (3).
     pos_f = [1, 2, 3, 4]
     pos_hb = [6, 7, 8, 9]
@@ -378,28 +378,26 @@ def generate_fig2():
     ylim = ax_a.get_ylim()
     top_y = ylim[1] + 0.005
     ax_a.text(2.5, top_y, 'Flat', ha='center', va='bottom',
-              fontsize=7, fontweight='bold', color='#444444')
+              fontsize=8, fontweight='bold', color='#444444')
     ax_a.text(7.5, top_y, 'Hierarchical\n(base)', ha='center', va='bottom',
-              fontsize=7, fontweight='bold', color='#444444')
+              fontsize=8, fontweight='bold', color='#444444')
     ax_a.text(12, top_y, 'Hierarchical\n(plateau)', ha='center', va='bottom',
-              fontsize=7, fontweight='bold', color='#444444')
+              fontsize=8, fontweight='bold', color='#444444')
 
     nmc_p = mpatches.Patch(color=BLUE, alpha=0.5, label='NMC-based')
     rf_p = mpatches.Patch(color=ORANGE, alpha=0.5, label='RF-based')
     ax_a.legend(handles=[nmc_p, rf_p], loc='lower left', framealpha=0.9,
-                fontsize=6)
+                fontsize=7)
     ax_a.yaxis.grid(True, alpha=0.3, linewidth=0.5)
     ax_a.set_axisbelow(True)
-    ax_a.text(-0.02, 1.08, '(A)', transform=ax_a.transAxes,
-              fontsize=10, fontweight='bold', va='top')
+    ax_a.text(-0.02, 1.06, '(A)', transform=ax_a.transAxes,
+              fontsize=11, fontweight='bold', va='top')
 
-    # ---- Panel B: Confusion matrices ----
-    # We need a 1x2 grid inside the right panel area.
-    # Remove the placeholder axis and create two sub-axes manually.
-    ax_b_left.remove()
-    gs_inner = gs[1].subgridspec(1, 2, wspace=0.4)
-    ax_cm1 = fig.add_subplot(gs_inner[0])
-    ax_cm2 = fig.add_subplot(gs_inner[1])
+    # ---- Panel B: Confusion matrices (bottom row, full width) ----
+    gs_bottom = gs[1].subgridspec(1, 3, width_ratios=[1, 1, 0.05], wspace=0.4)
+    ax_cm1 = fig.add_subplot(gs_bottom[0])
+    ax_cm2 = fig.add_subplot(gs_bottom[1])
+    ax_cb = fig.add_subplot(gs_bottom[2])
 
     classes = ['HER2+', 'HR+', 'Triple Neg']
     short_cls = ['HER2+', 'HR+', 'TN']
@@ -430,27 +428,30 @@ def generate_fig2():
     cm_flat = build_cm(flat_df, 'pipeline', 'kw_rf')
     cm_hier = build_cm(hier_df, 'stage2_pipeline', 'en_nmc_pens')
 
-    for ax, cm, title in [(ax_cm1, cm_flat, 'Flat\nKW+RF'),
-                           (ax_cm2, cm_hier, 'Hier.\nEN+NMC(P)')]:
+    im = None
+    for ax, cm, title in [(ax_cm1, cm_flat, 'Flat: KW+RF'),
+                           (ax_cm2, cm_hier, 'Hierarchical: EN+NMC(P)')]:
         im = ax.imshow(cm, cmap='Blues', vmin=0, vmax=1, aspect='equal')
         ax.set_xticks(range(3))
         ax.set_yticks(range(3))
-        ax.set_xticklabels(short_cls, fontsize=5.5)
-        ax.set_yticklabels(short_cls, fontsize=5.5)
-        ax.set_xlabel('Predicted', fontsize=6.5)
-        ax.set_ylabel('True', fontsize=6.5)
-        ax.set_title(title, fontsize=7, fontweight='bold', pad=4)
+        ax.set_xticklabels(short_cls, fontsize=9)
+        ax.set_yticklabels(short_cls, fontsize=9)
+        ax.set_xlabel('Predicted', fontsize=10)
+        ax.set_ylabel('True', fontsize=10)
+        ax.set_title(title, fontsize=10, fontweight='bold', pad=6)
         for i in range(3):
             for j in range(3):
                 v = cm[i, j]
                 c = 'white' if v > 0.5 else 'black'
                 ax.text(j, i, f'{v:.2f}', ha='center', va='center',
-                        fontsize=7, color=c, fontweight='bold')
+                        fontsize=11, color=c, fontweight='bold')
 
-    ax_cm1.text(-0.15, 1.22, '(B)', transform=ax_cm1.transAxes,
-                fontsize=10, fontweight='bold', va='top')
+    # Shared colorbar.
+    fig.colorbar(im, cax=ax_cb, label='Recall (row-normalized)')
 
-    plt.tight_layout(pad=0.8)
+    ax_cm1.text(-0.08, 1.12, '(B)', transform=ax_cm1.transAxes,
+                fontsize=11, fontweight='bold', va='top')
+
     fig.savefig(FIGURES_DIR / 'fig2_results.pdf', bbox_inches='tight', dpi=300)
     fig.savefig(FIGURES_DIR / 'fig2_results.png', bbox_inches='tight', dpi=300)
     plt.close(fig)
