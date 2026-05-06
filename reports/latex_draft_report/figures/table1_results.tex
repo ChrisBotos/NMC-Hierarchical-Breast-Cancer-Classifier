@@ -1,0 +1,25 @@
+\begin{table}[t]
+\centering
+\caption{Pipeline performance summary. BA is 3-class balanced accuracy; BA2 is Stage~2 balanced accuracy (HR+ vs TN). BA1\,=\,1.0 for all hierarchical pipelines. Per-class recalls pooled over all outer folds. Best values per column in bold.}
+\label{tab:results}
+\small
+\begin{tabular}{llcccccc}
+\toprule
+Experiment & Pipeline & BA & BA2 & HER2+ & HR+ & TN & Feat. \\
+\midrule
+  Flat & KW+NMC & 0.631 & -- & 0.764 & 0.623 & 0.507 & 15 \\
+   & KW+RF & 0.791 & -- & 0.994 & 0.736 & 0.641 & 75 \\
+   & EN+NMC & 0.746 & -- & 0.909 & 0.698 & 0.630 & 10 \\
+   & EN+RF & 0.770 & -- & 0.998 & 0.696 & 0.616 & 20 \\
+\midrule
+  Hier. (base) & KW+NMC & 0.819 & 0.728 & \textbf{1.000} & 0.760 & 0.697 & 30 \\
+   & KW+RF & 0.809 & 0.714 & \textbf{1.000} & 0.733 & 0.693 & 50 \\
+   & EN+NMC & 0.816 & 0.724 & \textbf{1.000} & 0.726 & 0.722 & 20 \\
+   & EN+RF & 0.791 & 0.687 & \textbf{1.000} & 0.720 & 0.652 & 20 \\
+\midrule
+  Hier. (plateau) & KW+NMC(P) & 0.826 & 0.739 & \textbf{1.000} & \textbf{0.767} & 0.711 & 100 \\
+   & EN+NMC(P) & \textbf{0.834} & \textbf{0.751} & \textbf{1.000} & 0.766 & \textbf{0.736} & 92 \\
+   & Ensemble & 0.828 & 0.742 & \textbf{1.000} & 0.752 & 0.732 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
