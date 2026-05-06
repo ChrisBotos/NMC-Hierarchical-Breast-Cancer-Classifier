@@ -390,7 +390,7 @@ def generate_fig2():
                 fontsize=7)
     ax_a.yaxis.grid(True, alpha=0.3, linewidth=0.5)
     ax_a.set_axisbelow(True)
-    ax_a.text(-0.02, 1.06, '(A)', transform=ax_a.transAxes,
+    ax_a.text(-0.02, 1.10, '(A)', transform=ax_a.transAxes,
               fontsize=11, fontweight='bold', va='top')
 
     # ---- Panel B: Confusion matrices (bottom row, full width) ----
