@@ -226,8 +226,20 @@ Code and predictions in submission archive.
   \item \textbf{Leakage prevention:} feature selection INSIDE each inner fold
   \item \textbf{Metric:} balanced accuracy (macro-averaged recall) \citep{brodersen2010balanced}
   \item \textbf{Flow:} best inner config selected $\to$ retrain on full outer train $\to$ evaluate on outer test fold
-  \item \textbf{Overview:} see Figure~1 % TODO: add \label{fig:workflow} when figure is included
+  \item \textbf{Overview:} see Figure~\ref{fig:workflow}
 \end{itemize}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{fig1_workflow.pdf}
+  \caption{Nested cross-validation workflow for the hierarchical classifier.
+    The outer loop (50 repeats $\times$ 5 folds) estimates generalisation performance.
+    The inner loop (5-fold on each outer training set) tunes hyperparameters.
+    Stage~1 separates HER2+ from non-HER2+ samples (BA1\,=\,1.0 in all folds);
+    Stage~2 classifies HR+ vs TN using the selected pipeline variant.
+    Feature selection occurs inside each inner fold to prevent information leakage.}
+  \label{fig:workflow}
+\end{figure*}
 
 \subsection{Plateau ensembling}
 \label{sec:plateau-method}
@@ -270,6 +282,8 @@ Code and predictions in submission archive.
 \section{Results}
 \label{sec:results}
 
+\input{figures/table1_results.tex}
+
 \subsection{Flat 2x2 experiment}
 \label{sec:results-flat}
 
@@ -291,9 +305,20 @@ Code and predictions in submission archive.
   \item \textbf{Best pipeline:} EN+NMC(plateau) -- BA2 = 0.759, combined 3-class BA = 0.840
   \item \textbf{Nadeau-Bengio:} all pairwise comparisons n.s.\ (conservative)
   \item \textbf{Bootstrap CIs:} 38/45 pairs distinguishable at 95\%
-  \item \textbf{TABLE 1:} flat + hierarchical results combined (3-class BA, BA2, per-class recalls, features)
-  \item \textbf{FIGURE 2:} violin/box plot of BA2, flat vs hierarchical, significance brackets
+  \item \textbf{Summary:} Table~\ref{tab:results} compares all pipelines; Figure~\ref{fig:results} shows distributions and confusion patterns
 \end{itemize}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{fig2_results.pdf}
+  \caption{Model comparison.
+    \textbf{(A)}~Distribution of 3-class balanced accuracy (BA) across 50 per-repeat means for each pipeline.
+    Flat pipelines (left) use single-stage classification; hierarchical pipelines (right) use the two-stage architecture.
+    All hierarchical variants outperform the best flat pipeline (KW+RF, BA\,=\,0.791).
+    \textbf{(B)}~Confusion matrices for the best flat pipeline (KW+RF, left) and best hierarchical pipeline (EN+NMC(P), right), pooled over all outer folds.
+    The flat pipeline confuses HR+ and TN frequently; the hierarchical pipeline reduces this confusion while maintaining perfect HER2+ separation.}
+  \label{fig:results}
+\end{figure*}
 
 \subsection{Plateau ensembling}
 \label{sec:plateau}
@@ -311,9 +336,20 @@ Code and predictions in submission archive.
 \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{Locus:} chr17q12 (ERBB2/TCAP), KW $H = 73.9$, $p = 9 \times 10^{-17}$
   \item \textbf{HER2+ separation:} perfect -- Stage 1 uses 5 features from this locus
-  \item \textbf{Limitation:} cannot distinguish HR+ vs TN (different signal: chr12q, chr5q)
+  \item \textbf{Limitation:} cannot distinguish HR+ vs TN (different signal: chr12q, chr5q; see Figure~\ref{fig:features})
   \item \textbf{Biology:} ERBB2 amplification defines HER2+ subtype, targeted by trastuzumab \citep{slamon1987her2}
 \end{itemize}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{fig3_features.pdf}
+  \caption{Feature selection stability for EN+NMC(P) Stage~2 (HR+ vs TN).
+    \textbf{(A)}~Selection frequency across 1000 outer folds for all 273 merged segments, ranked by frequency.
+    A plateau of $\sim$15 features are selected in $>$90\% of folds, followed by a sharp drop-off.
+    \textbf{(B)}~Top 10 most frequently selected regions with chromosomal coordinates.
+    Regions on chr12q and chr5q dominate Stage~2 feature selection, consistent with known HR+/TN biology distinct from the chr17q12 ERBB2 signal used in Stage~1.}
+  \label{fig:features}
+\end{figure*}
 
 \subsection{Accuracy estimate}
 \label{sec:estimate}
