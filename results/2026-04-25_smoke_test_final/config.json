@@ -1,0 +1,22 @@
+{
+  "hierarchical_nested_cv_runner": {
+    "timestamp": "2026-04-25T01:31:37.101200",
+    "command": "code/hierarchical_nested_cv_runner.py --pipeline nmc_pens_ensemble --repeat 1002 --config config_files/local.yaml --name smoke_test_final --input /mnt/d/Coursework/TB-Project/results/2026-04-24_server_run_v2/preprocessing/data/train_merged.tsv",
+    "stage2_pipeline": "nmc_pens_ensemble",
+    "repeat": 1002,
+    "config_file": "/mnt/d/Coursework/TB-Project/config_files/local.yaml"
+  },
+  "analyse_nested_cv": {
+    "timestamp": "2026-04-25T01:32:17.331123",
+    "command": "code/analyse_nested_cv.py --name smoke_test_final --config config_files/local.yaml --phase hierarchical_nested_cv",
+    "config_file": "/mnt/d/Coursework/TB-Project/config_files/local.yaml",
+    "n_fold_files": 17,
+    "n_total_folds": 85,
+    "n_pipelines": 9,
+    "n_repeats": 2,
+    "primary_metric": "balanced_accuracy",
+    "winning_pipeline": "kw_nmc_pens",
+    "winning_mean_bal_acc": 0.8382936999999999,
+    "friedman_p": null
+  }
+}
