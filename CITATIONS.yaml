@@ -1,0 +1,117 @@
+# CITATIONS.yaml - TB-Project (CATS)
+# Canonical citation registry for the project.
+# Usage: load_citations() from core_utils.citations to access programmatically.
+
+- id: wessels2005
+  title: "A protocol for building and evaluating predictors of disease state based on microarray data"
+  authors:
+    - Wessels, L.F.A.
+    - Reinders, M.J.T.
+    - Hart, A.A.M.
+    - Veenman, C.J.
+    - Dai, H.
+    - He, Y.D.
+    - van't Veer, L.J.
+  year: 2005
+  journal: "Bioinformatics"
+  doi: "10.1093/bioinformatics/bti429"
+  url: ""
+  bibtex: |
+    @article{wessels2005protocol,
+      title={A protocol for building and evaluating predictors of disease state based on microarray data},
+      author={Wessels, Lodewyk FA and Reinders, Marcel JT and Hart, Arno AM and Veenman, Cor J and Dai, Hongyue and He, Yudong D and van't Veer, Laura J},
+      journal={Bioinformatics},
+      volume={21},
+      number={19},
+      pages={3755--3762},
+      year={2005},
+      publisher={Oxford University Press}
+    }
+  usage: "Key reference for research question - simple classifiers with univariate filtering outperform complex pipelines on expression data."
+
+- id: nadeau2003
+  title: "Inference for the Generalization Error"
+  authors:
+    - Nadeau, C.
+    - Bengio, Y.
+  year: 2003
+  journal: "Machine Learning"
+  doi: "10.1023/A:1024068626366"
+  url: ""
+  bibtex: |
+    @article{nadeau2003inference,
+      title={Inference for the generalization error},
+      author={Nadeau, Claude and Bengio, Yoshua},
+      journal={Machine learning},
+      volume={52},
+      pages={239--281},
+      year={2003},
+      publisher={Springer}
+    }
+  usage: "Corrected repeated k-fold CV test for comparing classifiers."
+
+- id: tibshirani2002
+  title: "Diagnosis of multiple cancer types by shrunken centroids of gene expression"
+  authors:
+    - Tibshirani, R.
+    - Hastie, T.
+    - Narasimhan, B.
+    - Chu, G.
+  year: 2002
+  journal: "Proceedings of the National Academy of Sciences"
+  doi: "10.1073/pnas.082099299"
+  url: ""
+  bibtex: |
+    @article{tibshirani2002diagnosis,
+      title={Diagnosis of multiple cancer types by shrunken centroids of gene expression},
+      author={Tibshirani, Robert and Hastie, Trevor and Narasimhan, Balasubramanian and Chu, Gilbert},
+      journal={Proceedings of the National Academy of Sciences},
+      volume={99},
+      number={10},
+      pages={6567--6572},
+      year={2002},
+      publisher={National Acad Sciences}
+    }
+  usage: "Nearest centroid classifier methodology for gene expression data."
+
+- id: breiman2001
+  title: "Random Forests"
+  authors:
+    - Breiman, L.
+  year: 2001
+  journal: "Machine Learning"
+  doi: "10.1023/A:1010933404324"
+  url: ""
+  bibtex: |
+    @article{breiman2001random,
+      title={Random forests},
+      author={Breiman, Leo},
+      journal={Machine learning},
+      volume={45},
+      pages={5--32},
+      year={2001},
+      publisher={Springer}
+    }
+  usage: "Random Forest classifier used in the 2x2 design."
+
+- id: zou2005
+  title: "Regularization and variable selection via the elastic net"
+  authors:
+    - Zou, H.
+    - Hastie, T.
+  year: 2005
+  journal: "Journal of the Royal Statistical Society: Series B"
+  doi: "10.1111/j.1467-9868.2005.00503.x"
+  url: ""
+  bibtex: |
+    @article{zou2005regularization,
+      title={Regularization and variable selection via the elastic net},
+      author={Zou, Hui and Hastie, Trevor},
+      journal={Journal of the royal statistical society: series B (statistical methodology)},
+      volume={67},
+      number={2},
+      pages={301--320},
+      year={2005},
+      publisher={Wiley Online Library}
+    }
+  usage: "Elastic Net feature selection method used in the 2x2 design."

@@ -2,7 +2,7 @@
 
 Builds sklearn Pipelines ready for GridSearchCV. Hyperparameter grids,
 repeat counts, and fixed pipeline parameters are loaded from YAML
-config files in config_files/ via :mod:`utils.config_loader`.
+config files in configs/ via :mod:`utils.config_loader`.
 """
 
 from sklearn.ensemble import RandomForestClassifier

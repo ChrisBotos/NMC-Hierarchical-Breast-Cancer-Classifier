@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
   - python=3.10
+  # Core.
   - numpy>=1.23
   - pandas>=1.5
   - scipy>=1.9
@@ -13,5 +14,12 @@ dependencies:
   - joblib>=1.2
   - statsmodels>=0.13
   - rich>=13.0
+  - tqdm>=4.65
   - pyyaml>=6.0
   - python-docx>=0.8
+  # Dev.
+  - pytest>=7.0
+  - pytest-cov>=4.0
+  - black>=23.0
+  - ruff>=0.1.0
+  - pre-commit>=3.0

@@ -9,7 +9,7 @@
 # Usage:
 #     bash code/run_local.sh                              # default_run, local.yaml
 #     bash code/run_local.sh my_experiment                # custom run name
-#     bash code/run_local.sh my_experiment config_files/server.yaml  # custom config
+#     bash code/run_local.sh my_experiment configs/server.yaml  # custom config
 
 set -euo pipefail
 
@@ -19,7 +19,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Arguments.
 RUN_NAME="${1:-default_run}"
-CONFIG_FILE="${2:-config_files/local.yaml}"
+CONFIG_FILE="${2:-configs/local.yaml}"
 
 # Resolve config path relative to project root if not absolute.
 if [[ "$CONFIG_FILE" != /* ]]; then

@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "tb-project"
+version = "0.1.0"
+description = "Classification Assessment of Tumor Subtypes (CATS) - breast cancer molecular subtype classification from aCGH data."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Alexandros Michailidis"},
+    {name = "Antonie Wagner"},
+    {name = "Christos Botos"},
+    {name = "Yan Qiao"},
+]
+
+dependencies = [
+    "numpy>=1.23",
+    "scipy>=1.9",
+    "pandas>=1.5",
+    "matplotlib>=3.6",
+    "seaborn>=0.12",
+    "scikit-learn>=1.1",
+    "joblib>=1.2",
+    "statsmodels>=0.13",
+    "rich>=13.0",
+    "tqdm>=4.65",
+    "pyyaml>=6.0",
+    "python-docx>=0.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["code"]
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"

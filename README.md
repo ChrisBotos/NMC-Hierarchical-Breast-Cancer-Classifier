@@ -69,7 +69,7 @@ TB-Project/
   code/                    All scripts and utilities
   docs/                    Phase documentation
   reference_documents/     Assignment instructions and references
-  config_files/            YAML configs for local and server runs
+  configs/            YAML configs for local and server runs
 ```
 
 See `CLAUDE.md` for full rules, directory layout, and coding conventions.

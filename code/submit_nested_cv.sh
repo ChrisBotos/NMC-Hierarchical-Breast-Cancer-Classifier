@@ -8,9 +8,9 @@
 # and runs the Python script against the frozen config snapshot.
 #
 # Usage:
-#     bash code/submit_nested_cv.sh                                              # default_run, config_files/server.yaml
+#     bash code/submit_nested_cv.sh                                              # default_run, configs/server.yaml
 #     bash code/submit_nested_cv.sh my_experiment                                # custom run name, server config
-#     bash code/submit_nested_cv.sh my_experiment config_files/local.yaml        # custom run name + local config
+#     bash code/submit_nested_cv.sh my_experiment configs/local.yaml        # custom run name + local config
 #
 # Array mapping:
 #     Task ID = pipeline_index * n_repeats + (repeat - 1)
@@ -124,7 +124,7 @@ fi
 
 # Arguments (positional, only used outside SLURM).
 RUN_NAME="${1:-default_run}"
-CONFIG_FILE="${2:-config_files/server.yaml}"
+CONFIG_FILE="${2:-configs/server.yaml}"
 
 # Resolve config path relative to project root if not absolute.
 if [[ "$CONFIG_FILE" != /* ]]; then

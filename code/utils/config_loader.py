@@ -1,18 +1,19 @@
 """Configuration file loader for the TB-Project.
 
-Loads YAML configuration files from config_files/ and provides
+Loads YAML configuration files from configs/ and provides
 accessor functions for experiment parameters. Supports bare names
-(e.g. "local", "server") that resolve to config_files/<name>.yaml,
+(e.g. "local", "server") that resolve to configs/<name>.yaml,
 as well as full file paths.
 """
 
+import json
 from pathlib import Path
 
 import yaml
 
 # code/utils/config_loader.py -> code/utils -> code -> TB-Project.
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
-CONFIG_DIR = PROJECT_DIR / "config_files"
+CONFIG_DIR = PROJECT_DIR / "configs"
 DEFAULT_CONFIG = CONFIG_DIR / "local.yaml"
 
 # Backward-compatible aliases for the old trial/production names.
@@ -25,9 +26,10 @@ _ALIASES = {
 def load_config(config_path=None):
     """Load a YAML configuration file.
 
-    Supports three calling conventions:
-      - ``load_config()`` loads the default ``config_files/local.yaml``.
-      - ``load_config("server")`` resolves to ``config_files/server.yaml``.
+    Supports YAML (.yaml, .yml) and JSON (.json) files via three
+    calling conventions:
+      - ``load_config()`` loads the default ``configs/local.yaml``.
+      - ``load_config("server")`` resolves to ``configs/server.yaml``.
       - ``load_config("/absolute/path/to/config.yaml")`` loads that file.
 
     The legacy names "trial" and "production" are mapped to "local" and
@@ -55,7 +57,7 @@ def load_config(config_path=None):
 
         config_path = Path(config_path)
 
-        # Support bare names: "server" -> config_files/server.yaml.
+        # Support bare names: "server" -> configs/server.yaml.
         if not config_path.suffix and not config_path.exists():
             config_path = CONFIG_DIR / f"{config_path.name}.yaml"
 
@@ -64,7 +66,10 @@ def load_config(config_path=None):
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
     with open(config_path) as f:
-        config = yaml.safe_load(f)
+        if config_path.suffix == ".json":
+            config = json.load(f)
+        else:
+            config = yaml.safe_load(f)
 
     # Store the source path for logging and reproducibility.
     config["_config_path"] = str(config_path)
@@ -110,3 +115,26 @@ def get_n_repeats(config):
         int: Number of repeats.
     """
     return config["cv"]["n_repeats"]
+
+
+def merge_cli_overrides(config, args):
+    """Merge CLI argument values into a config dictionary.
+
+    Creates a new dictionary. Only ``None`` values from args are skipped;
+    ``0``, ``False``, and ``""`` are valid overrides.
+
+    Args:
+        config (dict): Base configuration dictionary.
+        args (dict or argparse.Namespace): CLI arguments. If a Namespace,
+            it is converted via ``vars()``.
+
+    Returns:
+        dict: Merged configuration (new dict, no mutation of inputs).
+    """
+    if not isinstance(args, dict):
+        args = vars(args)
+    merged = dict(config)
+    for key, value in args.items():
+        if value is not None:
+            merged[key] = value
+    return merged

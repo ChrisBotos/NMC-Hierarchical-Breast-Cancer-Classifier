@@ -20,7 +20,19 @@ from pathlib import Path
 CODE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = CODE_DIR.parent
 DATA_DIR = PROJECT_DIR / "data"
+DATA_RAW_DIR = DATA_DIR / "raw"
+DATA_INTERIM_DIR = DATA_DIR / "interim"
+DATA_PROCESSED_DIR = DATA_DIR / "processed"
+DATA_EXTERNAL_DIR = DATA_DIR / "external"
 RESULTS_DIR = PROJECT_DIR / "results"
+INTERESTING_RESULTS_DIR = PROJECT_DIR / "interesting_results"
+CONFIGS_DIR = PROJECT_DIR / "configs"
+DOCS_DIR = PROJECT_DIR / "docs"
+REPORTS_DIR = PROJECT_DIR / "reports"
+SCRIPTS_DIR = PROJECT_DIR / "scripts"
+NOTEBOOKS_DIR = PROJECT_DIR / "notebooks"
+REFERENCE_DOCS_DIR = PROJECT_DIR / "reference_documents"
+TESTS_DIR = PROJECT_DIR / "tests"
 
 
 def get_phase_dirs(phase_name, tag=""):

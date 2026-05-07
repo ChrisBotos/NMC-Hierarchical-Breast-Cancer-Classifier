@@ -81,7 +81,7 @@ Then update config to include all three indices and names.
 
 ## 5. File-by-File Change List
 
-### 5.1 `config_files/server.yaml`
+### 5.1 `configs/server.yaml`
 
 | Section | Change |
 |---------|--------|
@@ -94,7 +94,7 @@ Then update config to include all three indices and names.
 | `k_ensemble` | Delete entire section |
 | `suspected_mislabels` | Add Array.113 (index TBD) |
 
-### 5.2 `config_files/local.yaml`
+### 5.2 `configs/local.yaml`
 
 Mirror server.yaml structure for local smoke testing:
 - n_repeats: 2 (keep small)
@@ -233,7 +233,7 @@ PREREGISTERED_COMPARISONS = [
 
 ## 6. Config File Structure
 
-Single config file (`config_files/server.yaml`) for the entire run. The SLURM script freezes it as `config_snapshot_hierarchical.yaml` in the run directory.
+Single config file (`configs/server.yaml`) for the entire run. The SLURM script freezes it as `config_snapshot_hierarchical.yaml` in the run directory.
 
 No split base/pens/ensemble configs needed - the SLURM script's phase categorization handles the submission ordering.
 
@@ -447,7 +447,7 @@ The shared information is "which hyperparameter combos are stable across 500 ind
 1. Update `code/utils/constants.py` (pipeline definitions)
 2. Update `code/utils/cv_config.py` (pipeline factory)
 3. Update `code/hierarchical_nested_cv_runner.py` (remove old ensembles, add post-hoc ensemble)
-4. Update `config_files/server.yaml` and `config_files/local.yaml`
+4. Update `configs/server.yaml` and `configs/local.yaml`
 5. Update `code/submit_hierarchical_nested_cv.sh` (three phases, seed_start)
 6. Update `code/analyse_nested_cv.py` (pre-registered vs exploratory)
 7. Determine Array.113 index and update config

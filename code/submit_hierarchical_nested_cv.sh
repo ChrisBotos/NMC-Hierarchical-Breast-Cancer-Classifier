@@ -19,7 +19,7 @@
 # Usage:
 #     bash code/submit_hierarchical_nested_cv.sh                                            # default_run, server config, all pipelines
 #     bash code/submit_hierarchical_nested_cv.sh my_experiment                              # custom run name
-#     bash code/submit_hierarchical_nested_cv.sh my_experiment config_files/local.yaml      # custom run name + config
+#     bash code/submit_hierarchical_nested_cv.sh my_experiment configs/local.yaml      # custom run name + config
 #     bash code/submit_hierarchical_nested_cv.sh --skip kw_rf,en_rf my_experiment           # skip specific pipelines
 #     bash code/submit_hierarchical_nested_cv.sh --only kw_nmc_pens,en_nmc_pens my_run      # only submit listed pipelines
 #     bash code/submit_hierarchical_nested_cv.sh --dependency 12345 --only kw_nmc_pens my_run  # wait for job 12345
@@ -168,7 +168,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 RUN_NAME="${POSITIONAL_ARGS[0]:-default_run}"
-CONFIG_FILE="${POSITIONAL_ARGS[1]:-config_files/server.yaml}"
+CONFIG_FILE="${POSITIONAL_ARGS[1]:-configs/server.yaml}"
 
 # Resolve config path relative to project root if not absolute.
 if [[ "$CONFIG_FILE" != /* ]]; then

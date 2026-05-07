@@ -3,6 +3,7 @@
 # ===== IDE =====
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 
@@ -47,10 +48,17 @@ data/**/*
 results/**/*
 !results/**/
 !results/**/.gitkeep
+!results/**/config.json
+!results/**/report.md
 !results/2026-04-22_server_run_flat_nested_CV/**
 !results/2026-04-22_server_run_hierarchical_nested_CV/**
 !results/2026-04-24_server_run_v2/**
 !results/2026-04-25_final_hierarchical/**
+
+# ===== Interesting results (keep findings.md, ignore supporting files) =====
+interesting_results/*
+!interesting_results/.gitkeep
+!interesting_results/findings.md
 
 # ===== Model artifacts =====
 model/model.pkl
@@ -64,3 +72,6 @@ Thumbs.db
 *.tar.gz
 *.rar
 /.claudeignore
+
+# ===== Notebooks (keep structure, ignore outputs) =====
+notebooks/*.html

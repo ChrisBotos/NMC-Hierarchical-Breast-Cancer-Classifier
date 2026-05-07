@@ -1009,7 +1009,7 @@ def parse_args():
         default="local",
         help=(
             "Config file path or bare name. Bare names resolve to "
-            "config_files/<name>.yaml. (default: local)."
+            "configs/<name>.yaml. (default: local)."
         ),
     )
     parser.add_argument(

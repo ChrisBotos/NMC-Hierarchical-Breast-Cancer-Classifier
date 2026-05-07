@@ -17,7 +17,7 @@ Description:
 
 Usage:
     python3 code/analyse_nested_cv.py --name default_run --config local
-    python3 code/analyse_nested_cv.py --name server_run --config config_files/server.yaml --phase hierarchical_nested_cv
+    python3 code/analyse_nested_cv.py --name server_run --config configs/server.yaml --phase hierarchical_nested_cv
 
 Dependencies:
     Python >= 3.10.
@@ -1663,7 +1663,7 @@ def parse_args():
         default="local",
         help=(
             "Config file path or bare name. Bare names resolve to "
-            "config_files/<name>.yaml. (default: local)."
+            "configs/<name>.yaml. (default: local)."
         ),
     )
     parser.add_argument(

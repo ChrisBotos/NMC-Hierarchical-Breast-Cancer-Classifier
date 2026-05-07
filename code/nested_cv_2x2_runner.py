@@ -19,8 +19,8 @@ Description:
     resume from the last completed fold.
 
 Usage:
-    python3 code/nested_cv_2x2_runner.py --pipeline kw_nmc --repeat 1 --config config_files/local.yaml
-    python3 code/nested_cv_2x2_runner.py --pipeline en_rf --repeat 3 --config config_files/server.yaml
+    python3 code/nested_cv_2x2_runner.py --pipeline kw_nmc --repeat 1 --config configs/local.yaml
+    python3 code/nested_cv_2x2_runner.py --pipeline en_rf --repeat 3 --config configs/server.yaml
 
 Dependencies:
     Python >= 3.10.
@@ -252,7 +252,7 @@ def parse_args():
         default="local",
         help=(
             "Config file path or bare name. Bare names resolve to "
-            "config_files/<name>.yaml. Legacy names 'trial' and "
+            "configs/<name>.yaml. Legacy names 'trial' and "
             "'production' map to 'local' and 'server'. "
             "(default: local)."
         ),
