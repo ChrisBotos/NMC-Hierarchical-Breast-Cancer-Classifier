@@ -1,16 +1,68 @@
-import sys
-import argparse
-import joblib
-import pandas as pd
-import numpy as np
+"""
+Group 9.
+Authors:
+    Alexandros Michailidis (2903034).
+    Antonie Wagner (2903383).
+    Christos Botos (2878553).
+    Yan Qiao (2874296).
+Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
-from utils.cv_components import KruskalWallisSelector, ElasticNetSelector, NearestCentroidWithProba
+Script Name: run_model.py.
+Description:
+    Load the serialised hierarchical classifier and predict subtypes for
+    new validation samples. Handles region merging from raw aCGH input
+    and applies the two-stage prediction (HER2+ vs rest, then HR+ vs TN).
+
+Usage:
+    python3 model/run_model.py -i data/Validation_call.tsv -m model/model.pkl -o output.txt
+
+Dependencies:
+    Python >= 3.10.
+    scikit-learn, pandas, numpy, joblib.
+"""
+
+import argparse
+import sys
+from pathlib import Path
+
+import joblib
+import numpy as np
+import pandas as pd
+
+# Ensure code/ is on sys.path so joblib can resolve custom classes
+# (KruskalWallisSelector, ElasticNetSelector, NearestCentroidWithProba)
+# that were pickled with module paths under utils.cv_components.
+_CODE_DIR = Path(__file__).resolve().parent.parent / "code"
+if str(_CODE_DIR) not in sys.path:
+    sys.path.insert(0, str(_CODE_DIR))
+
+from utils.cv_components import (  # noqa: E402
+    ElasticNetSelector,
+    KruskalWallisSelector,
+    NearestCentroidWithProba,
+)
 
 
 def build_consensus_matrix(cn_df, merge_map, sample_cols):
+    """Merge raw genomic regions into consensus segments using the merge map.
+
+    Applies median aggregation to collapse groups of correlated raw regions
+    into single consensus segments, matching the preprocessing used during
+    training.
+
+    Args:
+        cn_df (pd.DataFrame): Raw copy-number data with genomic columns
+            and sample columns.
+        merge_map (dict): Mapping from segment ID (str) to list of raw
+            region indices.
+        sample_cols (list[str]): Sample column names to extract.
+
+    Returns:
+        pd.DataFrame: Merged consensus matrix with segments as rows and
+            samples as columns.
+    """
     data = cn_df[sample_cols].values.astype(float)
     n_segments = len(merge_map)
-
     cn_matrix = np.empty((n_segments, len(sample_cols)))
 
     for seg_id_str in merge_map:
@@ -22,26 +74,30 @@ def build_consensus_matrix(cn_df, merge_map, sample_cols):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i", required=True)
-    parser.add_argument("-m", required=True)
-    parser.add_argument("-o", required=True)
+    """Load model, preprocess validation data, and generate predictions."""
+    parser = argparse.ArgumentParser(
+        description="Predict breast cancer subtypes from aCGH data.",
+    )
+    parser.add_argument("-i", required=True, help="Input validation TSV.")
+    parser.add_argument("-m", required=True, help="Path to model.pkl.")
+    parser.add_argument("-o", required=True, help="Output prediction file.")
     args = parser.parse_args()
 
-    # ===== load model =====
-    model = joblib.load(args.m)
+    """Load Model"""
 
+    model = joblib.load(args.m)
     stage1 = model["stage1_pipeline"]
     stage2_models = model["stage2_pipelines"]
     le_s2 = model["label_encoder_stage2"]
     feature_names = model["feature_names"]
     merge_map = model["merge_map"]
 
-    # ===== load raw validation data =====
+    """Load and Preprocess Validation Data"""
+
     val_df = pd.read_csv(args.i, sep="\t")
     sample_cols = [c for c in val_df.columns if c.startswith("Array")]
 
-    # ===== merge 2834 → 273 =====
+    # Merge raw regions into consensus segments.
     val_merged = build_consensus_matrix(val_df, merge_map, sample_cols)
 
     X_val = val_merged.T
@@ -49,11 +105,13 @@ def main():
     X_val.index = sample_cols
     X_val = X_val[feature_names]
 
-    # ===== Stage 1: HER2+ vs rest =====
+    """Stage 1: HER2+ vs Rest"""
+
     proba = stage1.predict_proba(X_val)[:, 1]
     pred_s1 = (proba > 0.5).astype(int)
 
-    # ===== Stage 2: HR+ vs TN =====
+    """Stage 2: HR+ vs Triple Neg"""
+
     mask = (pred_s1 == 0)
     X_val_s2 = X_val[mask]
 
@@ -61,26 +119,27 @@ def main():
     avg_proba = np.mean(probs, axis=0)
     pred_s2 = np.argmax(avg_proba, axis=1)
 
-    # ===== combine predictions =====
+    """Combine Predictions"""
+
     final_pred = []
     idx = 0
-
     for i in range(len(pred_s1)):
         if pred_s1[i] == 1:
             final_pred.append("HER2+")
         else:
             label = le_s2.inverse_transform([pred_s2[idx]])[0]
-            final_pred.append("HR+" if label == 1 else "Triple Neg")
+            if label == 1:
+                final_pred.append("HR+")
+            else:
+                final_pred.append("Triple Neg")
             idx += 1
 
-    # ===== save output =====
-    out_df = pd.DataFrame({
-        "Sample": X_val.index,
-        "Subgroup": final_pred
-    })
+    """Save Output"""
 
-    out_df.columns = ['"Sample"', '"Subgroup"']
-    out_df.to_csv(args.o, sep="\t", index=False)
+    with open(args.o, "w", newline="\n") as f:
+        f.write('"Sample"\t"Subgroup"\n')
+        for sample, label in zip(X_val.index, final_pred):
+            f.write(f"{sample}\t{label}\n")
 
 
 if __name__ == "__main__":

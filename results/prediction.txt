@@ -1,4 +1,4 @@
-"""Sample"""	"""Subgroup"""
+"Sample"	"Subgroup"
 Array.1	HR+
 Array.61	HER2+
 Array.70	HER2+
@@ -35,14 +35,14 @@ Array.127	Triple Neg
 Array.119	HR+
 Array.157	HR+
 Array.54	HER2+
-Array.115	HR+
+Array.115	Triple Neg
 Array.121	HER2+
 Array.122	HER2+
 Array.158	Triple Neg
 Array.87	HER2+
 Array.28	HER2+
 Array.45	HR+
-Array.155	HR+
+Array.155	Triple Neg
 Array.12	HER2+
 Array.74	HER2+
 Array.26	HR+

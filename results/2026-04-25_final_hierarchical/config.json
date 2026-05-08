@@ -69,5 +69,10 @@
     "winning_pipeline": "en_nmc_pens",
     "winning_mean_bal_acc": 0.759282749,
     "friedman_p": 1.7785510300550747e-81
+  },
+  "final_training": {
+    "timestamp": "2026-05-08T21:07:23.776085",
+    "command": "code/final_training.py --name final_hierarchical",
+    "plateau_size": 15
   }
 }
