@@ -155,6 +155,7 @@ for i in range(len(pred_s1)):
         
         idx_s2 += 1
 # %%
+#make prediction for validation set and save to file
 sample_names = X_val.index
 
 pred_df = pd.DataFrame({
@@ -169,6 +170,7 @@ pred_df.to_csv(
     header=['"Sample"', '"Subgroup"']
 )
 # %%
+#generate model pkl file for submission
 import joblib
 import json
 with open(RESULTS_DIR / "2026-04-25_final_hierarchical/preprocessing/data/merge_map.json") as f:
