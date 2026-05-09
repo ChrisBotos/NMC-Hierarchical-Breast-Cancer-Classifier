@@ -69,15 +69,16 @@
     "friedman_p": 8.11309020717538e-17
   },
   "hierarchical_nested_cv_runner": {
-    "timestamp": "2026-04-25T00:13:13.079043",
-    "command": "/data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline en_nmc_pens --repeat 50 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml --name server_run_v2",
-    "stage2_pipeline": "en_nmc_pens",
-    "repeat": 50,
-    "config_file": "/data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_hierarchical.yaml",
+    "timestamp": "2026-05-10T01:11:42.362001",
+    "command": "/data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline en_nmc_pens --repeat 1199 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_pens_comparison.yaml --name server_run_v2 --max-plateau-size 0 --skip-if-complete",
+    "stage2_pipeline": "en_nmc_pens_pall",
+    "repeat": 1199,
+    "config_file": "/data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_pens_comparison.yaml",
     "input_path": "/data/cbotos/TB-Project/results/2026-04-24_server_run_v2/preprocessing/data/train_merged.tsv",
-    "mean_combined_balanced_accuracy": 0.8567459999999999,
+    "max_plateau_size": 0,
+    "mean_combined_balanced_accuracy": 0.793254,
     "mean_stage1_balanced_accuracy": 1.0,
-    "mean_stage2_balanced_accuracy": 0.785119
+    "mean_stage2_balanced_accuracy": 0.6898812
   },
   "submit_hierarchical_nested_cv": {
     "timestamp": "2026-04-25T00:11:59+03:00",
@@ -99,5 +100,13 @@
       "cpus_per_task": 1,
       "max_concurrent_jobs": 50
     }
-  }
-}
+  },
+  "submit_pens_comparison": {
+    "timestamp": "2026-05-10T00:53:22+03:00",
+    "run_name": "server_run_v2",
+    "config_file": "/data/cbotos/TB-Project/configs/pens_comparison.yaml",
+    "frozen_config": "/data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_pens_comparison.yaml",
+    "n_repeats": 200,
+    "seed_start": 1001,
+    "seed_range": "1001-1200",
+    "plateau_sizes": 
