@@ -239,20 +239,24 @@ def retrain_plateau_models(plateau_params, base_pipeline_name,
             feature_intersection, feature_frequency)
 
 
-def compute_pooled_plateau(base_pipeline_name, run_dir, log):
+def compute_pooled_plateau(base_pipeline_name, run_dir, log,
+                           max_size=None):
     """Read all inner_cv.csv files for a base pipeline, pool scores,
     and identify the stable plateau.
 
     Globs across all phase directories in the run for fold_details files
     matching the base pipeline. Pools mean_test_score across all folds
     and repeats (typically 250 observations per combo), then applies
-    the standard plateau threshold (best_mean - best_std) with a cap
-    at MAX_PLATEAU_SIZE.
+    the standard plateau threshold (best_mean - best_std) with an
+    optional cap on ensemble size.
 
     Args:
         base_pipeline_name (str): Base pipeline name (e.g. "kw_nmc").
         run_dir (Path): Path to the run directory.
         log (logging.Logger): Logger instance.
+        max_size (int or None): Maximum plateau ensemble size. None uses
+            MAX_PLATEAU_SIZE from constants. 0 means no cap (all
+            qualifying configs are included).
 
     Returns:
         tuple: (plateau_params_list, n_total_combos, pooled_best_score,
@@ -329,12 +333,18 @@ def compute_pooled_plateau(base_pipeline_name, run_dir, log):
         np.argsort(pooled_mean[plateau_indices])[::-1]
     ]
 
-    if len(plateau_indices) > MAX_PLATEAU_SIZE:
+    effective_max = MAX_PLATEAU_SIZE if max_size is None else max_size
+    if effective_max > 0 and len(plateau_indices) > effective_max:
         log.info(
             "Pooled plateau capped: %d -> %d combos",
-            len(plateau_indices), MAX_PLATEAU_SIZE,
+            len(plateau_indices), effective_max,
         )
-        plateau_indices = plateau_indices[:MAX_PLATEAU_SIZE]
+        plateau_indices = plateau_indices[:effective_max]
+    elif effective_max == 0:
+        log.info(
+            "Pooled plateau uncapped: using all %d qualifying combos",
+            len(plateau_indices),
+        )
 
     # Read one matching file to extract the actual param values per combo.
     ref_df = None
@@ -1041,6 +1051,14 @@ def parse_args():
         action="store_true",
         help="Exit immediately (code 0) if the final CSV already exists.",
     )
+    parser.add_argument(
+        "--max-plateau-size",
+        type=int,
+        default=-1,
+        help="Override MAX_PLATEAU_SIZE for plateau ensembles. "
+             "-1 = use constant (default), 0 = no cap (all qualifying), "
+             "N > 0 = cap at N.",
+    )
     return parser.parse_args()
 
 
@@ -1058,8 +1076,19 @@ def main():
     # Load experiment configuration.
     config = load_config(args.config)
 
+    # Compute output tag for file differentiation when --max-plateau-size
+    # is used. The canonical pipeline name (args.pipeline) is kept for all
+    # logic lookups; output_tag is used for CSV, checkpoint, and log names.
+    mps = args.max_plateau_size
+    if mps == -1:
+        output_tag = args.pipeline
+    elif mps == 0:
+        output_tag = f"{args.pipeline}_pall"
+    else:
+        output_tag = f"{args.pipeline}_p{mps}"
+
     # Set up run directory and logging.
-    tag = f"{args.pipeline}_r{args.repeat}"
+    tag = f"{output_tag}_r{args.repeat}"
     fig_dir, data_dir, log_dir, run_dir = get_run_dirs_no_replace(
         args.name, "hierarchical_nested_cv",
     )
@@ -1071,10 +1100,16 @@ def main():
     log.info("Config: %s", config["_config_path"])
     log.info("Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)")
     log.info("Stage 2: %s (HR+ vs Triple Neg)", args.pipeline)
+    if mps != -1:
+        log.info(
+            "Plateau size override: %s",
+            "no cap (all qualifying)" if mps == 0 else str(mps),
+        )
+    log.info("Output tag: %s", output_tag)
     log.info("Repeat seed: %d", args.repeat)
 
     # Early exit if already complete.
-    out_csv = csv_path(data_dir, args.pipeline, args.repeat)
+    out_csv = csv_path(data_dir, output_tag, args.repeat)
     if args.skip_if_complete and out_csv.exists():
         log.info(
             "Final CSV already exists: %s. Skipping (--skip-if-complete).",
@@ -1106,7 +1141,7 @@ def main():
         return
 
     # Checkpoint handling.
-    ckpt = checkpoint_path(data_dir, args.pipeline, args.repeat)
+    ckpt = checkpoint_path(data_dir, output_tag, args.repeat)
     prior_folds = []
 
     if args.force_restart:
@@ -1176,9 +1211,11 @@ def main():
 
     if args.pipeline in PLATEAU_ENSEMBLE_BASE:
         base_name = PLATEAU_ENSEMBLE_BASE[args.pipeline]
+        plateau_max = None if mps == -1 else mps
         (plateau_params, n_combos, pooled_best_score,
          pooled_best_std, threshold, pooled_n_files) = (
-            compute_pooled_plateau(base_name, run_dir, log)
+            compute_pooled_plateau(base_name, run_dir, log,
+                                   max_size=plateau_max)
         )
         if not plateau_params:
             log.error(
@@ -1211,7 +1248,7 @@ def main():
     combined_scores = [r["combined_bal_acc"] for r in fold_results]
 
     log.info("")
-    log.info("Summary for %s repeat %d:", args.pipeline, args.repeat)
+    log.info("Summary for %s repeat %d:", output_tag, args.repeat)
     log.info(
         "  Stage 1 (HER2+ vs rest):  %.4f (+/- %.4f)",
         np.mean(s1_scores), np.std(s1_scores),
@@ -1255,10 +1292,11 @@ def main():
     # Save run config snapshot.
     save_config(
         run_dir, "hierarchical_nested_cv_runner",
-        stage2_pipeline=args.pipeline,
+        stage2_pipeline=output_tag,
         repeat=args.repeat,
         config_file=config["_config_path"],
         input_path=str(args.input),
+        max_plateau_size=mps if mps != -1 else "default",
         mean_combined_balanced_accuracy=float(np.mean(combined_scores)),
         mean_stage1_balanced_accuracy=float(np.mean(s1_scores)),
         mean_stage2_balanced_accuracy=float(np.nanmean(s2_scores)),
