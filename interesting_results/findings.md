@@ -4,6 +4,31 @@ Curated log of notable findings, in reverse-chronological order.
 
 ---
 
+### 2026-05-09 - Why NMC beats logistic regression: constrained linear classifier on discrete data
+
+**Category:** discussion_point
+**Status:** confirmed
+
+**Summary:**
+NMC is itself a linear classifier (its decision boundary is the perpendicular bisector between class centroids). It beats ElasticNet logistic regression not because it is non-linear or fundamentally different, but because it is a MORE CONSTRAINED linear classifier with fewer free parameters. In the small-sample discrete-feature regime (n=72, p=50, features in {-1,0,1,2}), this constraint prevents overfitting.
+
+**Key argument:**
+- Logistic regression with k features has k free parameters (one coefficient per feature), each independently optimized.
+- NMC estimates 2 centroids for binary classification. The decision boundary is fully determined as the perpendicular bisector - its orientation cannot be freely adjusted.
+- With ~72 Stage 2 samples and top_k=50 features, logistic regression has enough freedom to overfit even with L1/L2 regularization. NMC cannot overfit as easily because the boundary shape is geometrically locked.
+- For discrete copy-number data (-1, 0, 1, 2), all features live on the same scale. NMC's implicit equal-variance assumption (perpendicular bisector) is approximately satisfied. This constraint does not hurt - it helps.
+- "Average copy-number state per class per region" (what centroids compute) is a biologically meaningful quantity. A linear logistic boundary has no such natural interpretation for discrete ordinal data.
+
+**EN_NMC vs standalone EN:**
+- The ElasticNet in EN_NMC uses the exact same model (LogisticRegression with elasticnet penalty) as standalone EN. Feature selection is identical.
+- The difference is purely in classification: EN_NMC discards the logistic coefficients after selection and trains NMC from scratch on the selected features.
+- EN is a better selector than classifier for this data. NMC is a better classifier given the selected features. Separating the two roles outperforms a single model doing both.
+
+**Implications for the paper discussion:**
+This is the bias-variance tradeoff in action. NMC wins not through model complexity but through principled constraint. This extends Wessels et al.'s finding: simple classifiers win because their inductive bias (here: centroid-based, equal-variance) happens to match the structure of discrete genomic data. The lesson is not "always use simple models" but "match model assumptions to data structure."
+
+---
+
 ### 2026-04-25 - Stage 1 threshold bug fix eliminates pathological tiebreaker artifacts
 
 **Source run:** `results/2026-04-25_final_hierarchical/hierarchical_nested_cv/`
