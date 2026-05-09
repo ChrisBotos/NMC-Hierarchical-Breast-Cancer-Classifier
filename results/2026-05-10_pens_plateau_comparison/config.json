@@ -1,0 +1,23 @@
+{
+  "submit_pens_comparison": {
+    "timestamp": "2026-05-10T00:53:22+03:00",
+    "run_name": "pens_plateau_comparison",
+    "description": "Plateau ensemble size comparison for EN+NMC pipeline. Tests n_plateau=50, 80, and unlimited to determine optimal ensemble size.",
+    "config_file": "configs/pens_comparison.yaml",
+    "n_repeats": 200,
+    "seed_start": 1001,
+    "seed_range": "1001-1200",
+    "plateau_sizes": [
+      50,
+      200,
+      0
+    ],
+    "plateau_sizes_actual": {
+      "p50": 50,
+      "p200": 80,
+      "pall": 80
+    },
+    "pipeline": "en_nmc_pens",
+    "note": "p200 and pall produced identical results (both resolved to n_plateau=80). Original en_nmc_pens uses n_plateau=15."
+  }
+}

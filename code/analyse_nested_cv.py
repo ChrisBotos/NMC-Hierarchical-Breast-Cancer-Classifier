@@ -27,6 +27,7 @@ Dependencies:
 """Imports and Configuration"""
 
 import argparse
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -65,13 +66,17 @@ def get_pipeline_order(phase, all_results):
     to hierarchical ordering if any hierarchical-only pipeline names are found
     in the data. Otherwise uses the original 4-pipeline ordering.
 
+    Any pipelines present in the data but absent from the canonical ordering
+    (e.g. filename-derived variants like en_nmc_pens_p50) are appended in
+    sorted order so they are not silently excluded from analysis.
+
     Args:
         phase (str): Phase directory name (e.g. 'nested_cv_2x2',
             'hierarchical_nested_cv').
         all_results (pd.DataFrame): Loaded fold results with pipeline column.
 
     Returns:
-        tuple: Canonical pipeline name ordering.
+        tuple: Pipeline name ordering covering all pipelines in the data.
     """
     actual_pipelines = set(all_results["pipeline"].unique())
     hierarchical_only = {
@@ -81,18 +86,47 @@ def get_pipeline_order(phase, all_results):
 
     if phase in ("hierarchical_nested_cv",) \
             or actual_pipelines & hierarchical_only:
-        return PIPELINE_NAMES
-    return FLAT_PIPELINE_NAMES
+        canonical = PIPELINE_NAMES
+    else:
+        canonical = FLAT_PIPELINE_NAMES
+
+    # Append any data-present pipelines not in the canonical ordering.
+    extra = sorted(actual_pipelines - set(canonical))
+    if extra:
+        return tuple(list(canonical) + extra)
+    return canonical
 
 
 """Data Loading and Aggregation"""
+
+
+def _extract_pipeline_from_filename(filepath):
+    """Extract the full pipeline name (including variant suffix) from a fold results filename.
+
+    Filenames follow the pattern: fold_results_<pipeline_name>_r<repeat>.csv
+    where <pipeline_name> may include variant suffixes like _p50, _p200, _pall.
+
+    Args:
+        filepath (Path): Path to a fold_results CSV file.
+
+    Returns:
+        str or None: Extracted pipeline name, or None if the filename
+            does not match the expected pattern.
+    """
+    match = re.match(r"fold_results_(.+)_r(\d+)\.csv", filepath.name)
+    if match:
+        return match.group(1)
+    return None
 
 
 def load_fold_results(nested_cv_data_dir, log):
     """Load and concatenate all fold result CSVs from the nested CV phase.
 
     Globs for fold_results_*.csv files in the given directory and
-    concatenates them into a single DataFrame.
+    concatenates them into a single DataFrame. Pipeline names are derived
+    from filenames rather than CSV contents to correctly disambiguate
+    variants (e.g. en_nmc_pens_p50 vs en_nmc_pens_p200) that share the
+    same internal pipeline column value.
 
     Args:
         nested_cv_data_dir (Path): Path to nested_cv_2x2/data/ directory.
@@ -114,7 +148,14 @@ def load_fold_results(nested_cv_data_dir, log):
         )
 
     log.info("Found %d fold result files.", len(csv_files))
-    dfs = [pd.read_csv(f) for f in csv_files]
+    dfs = []
+    for f in csv_files:
+        df = pd.read_csv(f)
+        # Derive the pipeline name from the filename to disambiguate variants.
+        fname_pipeline = _extract_pipeline_from_filename(f)
+        if fname_pipeline is not None:
+            df["_fname_pipeline"] = fname_pipeline
+        dfs.append(df)
     all_results = pd.concat(dfs, ignore_index=True)
 
     # Harmonise column names from hierarchical runner to match flat runner.
@@ -131,6 +172,19 @@ def load_fold_results(nested_cv_data_dir, log):
             columns={k: v for k, v in rename_map.items() if k in all_results.columns},
         )
         log.info("Renamed hierarchical columns to standard analysis names.")
+
+    # Override pipeline column with filename-derived name when variants exist.
+    if "_fname_pipeline" in all_results.columns:
+        internal_names = all_results["pipeline"].unique()
+        fname_names = all_results["_fname_pipeline"].unique()
+        if len(fname_names) > len(internal_names):
+            log.info(
+                "Filename-derived pipeline names (%d) exceed internal names (%d); "
+                "using filename variants for disambiguation.",
+                len(fname_names), len(internal_names),
+            )
+            all_results["pipeline"] = all_results["_fname_pipeline"]
+        all_results = all_results.drop(columns=["_fname_pipeline"])
 
     log.info(
         "Aggregated %d fold rows across %d pipelines and %d repeats.",

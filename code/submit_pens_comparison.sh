@@ -12,8 +12,8 @@
 #
 # Usage:
 #     bash code/submit_pens_comparison.sh
-#     bash code/submit_pens_comparison.sh server_run_v2
-#     bash code/submit_pens_comparison.sh server_run_v2 configs/pens_comparison.yaml
+#     bash code/submit_pens_comparison.sh pens_plateau_comparison
+#     bash code/submit_pens_comparison.sh pens_plateau_comparison configs/pens_comparison.yaml
 
 set -euo pipefail
 
@@ -114,7 +114,7 @@ fi
 # Outside SLURM: read config, resolve run directory, and submit 3 array jobs.
 # ===========================================================================
 
-RUN_NAME="${1:-server_run_v2}"
+RUN_NAME="${1:-pens_plateau_comparison}"
 CONFIG_FILE="${2:-configs/pens_comparison.yaml}"
 
 # Resolve config path relative to project root if not absolute.

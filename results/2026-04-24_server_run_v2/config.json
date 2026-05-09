@@ -100,13 +100,5 @@
       "cpus_per_task": 1,
       "max_concurrent_jobs": 50
     }
-  },
-  "submit_pens_comparison": {
-    "timestamp": "2026-05-10T00:53:22+03:00",
-    "run_name": "server_run_v2",
-    "config_file": "/data/cbotos/TB-Project/configs/pens_comparison.yaml",
-    "frozen_config": "/data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_pens_comparison.yaml",
-    "n_repeats": 200,
-    "seed_start": 1001,
-    "seed_range": "1001-1200",
-    "plateau_sizes": 
+  }
+}

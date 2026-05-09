@@ -1,0 +1,113 @@
+2026-05-10 00:55:58,318 - INFO - Starting hierarchical_nested_cv_runner (git: db228813).
+2026-05-10 00:55:58,322 - INFO - Run: 2026-04-24_server_run_v2
+2026-05-10 00:55:58,323 - INFO - Config: /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_pens_comparison.yaml
+2026-05-10 00:55:58,324 - INFO - Stage 1: kw_rf (fixed, binary HER2+ vs rest, threshold=0.5)
+2026-05-10 00:55:58,325 - INFO - Stage 2: en_nmc_pens (HR+ vs Triple Neg)
+2026-05-10 00:55:58,325 - INFO - Plateau size override: 50
+2026-05-10 00:55:58,326 - INFO - Output tag: en_nmc_pens_p50
+2026-05-10 00:55:58,327 - INFO - Repeat seed: 1107
+2026-05-10 00:55:58,328 - INFO - Stage 2: no GridSearchCV (ensemble pipeline)
+2026-05-10 00:55:58,329 - INFO - Loading data...
+2026-05-10 00:55:58,345 - INFO - Loaded 100 samples, 273 features.
+2026-05-10 00:55:58,346 - INFO - Classes: ['HER2+', 'HR+', 'Triple Neg']
+2026-05-10 00:55:58,348 - INFO -   HER2+: 32 samples
+2026-05-10 00:55:58,349 - INFO -   HR+: 36 samples
+2026-05-10 00:55:58,350 - INFO -   Triple Neg: 32 samples
+2026-05-10 00:55:58,351 - INFO - Mislabel indices verified: [(2, 'Array.67'), (4, 'Array.22'), (45, 'Array.113')]
+2026-05-10 00:55:59,061 - INFO - Pooled plateau capped: 80 -> 50 combos
+2026-05-10 00:55:59,065 - INFO - Pooled plateau: 50 of 200 combos from 250 fold files (best=0.7476, std=0.0547, threshold=0.6929)
+2026-05-10 00:55:59,066 - INFO -   Plateau combo 1: score=0.7476, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:55:59,068 - INFO -   Plateau combo 2: score=0.7459, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:55:59,069 - INFO -   Plateau combo 3: score=0.7434, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:55:59,069 - INFO -   Plateau combo 4: score=0.7427, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+2026-05-10 00:55:59,070 - INFO -   Plateau combo 5: score=0.7427, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:55:59,071 - INFO -   Plateau combo 6: score=0.7414, params={'selector__C': 100.0, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:55:59,072 - INFO -   Plateau combo 7: score=0.7409, params={'selector__C': 100.0, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:55:59,073 - INFO -   Plateau combo 8: score=0.7405, params={'selector__C': 100.0, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:55:59,074 - INFO -   Plateau combo 9: score=0.7405, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+2026-05-10 00:55:59,075 - INFO -   Plateau combo 10: score=0.7404, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:55:59,076 - INFO -   Plateau combo 11: score=0.7402, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:55:59,077 - INFO -   Plateau combo 12: score=0.7399, params={'selector__C': 100.0, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+2026-05-10 00:55:59,078 - INFO -   Plateau combo 13: score=0.7398, params={'selector__C': 7.74264, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:55:59,079 - INFO -   Plateau combo 14: score=0.7397, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k': 20}
+2026-05-10 00:55:59,080 - INFO -   Plateau combo 15: score=0.7388, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+2026-05-10 00:55:59,080 - INFO -   Plateau combo 16: score=0.7387, params={'selector__C': 2.15443, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:55:59,081 - INFO -   Plateau combo 17: score=0.7385, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+2026-05-10 00:55:59,082 - INFO -   Plateau combo 18: score=0.7384, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.9, 'selector__top_k': 50}
+2026-05-10 00:55:59,083 - INFO -   Plateau combo 19: score=0.7383, params={'selector__C': 100.0, 'selector__l1_ratio': 0.9, 'selector__top_k': 50}
+2026-05-10 00:55:59,084 - INFO -   Plateau combo 20: score=0.7383, params={'selector__C': 2.15443, 'selector__l1_ratio': 0.9, 'selector__top_k': 50}
+2026-05-10 00:55:59,085 - INFO -   Plateau combo 21: score=0.7380, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:55:59,086 - INFO -   Plateau combo 22: score=0.7362, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:55:59,087 - INFO -   Plateau combo 23: score=0.7356, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 20}
+2026-05-10 00:55:59,088 - INFO -   Plateau combo 24: score=0.7339, params={'selector__C': 2.15443, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:55:59,089 - INFO -   Plateau combo 25: score=0.7334, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:55:59,089 - INFO -   Plateau combo 26: score=0.7329, params={'selector__C': 7.74264, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:55:59,090 - INFO -   Plateau combo 27: score=0.7328, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.7, 'selector__top_k': 20}
+2026-05-10 00:55:59,091 - INFO -   Plateau combo 28: score=0.7324, params={'selector__C': 2.15443, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:55:59,092 - INFO -   Plateau combo 29: score=0.7321, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:55:59,093 - INFO -   Plateau combo 30: score=0.7303, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.9, 'selector__top_k': 20}
+2026-05-10 00:55:59,094 - INFO -   Plateau combo 31: score=0.7301, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 20}
+2026-05-10 00:55:59,095 - INFO -   Plateau combo 32: score=0.7300, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+2026-05-10 00:55:59,096 - INFO -   Plateau combo 33: score=0.7298, params={'selector__C': 27.8256, 'selector__l1_ratio': 0.9, 'selector__top_k': 50}
+2026-05-10 00:55:59,097 - INFO -   Plateau combo 34: score=0.7297, params={'selector__C': 2.15443, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+2026-05-10 00:55:59,097 - INFO -   Plateau combo 35: score=0.7296, params={'selector__C': 7.74264, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+2026-05-10 00:55:59,098 - INFO -   Plateau combo 36: score=0.7294, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.5, 'selector__top_k': 20}
+2026-05-10 00:55:59,099 - INFO -   Plateau combo 37: score=0.7286, params={'selector__C': 7.74264, 'selector__l1_ratio': 0.9, 'selector__top_k': 50}
+2026-05-10 00:55:59,100 - INFO -   Plateau combo 38: score=0.7281, params={'selector__C': 2.15443, 'selector__l1_ratio': 0.9, 'selector__top_k': 20}
+2026-05-10 00:55:59,101 - INFO -   Plateau combo 39: score=0.7280, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:55:59,102 - INFO -   Plateau combo 40: score=0.7280, params={'selector__C': 7.74264, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:55:59,103 - INFO -   Plateau combo 41: score=0.7270, params={'selector__C': 2.15443, 'selector__l1_ratio': 0.7, 'selector__top_k': 20}
+2026-05-10 00:55:59,104 - INFO -   Plateau combo 42: score=0.7253, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.3, 'selector__top_k': 20}
+2026-05-10 00:55:59,105 - INFO -   Plateau combo 43: score=0.7243, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.9, 'selector__top_k': 50}
+2026-05-10 00:55:59,106 - INFO -   Plateau combo 44: score=0.7238, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.3, 'selector__top_k': 20}
+2026-05-10 00:55:59,106 - INFO -   Plateau combo 45: score=0.7237, params={'selector__C': 2.15443, 'selector__l1_ratio': 0.5, 'selector__top_k': 20}
+2026-05-10 00:55:59,107 - INFO -   Plateau combo 46: score=0.7236, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.9, 'selector__top_k': 20}
+2026-05-10 00:55:59,108 - INFO -   Plateau combo 47: score=0.7232, params={'selector__C': 7.74264, 'selector__l1_ratio': 0.9, 'selector__top_k': 20}
+2026-05-10 00:55:59,109 - INFO -   Plateau combo 48: score=0.7221, params={'selector__C': 7.74264, 'selector__l1_ratio': 0.7, 'selector__top_k': 20}
+2026-05-10 00:55:59,110 - INFO -   Plateau combo 49: score=0.7210, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.9, 'selector__top_k': 10}
+2026-05-10 00:55:59,111 - INFO -   Plateau combo 50: score=0.7205, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+2026-05-10 00:55:59,769 - INFO -     Retraining 50 plateau models
+2026-05-10 00:55:59,793 - INFO -       [1/50] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:55:59,864 - INFO -       [2/50] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:56:00,017 - INFO -       [3/50] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:56:10,587 - INFO -       [50/50] n_features=20, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+2026-05-10 00:56:10,589 - INFO -     Plateau features: union=112, intersection=7
+2026-05-10 00:56:10,598 - INFO -   Fold 1: s1=1.0000 (t=0.50)  s2=0.7619  combined=0.8413  auroc=0.9579  excl=0.8857 (1)  (11.5s)
+2026-05-10 00:56:11,244 - INFO -     Retraining 50 plateau models
+2026-05-10 00:56:11,267 - INFO -       [1/50] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:56:11,323 - INFO -       [2/50] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:56:11,491 - INFO -       [3/50] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:56:22,946 - INFO -       [50/50] n_features=20, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+2026-05-10 00:56:22,948 - INFO -     Plateau features: union=111, intersection=4
+2026-05-10 00:56:22,957 - INFO -   Fold 2: s1=1.0000 (t=0.50)  s2=0.6905  combined=0.7937  auroc=0.9505  excl=0.7937 (0)  (12.4s)
+2026-05-10 00:56:23,593 - INFO -     Retraining 50 plateau models
+2026-05-10 00:56:23,614 - INFO -       [1/50] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:56:23,666 - INFO -       [2/50] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:56:23,822 - INFO -       [3/50] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:56:35,282 - INFO -       [50/50] n_features=20, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+2026-05-10 00:56:35,284 - INFO -     Plateau features: union=105, intersection=7
+2026-05-10 00:56:35,293 - INFO -   Fold 3: s1=1.0000 (t=0.50)  s2=0.9375  combined=0.9583  auroc=1.0000  excl=0.9583 (0)  (12.3s)
+2026-05-10 00:56:35,928 - INFO -     Retraining 50 plateau models
+2026-05-10 00:56:35,949 - INFO -       [1/50] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:56:36,003 - INFO -       [2/50] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:56:36,151 - INFO -       [3/50] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:56:47,359 - INFO -       [50/50] n_features=20, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+2026-05-10 00:56:47,361 - INFO -     Plateau features: union=104, intersection=6
+2026-05-10 00:56:47,370 - INFO -   Fold 4: s1=1.0000 (t=0.50)  s2=0.7857  combined=0.8571  auroc=0.9634  excl=0.8571 (0)  (12.1s)
+2026-05-10 00:56:48,002 - INFO -     Retraining 50 plateau models
+2026-05-10 00:56:48,024 - INFO -       [1/50] n_features=50, params={'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 00:56:48,074 - INFO -       [2/50] n_features=50, params={'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 00:56:48,196 - INFO -       [3/50] n_features=50, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 00:56:58,742 - INFO -       [50/50] n_features=20, params={'selector__C': 0.599484, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+2026-05-10 00:56:58,744 - INFO -     Plateau features: union=117, intersection=8
+2026-05-10 00:56:58,753 - INFO -   Fold 5: s1=1.0000 (t=0.50)  s2=0.7143  combined=0.8095  auroc=0.9121  excl=0.8889 (2)  (11.4s)
+2026-05-10 00:56:58,757 - INFO - 
+2026-05-10 00:56:58,757 - INFO - Summary for en_nmc_pens_p50 repeat 1107:
+2026-05-10 00:56:58,758 - INFO -   Stage 1 (HER2+ vs rest):  1.0000 (+/- 0.0000)
+2026-05-10 00:56:58,759 - INFO -   Stage 2 (HR+ vs TN):      0.7780 (+/- 0.0866)
+2026-05-10 00:56:58,760 - INFO -   Combined (3-class):       0.8520 (+/- 0.0577)
+2026-05-10 00:56:58,761 - INFO -   Combined (excl mislabels): 0.8767 (+/- 0.0532)
+2026-05-10 00:56:58,762 - INFO -   Combined fold scores: [0.8413, 0.7937, 0.9583, 0.8571, 0.8095]
+2026-05-10 00:56:58,762 - INFO -   Total time: 59.6s
+2026-05-10 00:56:58,768 - INFO - Fold results saved to /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/hierarchical_nested_cv/data/fold_results_en_nmc_pens_p50_r1107.csv
+2026-05-10 00:56:58,770 - INFO - Checkpoint removed (job complete).
