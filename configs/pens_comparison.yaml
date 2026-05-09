@@ -1,6 +1,8 @@
 # Plateau ensemble size comparison experiment.
-# Runs en_nmc_pens with 3 MAX_PLATEAU_SIZE values (50, 200, all)
-# to measure impact on Stage 2 balanced accuracy.
+# Runs en_nmc_pens with MAX_PLATEAU_SIZE values (50, 80) to measure
+# impact on Stage 2 balanced accuracy.
+# Note: Originally tested 50, 200, and unlimited. Both 200 and unlimited
+# resolved to n_plateau=80 (only 80 qualifying combinations exist).
 # Uses same seeds as server.yaml (1001-1200) for paired comparison.
 
 cv:

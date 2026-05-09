@@ -1082,8 +1082,6 @@ def main():
     mps = args.max_plateau_size
     if mps == -1:
         output_tag = args.pipeline
-    elif mps == 0:
-        output_tag = f"{args.pipeline}_pall"
     else:
         output_tag = f"{args.pipeline}_p{mps}"
 

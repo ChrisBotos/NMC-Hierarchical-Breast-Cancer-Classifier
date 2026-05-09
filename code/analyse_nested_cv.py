@@ -55,6 +55,34 @@ from utils.statistics import nadeau_bengio_test, pairwise_wilcoxon
 
 rich.traceback.install()
 
+# Auto-generated fallback colours for pipelines not in PIPELINE_COLORS.
+_FALLBACK_COLORS = {}
+_TAB10 = plt.cm.tab10
+
+
+def get_pipeline_color(pipeline_name):
+    """Return a colour for a pipeline, generating one if not predefined.
+
+    Known pipelines use their entry in PIPELINE_COLORS. Unknown ones get
+    a distinct colour from the tab10 colourmap so they are visually
+    distinguishable rather than all falling back to the same grey.
+
+    Args:
+        pipeline_name (str): Internal pipeline name.
+
+    Returns:
+        str: Hex colour string.
+    """
+    if pipeline_name in PIPELINE_COLORS:
+        return PIPELINE_COLORS[pipeline_name]
+    if pipeline_name not in _FALLBACK_COLORS:
+        idx = len(_FALLBACK_COLORS)
+        rgba = _TAB10(idx % 10)
+        _FALLBACK_COLORS[pipeline_name] = "#{:02x}{:02x}{:02x}".format(
+            int(rgba[0] * 255), int(rgba[1] * 255), int(rgba[2] * 255),
+        )
+    return _FALLBACK_COLORS[pipeline_name]
+
 
 """Pipeline Ordering"""
 
@@ -104,7 +132,7 @@ def _extract_pipeline_from_filename(filepath):
     """Extract the full pipeline name (including variant suffix) from a fold results filename.
 
     Filenames follow the pattern: fold_results_<pipeline_name>_r<repeat>.csv
-    where <pipeline_name> may include variant suffixes like _p50, _p200, _pall.
+    where <pipeline_name> may include variant suffixes like _p50, _p80.
 
     Args:
         filepath (Path): Path to a fold_results CSV file.
@@ -125,7 +153,7 @@ def load_fold_results(nested_cv_data_dir, log):
     Globs for fold_results_*.csv files in the given directory and
     concatenates them into a single DataFrame. Pipeline names are derived
     from filenames rather than CSV contents to correctly disambiguate
-    variants (e.g. en_nmc_pens_p50 vs en_nmc_pens_p200) that share the
+    variants (e.g. en_nmc_pens_p50 vs en_nmc_pens_p80) that share the
     same internal pipeline column value.
 
     Args:
@@ -672,7 +700,7 @@ def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log,
         for p in pipelines
     ]
     labels = [PIPELINE_LABELS.get(p, p) for p in pipelines]
-    colors = [PIPELINE_COLORS.get(p, "#888888") for p in pipelines]
+    colors = [get_pipeline_color(p) for p in pipelines]
 
     # Violin plot.
     parts = ax.violinplot(
@@ -877,7 +905,7 @@ def plot_repeat_convergence(per_repeat, fig_dir, log,
         cumulative_mean = np.cumsum(scores) / np.arange(1, len(scores) + 1)
         ax.plot(
             range(1, len(scores) + 1), cumulative_mean,
-            color=PIPELINE_COLORS.get(p, "#888888"),
+            color=get_pipeline_color(p),
             label=PIPELINE_LABELS.get(p, p),
             linewidth=1.5,
         )
@@ -947,7 +975,7 @@ def plot_feature_importance(all_results, fig_dir, log,
         counts = [freq_by_pipeline[p].get(f, 0) for f in top_features]
         ax.barh(
             y_pos + i * bar_height, counts, bar_height,
-            color=PIPELINE_COLORS.get(p, "#888888"),
+            color=get_pipeline_color(p),
             label=PIPELINE_LABELS.get(p, p),
             alpha=0.8,
         )

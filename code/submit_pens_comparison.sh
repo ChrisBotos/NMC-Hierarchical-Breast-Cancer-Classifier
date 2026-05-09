@@ -1,13 +1,17 @@
 #!/bin/bash
 # Self-submitting SLURM wrapper for plateau ensemble size comparison.
 #
-# Runs en_nmc_pens with 3 different MAX_PLATEAU_SIZE values (50, 200, all)
+# Runs en_nmc_pens with different MAX_PLATEAU_SIZE values (50, 80)
 # to compare Stage 2 balanced accuracy as a function of ensemble size.
 # All variants run in the existing server_run_v2 directory to access
 # pre-computed en_nmc base inner CV files. Same seeds (1001-1200) as the
 # production run enable paired comparison.
 #
-# Three independent array jobs are submitted (one per plateau size).
+# Note: Originally tested 50, 200, and 0 (unlimited). Both 200 and unlimited
+# resolved to n_plateau=80 (only 80 qualifying combinations exist), so these
+# were merged into a single p80 variant.
+#
+# Independent array jobs are submitted (one per plateau size).
 # Each array has 200 tasks (one per repeat seed).
 #
 # Usage:
@@ -160,8 +164,9 @@ PHASE_DIR="$RUN_DIR/hierarchical_nested_cv"
 SLURM_LOG_DIR="$PHASE_DIR/logs/slurm"
 mkdir -p "$SLURM_LOG_DIR"
 
-# Plateau sizes to compare: 50, 200, 0 (all qualifying).
-PLATEAU_SIZES=(50 200 0)
+# Plateau sizes to compare: 50 and 80 (the actual maximum).
+# Note: 80 is the total number of qualifying plateau combinations.
+PLATEAU_SIZES=(50 80)
 
 # Build mail arguments.
 MAIL_ARGS=""

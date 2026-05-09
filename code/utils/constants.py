@@ -27,6 +27,10 @@ PIPELINE_LABELS = {
     "standalone_en_pens": "EN (plateau)",
     "en_nmc_pens": "EN + NMC (plateau)",
     "nmc_pens_ensemble": "NMC Pens Ensemble",
+    "en_nmc_pens_p50": "Plateau n=50",
+    "en_nmc_pens_p80": "Plateau n=80",
+    "kw_nmc_kens": "KW + NMC (k-ensemble)",
+    "kw_nmc_kgrid": "KW + NMC (k-grid)",
 }
 
 # Pipeline colours (consistent palette for all variants).
@@ -41,6 +45,10 @@ PIPELINE_COLORS = {
     "standalone_en_pens": "#DC0000",
     "en_nmc_pens": "#B65284",
     "nmc_pens_ensemble": "#3C5488",
+    "en_nmc_pens_p50": "#E64B35",
+    "en_nmc_pens_p80": "#00A087",
+    "kw_nmc_kens": "#91D1C2",
+    "kw_nmc_kgrid": "#F39B7F",
 }
 
 # Canonical ordering for all hierarchical pipeline variants.

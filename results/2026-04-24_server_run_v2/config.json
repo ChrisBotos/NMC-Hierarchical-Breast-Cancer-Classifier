@@ -71,7 +71,7 @@
   "hierarchical_nested_cv_runner": {
     "timestamp": "2026-05-10T01:11:42.362001",
     "command": "/data/cbotos/TB-Project/code/hierarchical_nested_cv_runner.py --pipeline en_nmc_pens --repeat 1199 --config /data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_pens_comparison.yaml --name server_run_v2 --max-plateau-size 0 --skip-if-complete",
-    "stage2_pipeline": "en_nmc_pens_pall",
+    "stage2_pipeline": "en_nmc_pens_p80",
     "repeat": 1199,
     "config_file": "/data/cbotos/TB-Project/results/2026-04-24_server_run_v2/config_snapshot_pens_comparison.yaml",
     "input_path": "/data/cbotos/TB-Project/results/2026-04-24_server_run_v2/preprocessing/data/train_merged.tsv",

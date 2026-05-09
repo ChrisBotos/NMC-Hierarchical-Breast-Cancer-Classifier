@@ -103,13 +103,21 @@ def pairwise_wilcoxon(wide_df, groups, log):
         log.warning("Fewer than 3 complete rows; skipping statistical tests.")
         return None, None, None
 
-    # Friedman test.
+    # Omnibus test: Friedman for k>=3, Wilcoxon signed-rank for k=2.
     samples = [clean[g].values for g in groups]
-    friedman_stat, friedman_p = stats.friedmanchisquare(*samples)
-    log.info("Friedman test: chi2=%.4f, p=%.6f", friedman_stat, friedman_p)
+    if len(groups) >= 3:
+        friedman_stat, friedman_p = stats.friedmanchisquare(*samples)
+        log.info("Friedman test: chi2=%.4f, p=%.6f", friedman_stat, friedman_p)
+    else:
+        # Two-group case: use Wilcoxon signed-rank as the omnibus test.
+        friedman_stat, friedman_p = stats.wilcoxon(samples[0], samples[1])
+        log.info(
+            "Wilcoxon signed-rank (2 groups): W=%.4f, p=%.6f",
+            friedman_stat, friedman_p,
+        )
 
     if friedman_p >= 0.05:
-        log.info("Friedman test not significant (p >= 0.05); skipping pairwise tests.")
+        log.info("Omnibus test not significant (p >= 0.05); skipping pairwise tests.")
         return friedman_stat, friedman_p, None
 
     # Pairwise Wilcoxon signed-rank tests with Bonferroni correction.
