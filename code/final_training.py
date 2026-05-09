@@ -175,7 +175,7 @@ def train_stage1(X_train, y, log):
     )
 
     stage1_pipe = build_pipeline("kw_rf", random_state=42)
-    stage1_pipe.set_params(selector__k=5, clf__max_features=None)
+    stage1_pipe.set_params(selector__k=5)
     stage1_pipe.fit(X_train, y_s1)
 
     log.info("Stage 1 training complete.")
@@ -255,7 +255,7 @@ def predict_hierarchical(stage1_pipe, stage2_models, le_s2, X_val, log):
     """
     # Stage 1: classify HER2+ vs rest.
     proba_s1 = stage1_pipe.predict_proba(X_val)[:, 1]
-    pred_s1 = (proba_s1 > 0.5).astype(int)
+    pred_s1 = (proba_s1 >= 0.5).astype(int)
     n_her2 = pred_s1.sum()
     log.info("Stage 1 predictions: %d HER2+ out of %d.", n_her2, len(pred_s1))
 

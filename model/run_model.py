@@ -48,7 +48,8 @@ def build_consensus_matrix(cn_df, merge_map, sample_cols):
 
     Applies median aggregation to collapse groups of correlated raw regions
     into single consensus segments, matching the preprocessing used during
-    training.
+    training. Sorts the output by genomic position to match the row order
+    produced by preprocessing_phase.py.
 
     Args:
         cn_df (pd.DataFrame): Raw copy-number data with genomic columns
@@ -59,18 +60,35 @@ def build_consensus_matrix(cn_df, merge_map, sample_cols):
 
     Returns:
         pd.DataFrame: Merged consensus matrix with segments as rows and
-            samples as columns.
+            samples as columns, sorted by genomic position.
     """
     data = cn_df[sample_cols].values.astype(float)
     n_segments = len(merge_map)
+    chrom_arr = np.empty(n_segments, dtype=int)
+    start_arr = np.empty(n_segments, dtype=int)
     cn_matrix = np.empty((n_segments, len(sample_cols)))
 
     for seg_id_str in merge_map:
         seg_id = int(seg_id_str)
         raw_indices = merge_map[seg_id_str]
         cn_matrix[seg_id] = np.median(data[raw_indices], axis=0)
+        constituent = cn_df.iloc[raw_indices]
+        chrom_arr[seg_id] = int(constituent["Chromosome"].iloc[0])
+        start_arr[seg_id] = int(constituent["Start"].min())
 
-    return pd.DataFrame(cn_matrix)
+    consensus_df = pd.DataFrame(cn_matrix, columns=sample_cols)
+    consensus_df.insert(0, "Chromosome", chrom_arr)
+    consensus_df.insert(1, "Start", start_arr)
+
+    # Sort by genomic position to match preprocessing_phase.py output order.
+    consensus_df = consensus_df.sort_values(
+        ["Chromosome", "Start"],
+    ).reset_index(drop=True)
+
+    # Drop coordinate columns, returning only sample data.
+    consensus_df = consensus_df.drop(columns=["Chromosome", "Start"])
+
+    return consensus_df
 
 
 def main():
@@ -95,7 +113,8 @@ def main():
     """Load and Preprocess Validation Data"""
 
     val_df = pd.read_csv(args.i, sep="\t")
-    sample_cols = [c for c in val_df.columns if c.startswith("Array")]
+    genomic_cols = ("Chromosome", "Start", "End", "Nclone")
+    sample_cols = [c for c in val_df.columns if c not in genomic_cols]
 
     # Merge raw regions into consensus segments.
     val_merged = build_consensus_matrix(val_df, merge_map, sample_cols)
@@ -108,7 +127,7 @@ def main():
     """Stage 1: HER2+ vs Rest"""
 
     proba = stage1.predict_proba(X_val)[:, 1]
-    pred_s1 = (proba > 0.5).astype(int)
+    pred_s1 = (proba >= 0.5).astype(int)
 
     """Stage 2: HR+ vs Triple Neg"""
 
