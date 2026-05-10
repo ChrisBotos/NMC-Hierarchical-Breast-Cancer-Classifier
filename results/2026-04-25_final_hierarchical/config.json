@@ -71,8 +71,8 @@
     "friedman_p": 1.7785510300550747e-81
   },
   "final_training": {
-    "timestamp": "2026-05-09T19:57:08.099350",
-    "command": "/mnt/d/Coursework/TB-Project/code/final_training.py --name final_hierarchical",
+    "timestamp": "2026-05-10T01:52:56.378541",
+    "command": "code/final_training.py --name final_hierarchical",
     "plateau_size": 15
   }
 }

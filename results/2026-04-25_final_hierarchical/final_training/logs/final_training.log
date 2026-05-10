@@ -1,30 +1,30 @@
-2026-05-09 19:57:08,091 - INFO - Starting final_training (git: 6cd68ac2).
-2026-05-09 19:57:08,101 - INFO - Run directory: /mnt/d/Coursework/TB-Project/results/2026-04-25_final_hierarchical
-2026-05-09 19:57:08,120 - INFO - Loaded training data: 100 samples x 273 features.
-2026-05-09 19:57:08,121 - INFO - Class distribution: {'HER2+': np.int64(32), 'HR+': np.int64(36), 'Triple Neg': np.int64(32)}
-2026-05-09 19:57:08,129 - INFO - Loaded validation data: 57 samples x 273 features.
-2026-05-09 19:57:08,131 - INFO - Stage 1 training: 32 HER2+ vs 68 rest.
-2026-05-09 19:57:08,696 - INFO - Stage 1 training complete.
-2026-05-09 19:57:08,697 - INFO - Stage 2 training: 68 samples, classes [1 2] -> encoded [0, 1].
-2026-05-09 19:57:08,720 - INFO -   Plateau model  1/15 trained (C=0.04642, l1=0.1, shrink=None).
-2026-05-09 19:57:08,743 - INFO -   Plateau model  2/15 trained (C=0.04642, l1=0.1, shrink=0.2).
-2026-05-09 19:57:08,765 - INFO -   Plateau model  3/15 trained (C=0.04642, l1=0.1, shrink=0.1).
-2026-05-09 19:57:08,819 - INFO -   Plateau model  4/15 trained (C=0.1668, l1=0.5, shrink=0.2).
-2026-05-09 19:57:08,873 - INFO -   Plateau model  5/15 trained (C=0.1668, l1=0.5, shrink=0.1).
-2026-05-09 19:57:08,926 - INFO -   Plateau model  6/15 trained (C=0.1668, l1=0.5, shrink=0.5).
-2026-05-09 19:57:08,981 - INFO -   Plateau model  7/15 trained (C=0.1668, l1=0.5, shrink=None).
-2026-05-09 19:57:09,003 - INFO -   Plateau model  8/15 trained (C=0.04642, l1=0.1, shrink=0.5).
-2026-05-09 19:57:09,125 - INFO -   Plateau model  9/15 trained (C=0.5995, l1=0.7, shrink=0.2).
-2026-05-09 19:57:09,175 - INFO -   Plateau model 10/15 trained (C=0.1668, l1=0.3, shrink=0.1).
-2026-05-09 19:57:09,224 - INFO -   Plateau model 11/15 trained (C=0.1668, l1=0.3, shrink=0.2).
-2026-05-09 19:57:09,267 - INFO -   Plateau model 12/15 trained (C=0.1668, l1=0.1, shrink=None).
-2026-05-09 19:57:09,311 - INFO -   Plateau model 13/15 trained (C=0.1668, l1=0.1, shrink=0.2).
-2026-05-09 19:57:09,359 - INFO -   Plateau model 14/15 trained (C=0.1668, l1=0.1, shrink=0.1).
-2026-05-09 19:57:09,477 - INFO -   Plateau model 15/15 trained (C=0.5995, l1=0.7, shrink=0.1).
-2026-05-09 19:57:09,478 - INFO - Stage 2 training complete: 15 models.
-2026-05-09 19:57:09,498 - INFO - Stage 1 predictions: 20 HER2+ out of 57.
-2026-05-09 19:57:09,533 - INFO - Final predictions: 20 HER2+, 21 HR+, 16 TN.
-2026-05-09 19:57:09,537 - INFO - Predictions saved to /mnt/d/Coursework/TB-Project/results/prediction.txt (57 samples).
-2026-05-09 19:57:09,540 - INFO - Estimate saved to /mnt/d/Coursework/TB-Project/results/estimate.txt: 48 / 57 (BA=0.8395).
-2026-05-09 19:57:09,782 - INFO - Model saved to /mnt/d/Coursework/TB-Project/model/model.pkl.
-2026-05-09 19:57:09,783 - INFO - Final training complete.
+2026-05-10 01:52:56,371 - INFO - Starting final_training (git: c2919221).
+2026-05-10 01:52:56,381 - INFO - Run directory: /mnt/d/Coursework/TB-Project/results/2026-04-25_final_hierarchical
+2026-05-10 01:52:56,404 - INFO - Loaded training data: 100 samples x 273 features.
+2026-05-10 01:52:56,406 - INFO - Class distribution: {'HER2+': np.int64(32), 'HR+': np.int64(36), 'Triple Neg': np.int64(32)}
+2026-05-10 01:52:56,414 - INFO - Loaded validation data: 57 samples x 273 features.
+2026-05-10 01:52:56,416 - INFO - Stage 1 training: 32 HER2+ vs 68 rest.
+2026-05-10 01:52:57,046 - INFO - Stage 1 training complete.
+2026-05-10 01:52:57,047 - INFO - Stage 2 training: 68 samples, classes [1 2] -> encoded [0, 1].
+2026-05-10 01:52:57,072 - INFO -   Plateau model  1/15 trained: {'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 01:52:57,133 - INFO -   Plateau model  2/15 trained: {'selector__C': 0.16681, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 01:52:57,279 - INFO -   Plateau model  3/15 trained: {'selector__C': 0.599484, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 01:52:57,303 - INFO -   Plateau model  4/15 trained: {'selector__C': 0.0464159, 'selector__l1_ratio': 0.1, 'selector__top_k': 20}
+2026-05-10 01:52:57,348 - INFO -   Plateau model  5/15 trained: {'selector__C': 0.16681, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 01:52:57,648 - INFO -   Plateau model  6/15 trained: {'selector__C': 100.0, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 01:52:58,011 - INFO -   Plateau model  7/15 trained: {'selector__C': 100.0, 'selector__l1_ratio': 0.3, 'selector__top_k': 50}
+2026-05-10 01:52:58,319 - INFO -   Plateau model  8/15 trained: {'selector__C': 100.0, 'selector__l1_ratio': 0.7, 'selector__top_k': 50}
+2026-05-10 01:52:58,378 - INFO -   Plateau model  9/15 trained: {'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+2026-05-10 01:52:58,470 - INFO -   Plateau model 10/15 trained: {'selector__C': 0.599484, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 01:52:58,742 - INFO -   Plateau model 11/15 trained: {'selector__C': 27.8256, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 01:52:59,058 - INFO -   Plateau model 12/15 trained: {'selector__C': 100.0, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+2026-05-10 01:52:59,245 - INFO -   Plateau model 13/15 trained: {'selector__C': 7.74264, 'selector__l1_ratio': 0.1, 'selector__top_k': 50}
+2026-05-10 01:52:59,309 - INFO -   Plateau model 14/15 trained: {'selector__C': 0.16681, 'selector__l1_ratio': 0.5, 'selector__top_k': 20}
+2026-05-10 01:52:59,614 - INFO -   Plateau model 15/15 trained: {'selector__C': 27.8256, 'selector__l1_ratio': 0.5, 'selector__top_k': 50}
+2026-05-10 01:52:59,615 - INFO - Stage 2 training complete: 15 models.
+2026-05-10 01:52:59,638 - INFO - Stage 1 predictions: 20 HER2+ out of 57.
+2026-05-10 01:52:59,677 - INFO - Final predictions: 20 HER2+, 22 HR+, 15 TN.
+2026-05-10 01:52:59,681 - INFO - Predictions saved to /mnt/d/Coursework/TB-Project/results/prediction.txt (57 samples).
+2026-05-10 01:52:59,685 - INFO - Estimate saved to /mnt/d/Coursework/TB-Project/results/estimate.txt: 48 / 57 (BA=0.8395).
+2026-05-10 01:52:59,983 - INFO - Model saved to /mnt/d/Coursework/TB-Project/model/model.pkl.
+2026-05-10 01:52:59,985 - INFO - Final training complete.

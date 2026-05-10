@@ -42,7 +42,7 @@ Array.158	Triple Neg
 Array.87	HER2+
 Array.28	HER2+
 Array.45	HR+
-Array.155	Triple Neg
+Array.155	HR+
 Array.12	HER2+
 Array.74	HER2+
 Array.26	HR+

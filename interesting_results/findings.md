@@ -4,6 +4,26 @@ Curated log of notable findings, in reverse-chronological order.
 
 ---
 
+### 2026-05-10 - Plateau ensemble size (pens15 vs pens50) and shrink_threshold: no meaningful effect
+
+**Category:** negative_result
+**Status:** confirmed
+
+**Summary:**
+Increasing the plateau ensemble from 15 to 50 models changes 4 out of 57 validation predictions, all on samples with Stage 2 probabilities within 3.2% of 0.5. Separately, the NMC shrink_threshold parameter (previously included in an incorrect final_training config) has negligible effect - correcting the final training to match the CV runner (no shrink_threshold tuning, using raw plateau configs with selector__C, l1_ratio, top_k) changed only 1 sample (Array.155).
+
+**Key evidence:**
+- Nested CV BA2: pens15=0.7511, pens50=0.7515 (difference: +0.0004, negligible).
+- Final prediction disagreements (pens15 vs pens50): Array.156, Array.119, Array.115, Array.158. All have probabilities in the 0.47-0.53 range - essentially coin flips.
+- pens50 pushes all 4 disagreement samples closer to true 0.500 probability, suggesting the additional 35 models dilute rather than sharpen the signal. The extra configs (lower-ranked plateau entries with top_k=20 and weaker C/l1_ratio combos) add noise to the ensemble average.
+- shrink_threshold was never part of the en_nmc inner CV grid (only selector__C, l1_ratio, top_k were tuned). The old final_training.py incorrectly hand-crafted 15 configs by cross-multiplying 5 (C, l1_ratio) combos with shrink_threshold values (None, 0.1, 0.2, 0.5). Fixed to use the exact 15 plateau configs from compute_pooled_plateau(). Net effect: 1 sample changed.
+- Decision: stay with pens15. The 15 top-ranked plateau configs are sufficient; adding lower-quality configs washes out signal on borderline samples.
+
+**Observation on TN at the boundary:**
+3 of 4 pens15-vs-pens50 disagreements involve pens15 predicting TN where pens50 predicts HR+. Given that TN has the lowest recall (~0.66-0.74) and is structurally harder to predict, borderline samples may genuinely lean TN more often than the averaged probabilities suggest. The ensemble average, dominated by top_k=50 configs that select many HR+-leaning features, may systematically underweight TN signal at the boundary.
+
+---
+
 ### 2026-05-09 - Why NMC beats logistic regression: constrained linear classifier on discrete data
 
 **Category:** discussion_point

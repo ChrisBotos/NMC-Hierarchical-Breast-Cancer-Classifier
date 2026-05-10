@@ -16,7 +16,8 @@ Description:
         Stage 1 (fixed): KW feature selection (k=5) + Random Forest.
             Classifies HER2+ vs rest.
         Stage 2 (plateau ensemble): 15 ElasticNet + NMC models with
-            varied hyperparameters, averaged for robustness.
+            varied selector hyperparameters (C, l1_ratio, top_k) from
+            compute_pooled_plateau(), averaged for robustness.
             Classifies HR+ vs Triple Neg on samples not routed to HER2+.
 
     Outputs:
@@ -56,25 +57,27 @@ rich.traceback.install()
 """Constants"""
 
 # Plateau ensemble hyperparameter configurations for Stage 2.
-# Extracted from pooled inner CV results across 200 repeats x 5 folds
-# of the en_nmc base pipeline. Threshold: best_mean - best_std, capped
-# at 15. All configurations use selector__top_k=50.
+# Extracted from pooled inner CV results across 250 fold files (50
+# repeats x 5 folds) of the en_nmc base pipeline via
+# compute_pooled_plateau(). Threshold: best_mean - best_std, capped
+# at MAX_PLATEAU_SIZE=15. These are the exact same configs used by
+# retrain_plateau_models() in the nested CV runner.
 PLATEAU_CONFIGS = [
-    {"C": 0.0464159, "l1_ratio": 0.1, "shrink_threshold": None},
-    {"C": 0.0464159, "l1_ratio": 0.1, "shrink_threshold": 0.2},
-    {"C": 0.0464159, "l1_ratio": 0.1, "shrink_threshold": 0.1},
-    {"C": 0.16681, "l1_ratio": 0.5, "shrink_threshold": 0.2},
-    {"C": 0.16681, "l1_ratio": 0.5, "shrink_threshold": 0.1},
-    {"C": 0.16681, "l1_ratio": 0.5, "shrink_threshold": 0.5},
-    {"C": 0.16681, "l1_ratio": 0.5, "shrink_threshold": None},
-    {"C": 0.0464159, "l1_ratio": 0.1, "shrink_threshold": 0.5},
-    {"C": 0.599484, "l1_ratio": 0.7, "shrink_threshold": 0.2},
-    {"C": 0.16681, "l1_ratio": 0.3, "shrink_threshold": 0.1},
-    {"C": 0.16681, "l1_ratio": 0.3, "shrink_threshold": 0.2},
-    {"C": 0.16681, "l1_ratio": 0.1, "shrink_threshold": None},
-    {"C": 0.16681, "l1_ratio": 0.1, "shrink_threshold": 0.2},
-    {"C": 0.16681, "l1_ratio": 0.1, "shrink_threshold": 0.1},
-    {"C": 0.599484, "l1_ratio": 0.7, "shrink_threshold": 0.1},
+    {"selector__C": 0.0464159, "selector__l1_ratio": 0.1, "selector__top_k": 50},
+    {"selector__C": 0.16681, "selector__l1_ratio": 0.3, "selector__top_k": 50},
+    {"selector__C": 0.599484, "selector__l1_ratio": 0.7, "selector__top_k": 50},
+    {"selector__C": 0.0464159, "selector__l1_ratio": 0.1, "selector__top_k": 20},
+    {"selector__C": 0.16681, "selector__l1_ratio": 0.1, "selector__top_k": 50},
+    {"selector__C": 100.0, "selector__l1_ratio": 0.1, "selector__top_k": 50},
+    {"selector__C": 100.0, "selector__l1_ratio": 0.3, "selector__top_k": 50},
+    {"selector__C": 100.0, "selector__l1_ratio": 0.7, "selector__top_k": 50},
+    {"selector__C": 0.16681, "selector__l1_ratio": 0.5, "selector__top_k": 50},
+    {"selector__C": 0.599484, "selector__l1_ratio": 0.1, "selector__top_k": 50},
+    {"selector__C": 27.8256, "selector__l1_ratio": 0.1, "selector__top_k": 50},
+    {"selector__C": 100.0, "selector__l1_ratio": 0.5, "selector__top_k": 50},
+    {"selector__C": 7.74264, "selector__l1_ratio": 0.1, "selector__top_k": 50},
+    {"selector__C": 0.16681, "selector__l1_ratio": 0.5, "selector__top_k": 20},
+    {"selector__C": 27.8256, "selector__l1_ratio": 0.5, "selector__top_k": 50},
 ]
 
 # NMC class weighting must match the CV configuration.
@@ -185,9 +188,10 @@ def train_stage1(X_train, y, log):
 def train_stage2_ensemble(X_train, y, log):
     """Train the Stage 2 plateau ensemble (HR+ vs Triple Neg).
 
-    Trains 15 EN+NMC pipelines with different hyperparameter combinations
-    from the plateau analysis. Each pipeline is fitted on only the HR+ and
-    Triple Neg samples.
+    Trains plateau EN+NMC pipelines with hyperparameter combinations
+    from compute_pooled_plateau(). Each pipeline is fitted on only the
+    HR+ and Triple Neg samples. Uses pipe.set_params(**cfg) exactly as
+    retrain_plateau_models() does in the nested CV runner.
 
     Args:
         X_train (pd.DataFrame): Training features (all samples).
@@ -218,18 +222,12 @@ def train_stage2_ensemble(X_train, y, log):
         pipe = build_stage2_pipeline(
             "en_nmc", random_state=42, config=STAGE2_CONFIG,
         )
-        pipe.set_params(
-            selector__top_k=50,
-            selector__C=cfg["C"],
-            selector__l1_ratio=cfg["l1_ratio"],
-            clf__shrink_threshold=cfg["shrink_threshold"],
-        )
+        pipe.set_params(**cfg)
         pipe.fit(X_s2, y_s2_enc)
         stage2_models.append(pipe)
         log.info(
-            "  Plateau model %2d/%d trained (C=%.4g, l1=%.1f, shrink=%s).",
-            i + 1, len(PLATEAU_CONFIGS),
-            cfg["C"], cfg["l1_ratio"], cfg["shrink_threshold"],
+            "  Plateau model %2d/%d trained: %s",
+            i + 1, len(PLATEAU_CONFIGS), cfg,
         )
 
     log.info("Stage 2 training complete: %d models.", len(stage2_models))
