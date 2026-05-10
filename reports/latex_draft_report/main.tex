@@ -30,6 +30,7 @@
 \usepackage{enumitem}
 \usepackage{multicol}
 \usepackage{authblk}
+\usepackage{comment}
 
 % ---- Figure path ----
 \graphicspath{{figures/}}
@@ -84,6 +85,8 @@ Array CGH provides discrete copy-number profiles for molecular classification.
 Wessels et al.\ (2005) showed simple classifiers match complex ones on expression data;
 unknown whether this holds for discrete aCGH with limited samples ($n=100$).
 
+
+
 \textbf{Results:}
 Flat $2 \times 2$ experiment: RF outperforms NMC, apparently contradicting Wessels.
 HER2+ perfectly separable (masks real HR+/TN problem).
@@ -93,6 +96,11 @@ Best biomarker: chr17q12 ERBB2 amplicon.
 Final model: hierarchical EN+NMC with plateau ensembling, BA2 $= 0.76$, combined 3-class BA $= 0.84$.
 Validation estimate: 48/57 correct (per-class recall weighted by training proportions).
 
+\textbf{DRAFT}
+
+Breast cancer molecular subtypes (HER2+, HR+, and TN) require distinct therapeutic strategies, motivating accurate subtype classification from genomic data. Array comparative genomic hybridization (aCGH) provides discrete copy-number profiles that capture subtype-specific genomic alterations. Wessels et al.\textbackslash{} (2005) previously reported that simple classifiers can perform comparably to more complex models on gene-expression datasets with limited sample sizes. However, it remains unclear whether this principle also applies to discrete aCGH data, particularly in small-sample multi-class classification settings.
+In the flat $2 \times 2$ experiment, RF-based pipelines outperformed NMC-based pipelines, apparently contradicting the findings of Wessels et al.\ HER2+ samples were found to be nearly perfectly separable, suggesting that the overall 3-class problem was dominated by the easier HER2+ classification task and masked the more challenging HR+/TN distinction. After hierarchical decomposition into HER2+ vs.\ non-HER2+ followed by HR+ vs.\ TN classification, this trend reversed, with NMC outperforming RF in the Stage~2 HR+/TN task. These results suggest that the validity of Wessels’ principle depends on the underlying multi-class problem structure. The strongest biomarker region corresponded to the chr17q12 ERBB2 amplicon, which achieved near-perfect separation of HER2+ samples. The final submitted model, based on hierarchical EN+NMC with plateau ensembling, achieved a Stage~2 balanced accuracy of 0.76 and a combined 3-class balanced accuracy of 0.84. The expected validation performance was estimated at 48 correctly classified samples out of 57 using per-class recall weighted by the observed training proportions.
+
 \textbf{Availability:}
 Code and predictions in submission archive.
 \end{abstract}
@@ -101,12 +109,13 @@ Code and predictions in submission archive.
 \section{Introduction}
 \label{sec:introduction}
 
-\begin{itemize}[leftmargin=*, nosep]
+\begin{comment}
+    \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{Heterogeneity:} breast cancer molecular subtypes drive treatment decisions
   \item \textbf{Subtypes:} HER2+, HR+, Triple Negative -- different prognosis and therapy
   \item \textbf{Literature:} \cite{perou2000molecular} intrinsic subtypes; \cite{sorlie2001gene} clinical implications; \cite{slamon1987her2} HER2 amplification
   \item \textbf{aCGH:} array CGH measures genome-wide CN changes \citep{pinkel2005array}
-  \item \textbf{Discrete CN calls:} loss ($-1$), normal ($0$), gain ($+1$), amplification ($+2$)
+  \item \textbf{Discrete CN calls:} loss ($-1$), normal ($0$), gain ($+1$), amplification ($+2$) %Tony: I put this into Data description, too much detail for an introduction I'd say.
   \item \textbf{Preprocessing:} CBS segmentation \citep{venkatraman2007cbs}, CGHcall \citep{vandewiel2007cghcall}, overview \citep{vandewiel2011preprocessing}
   \item \textbf{Goal:} classify subtypes from CN profiles alone ($n=100$ train, 57 validation)
   \item \textbf{Wessels:} \cite{wessels2005protocol} simple classifiers + univariate filtering match complex on expression data
@@ -118,6 +127,19 @@ Code and predictions in submission archive.
   \item \textbf{Approach:} 2x2 factorial design, nested CV, hierarchical extension
   \item \textbf{Preview:} the answer depends on problem decomposition
 \end{itemize}
+\end{comment}
+
+Breast cancer is a heterogeneous disease comprising multiple molecular subtypes that differ substantially in prognosis and therapeutic response. In clinical practice, distinguishing between these subtypes is essential for guiding treatment decisions. Among the most prominent subtypes are HER2-positive (HER2+), hormone receptor-positive (HR+), and triple-negative (TN) breast cancer, each characterized by distinct biological mechanisms and requiring different therapeutic strategies. The concept of intrinsic breast cancer subtypes was first introduced by \citet{perou2000molecular} and further linked to clinical outcomes by \citet{sorlie2001gene}. In particular, the amplification of the HER2 oncogene has been identified as a key driver of aggressive tumor behavior and targeted therapy response \citep{slamon1987her2}.
+
+In this study, we focus on genomic copy number (CN) alterations as measured by array Comparative Genomic Hybridization (aCGH), a technique that enables genome-wide assessment of DNA copy number changes \citep{pinkel2005array}. Prior to analysis, raw aCGH signals are commonly processed using segmentation and calling procedures such as Circular Binary Segmentation (CBS) \citep{venkatraman2007cbs} and CGHcall \citep{vandewiel2007cghcall}, with comprehensive overviews provided by \citet{vandewiel2011preprocessing}. These preprocessing steps yield high-dimensional, discrete feature representations suitable for downstream classification tasks.
+
+The goal of this work is to classify breast cancer subtypes based solely on CN profiles, using a training set of 100 labelled samples and a validation set of 57 unlabelled samples. This setting poses a typical high-dimensional, low-sample-size challenge, where model complexity must be carefully controlled to avoid overfitting.
+
+A key motivation for our study is the work of \citet{wessels2005protocol}, who demonstrated that simple classifiers combined with univariate feature filtering can perform competitively with, or even outperform, more complex models on continuous gene expression data. Their findings, based on breast cancer data from \citet{vantveer2002gene}, suggest that complex models are particularly prone to overfitting in small-sample settings. Similarly, \citet{haury2011influence} showed that univariate feature selection methods can achieve competitive predictive performance, while also emphasizing the importance of feature stability.
+
+However, two important gaps remain. First, prior work has focused on continuous gene expression data, whereas aCGH data are discrete and may exhibit different statistical properties. Second, the influence of multi-class classification structure on the relative performance of simple versus complex models has not been systematically investigated.
+
+In this study, we address these gaps by examining whether the principle proposed by \citet{wessels2005protocol} extends to discrete aCGH-based classification of breast cancer subtypes. In particular, we investigate how feature redundancy and the multi-class nature of the problem affect classifier performance and selection. To this end, we employ a $2 \times 2$ factorial design comparing simple and complex feature selection methods with simple and complex classifiers, evaluated using nested cross-validation (CV). Additionally, we explore a hierarchical extension of the classification task motivated by the observation that HER2+ samples are consistently classified with perfect recall in the flat setting, while most misclassifications occur between HR+ and TN subtypes. Our results show that the relative performance of simple and complex approaches depends critically on how the classification problem is structured.
 
 % =============================================================================
 \section{Methods}
@@ -126,7 +148,8 @@ Code and predictions in submission archive.
 \subsection{Data description}
 \label{sec:data}
 
-\begin{itemize}[leftmargin=*, nosep]
+\begin{comment}
+    \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{Training set:} 100 labelled samples, 244K-probe aCGH platform
   \item \textbf{Features:} 2834 genomic regions with discrete CN calls
   \item \textbf{Classes:} HER2+ ($n=32$), HR+ ($n=36$), TN ($n=32$) -- approximately balanced
@@ -134,6 +157,9 @@ Code and predictions in submission archive.
   \item \textbf{Coordinates:} hg18/NCBI Build 36
   \item \textbf{Implementation:} Python 3.10, scikit-learn \citep{pedregosa2011sklearn}
 \end{itemize}
+\end{comment}
+
+The training dataset consists of 100 labelled breast cancer samples profiled using a high-resolution aCGH platform with approximately 244k probes. The data is summarized into 2,834 genomic regions, each represented by a discrete copy number call indicating loss (-1), normal state (0), gain (1), or amplification (2). The classification task involves three molecular subtypes: HER2+ (n=32), HR+ (n=36), and TN (n=32), resulting in an approximately balanced class distribution. In addition to the training data, a separate validation set of 57 unlabelled samples measured on the same platform is provided for final model evaluation. All genomic coordinates are based on the hg18/NCBI Build 36 reference genome. The analysis was implemented in Python 3.10 using the \texttt{scikit-learn} library \citep{pedregosa2011sklearn}.
 
 \subsection{Label-free region merging}
 \label{sec:merging}
@@ -165,24 +191,52 @@ Code and predictions in submission archive.
 \subsubsection{Feature selection}
 \label{sec:features}
 
-\begin{itemize}[leftmargin=*, nosep]
+\begin{comment}
+    \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{KW:} Kruskal-Wallis $H$-statistic ranking \citep{kruskalwallis1952}, select top $k$
   \item \textbf{KW properties:} non-parametric, respects ordinal CN values, handles 3-class natively
   \item \textbf{KW grid:} $k \in \{5, 10, 15, 20, 30, 50, 75, 100\}$ tuned via inner CV
-  \item \textbf{EN:} Elastic net multinomial logistic regression \citep{zou2005elasticnet}
-  \item \textbf{EN properties:} L1+L2 penalty -- sparsity + grouping effect for correlated features
-  \item \textbf{EN top-$k$:} select top $k \in \{5, 10, 20, 50\}$ by absolute coefficient
+\end{itemize}
+\end{comment}
+
+To investigate the impact of model complexity, we employed two feature selection approaches: a simple univariate method using the Kruskal–Wallis (KW) test and a more complex multivariate approach based on Elastic Net (EN). Both methods were applied to the merged dataset obtained from the preceding step.
+
+\textbf{Kruskal-Wallis.} The KW test \citep{kruskalwallis1952} is a non-parametric statistical method used to assess whether multiple groups originate from the same distribution. In our setting, it is applied independently to each genomic region to evaluate whether CN values differ significantly across the three breast cancer subtypes. The resulting $H$-statistic quantifies how strongly the distributions of a feature differ between classes, providing a measure of its discriminatory power. All regions are ranked according to this statistic, and the top $k$ features are selected.
+
+This approach offers several advantages in the context of aCGH data. As a non-parametric method, it does not rely on distributional assumptions and is therefore robust to the non-Gaussian and discrete nature of CN values. Furthermore, it naturally respects the ordinal structure of CN calls and can natively handle the multi-class setting.
+
+The number of selected features $k$ is treated as a hyperparameter and tuned within the inner cross-validation loop. Specifically, we consider \mbox{$k \in \{5,10,15,20,30,50,75,100\}$} and select the value that maximizes classification performance on the training data.
+
+\vspace{0.2cm}
+
+\textbf{Elastic Net.}  Elastic net multinomial logistic regression\citep{zou2005elasticnet} was used a multivariate embedded feature selection method. In contrast to univariate methods, Elastic Net evaluates features jointly and can therefore account for correlations between genomic regions. It combines L1 (Lasso) and L2(Ridge) regularization penalties, where L1 results to feature selectio by reducing coefficients to zero rapidly, while L2 is helping the handling of correlated features resulting to overfitting reduction.
+
+The Elastic Net selector was tuned through hyperparameters $C$ and \texttt{l1\_ratio}. The parameter $C$ controls the inverse strength of regularization, meaning that the smaller the value of $C$ the stronger the regularization, while the larger the value the weaker the regularization. The \texttt{l1\_ratio} controls the balance between L1 and L2 penalties. Feature selection is performed by computing the sum across all classes of the absolute of the coefficients, and features are ranked according to this score
+
+After ranking of the features of the Elastic Net by coefficient importance, only the top-$k$ features were obtained for classifier training. The value of $k$ was treated as an adittional hyperparameter as mentioned above and is also optimized in the inner cross-validation loop.
+ select top $k \in \{5, 10, 20, 50\}$ by absolute coefficient
+ \begin{itemize}
   \item \textbf{EN grid:} $C \in \{10^{-3}, \ldots, 10^{2}\}$ (10 log-spaced), L1 ratio $\in \{0.1, 0.3, 0.5, 0.7, 0.9\}$
   \item \textbf{EN configs:} $10 \times 5 \times 4 = 200$ per fold
 \end{itemize}
 
+
 \subsubsection{Classifiers}
 \label{sec:classifiers}
 
-\begin{itemize}[leftmargin=*, nosep]
+\begin{comment}
+    \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{NMC:} Nearest mean classifier -- assign to closest class centroid (Euclidean)
   \item \textbf{NMC tuning:} linear boundary, zero base hyperparams; shrinkage $\delta \in \{\text{None}, 0.1, 0.2, 0.5\}$
   \item \textbf{NMC rationale:} referenced by Wessels as prototypical simple classifier
+\end{itemize}
+\end{comment}
+
+As a representative simple classifier, we employ the \textbf{Nearest Mean Classifier (NMC)}, which assigns each sample to the class whose centroid (mean feature vector) is closest in terms of Euclidean distance. This results in a linear decision boundary and a model with minimal complexity. In its basic form, the NMC has no inherent hyperparameters. However, we optionally apply centroid shrinkage to improve robustness in high-dimensional settings. Specifically, we consider shrinkage values $\delta \in \{\text{None}, 0.1, 0.2, 0.5\}$, where non-zero values reduce the influence of features with small between-class differences. The NMC is particularly suitable for our study as it has been highlighted by \citet{wessels2005protocol} as a prototypical example of a simple classifier, making it a natural baseline for comparison against more complex models.
+
+\textbf{Random Forest.}
+
+\begin{itemize}[leftmargin=*, nosep]
   \item \textbf{RF:} Random forest, 500 trees \citep{breiman2001random}, balanced class weights
   \item \textbf{RF tuning:} max\_features $\in \{\text{sqrt}, 0.3\}$, min\_samples\_leaf $\in \{1, 5\}$ (4 configs)
   \item \textbf{RF rationale:} non-linear, captures feature interactions
@@ -196,8 +250,20 @@ Code and predictions in submission archive.
   \item \textbf{KW+RF:} $8 \times 4 = 32$ inner configs
   \item \textbf{EN+NMC:} $200 \times 4 = 800$ inner configs
   \item \textbf{EN+RF:} $200 \times 4 = 800$ inner configs
-  \item \textbf{Note:} grid size asymmetry relevant for plateau ensembling interpretation
 \end{itemize}
+
+\vspace{0.2cm}
+
+\textbf{EN+NMC:} $200 \times 4 = 800$ inner configs. In this pipeline, Elastic Net was first applied to perform feature selection, and the selected top-$k$ features were later on used to train the NMC classifier. NMC is a simple nearest centroid classifier that chooses the classes based on the nearest mean of classes in the selected features space. NMC has no major hyperparameters to tune during inner cross validation except $\delta$ which is mentioned in the NMC section above, so mainly the hyperparameters that are tuned are those of EN and the number of selected features.
+
+\vspace{0.2cm}
+
+\textbf{EN+RF:} $200 \times 4 = 800$ inner configs. In this pipeline, Elastic Net is yet again used for second time to rank and choose the best features to use in training of the classifier. The classifier of choice for this pipeline is Random Forest is a tree-based ensemble method that can capture non-linear interactions between selected features, When comparing this pipeline with the one that uses EN and NMC, this pipeline combines multivariate sparse feature selection with a more flexible classifier.
+
+\vspace{0.2cm}
+
+
+The asymmetry in grid sizes is relevant for interpreting potential plateau ensembling effects.
 
 \subsection{Hierarchical classifier}
 \label{sec:hierarchical}
@@ -218,7 +284,8 @@ Code and predictions in submission archive.
 \subsection{Cross-validation scheme}
 \label{sec:cv}
 
-\begin{itemize}[leftmargin=*, nosep]
+\begin{comment}
+    \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{Scheme:} nested stratified repeated 5-fold CV \citep{wessels2005protocol, ambroise2002selection}
   \item \textbf{Outer loop:} unbiased BA estimation, preserves 32/36/32 proportions
   \item \textbf{Flat scale:} 50 repeats $\times$ 5 folds = 250 evaluations (seeds 1--50)
@@ -227,8 +294,18 @@ Code and predictions in submission archive.
   \item \textbf{Leakage prevention:} feature selection INSIDE each inner fold
   \item \textbf{Metric:} balanced accuracy (macro-averaged recall) \citep{brodersen2010balanced}
   \item \textbf{Flow:} best inner config selected $\to$ retrain on full outer train $\to$ evaluate on outer test fold
+  \item \textbf{Repeated evaluation:} the entire nested CV procedure was repeated across multiple seeds to prevent dependency on one certain train-test-split and retrieve more robust performance results.
   \item \textbf{Overview:} see Figure~\ref{fig:workflow}
 \end{itemize}
+\end{comment}
+
+To obtain an unbiased estimate of model performance, we employ a nested, stratified, repeated 5-fold CV scheme, following established recommendations for high-dimensional, low-sample-size settings \citep{wessels2005protocol, ambroise2002selection}. Stratification ensures that the class proportions (32 HER2+, 36 HR+, and 32 TN samples) are preserved \hbox{across all folds.}
+
+The outer CV loop is used for unbiased performance estimation. In each iteration, the data is split into training and test folds, and model performance is evaluated on the held-out outer test fold. For the flat classification setting, this procedure is repeated $50$ times with different random seeds, resulting in a total of $50\times 5 = 250$ outer evaluations. For the hierarchical classification setting, a larger number of 200 repetitions is used, yielding $200 \times 5=1000$ outer evaluations.
+
+Within each outer training set, an inner 5-fold CV loop is performed to tune hyperparameters. Importantly, all feature selection steps are carried out strictly within the inner CV folds to prevent information leakage from the test data. For each outer fold, the best-performing hyperparameter configuration identified in the inner loop is selected, and the corresponding model is retrained on the full outer training set before being evaluated on the outer test fold.
+
+Model performance is assessed using balanced accuracy, defined as the macro-averaged recall across classes \citep{brodersen2010balanced}. To obtain robust performance estimates, the entire nested CV procedure is repeated across multiple random seeds, reducing the dependence on any single train–test split. An overview of the complete workflow is provided in Figure~\ref{fig:workflow}.
 
 \begin{figure*}[t]
   \centering
@@ -241,6 +318,7 @@ Code and predictions in submission archive.
     Feature selection occurs inside each inner fold to prevent information leakage.}
   \label{fig:workflow}
 \end{figure*}
+
 
 \subsection{Plateau ensembling}
 \label{sec:plateau-method}
@@ -271,12 +349,27 @@ Code and predictions in submission archive.
 \label{sec:final-model}
 
 \begin{itemize}[leftmargin=*, nosep]
-  \item \textbf{Selected pipeline:} hierarchical EN+NMC with plateau ensembling
+  \item (\textbf{Selected pipeline:} hierarchical EN+NMC with plateau ensembling
   \item \textbf{Retraining:} on all 100 labelled samples
   \item \textbf{Plateau membership:} from nested CV (no re-tuning)
   \item \textbf{Validation preprocessing:} merging map applied for consistent segment boundaries
   \item \textbf{Estimate formula:} $\sum_c (\hat{r}_c \times n_c / N) \times 57$ where $N = 100$, using training proportions as proxy (not BA $\times$ 57)
   \item \textbf{Sensitivity:} estimate ranges 46--48 under alternative plausible proportions; submit 48
+
+
+The final submitted model used the hierarchical EN+NMC pipeline with plateau ensembling, which achieved the best overall performance during nested cross-validation.After model selection, the complete training dataset of 100 labelled samples was used to retrain the final classifier. Importantly, the plateau ensemble membership was fixed based on the nested cross-validation results and was not re-tuned on the full dataset, thereby avoiding additional optimisation bias.
+
+Before generating predictions for the validation cohort, the same region-merging map derived from the training data was applied to the validation samples to ensure consistent segment boundaries and feature representation between datasets. The expected number of correctly classified validation samples was estimated using a weighted recall formulation rather than directly multiplying balanced accuracy by the number of validation samples. Specifically, The expected number of correctly classified validation samples was estimated using a weighted recall formulation rather than directly multiplying balanced accuracy by the number of validation samples. Specifically, the estimate was calculated as:
+\begin{equation}
+\sum_c \left( \hat{r}_c \times \frac{n_c}{N} \right) \times 57
+\end{equation}
+
+\vspace{-0.5em}
+
+where $\hat{r}_c$ denotes the estimated recall for class $c$, $n_c$ is the number of training samples belonging to class $c$, and $N = 100$ is the total number of training samples. Using the observed training class proportions as a proxy for the unknown validation distribution yielded an estimated accuracy of 48 correctly classified samples. Sensitivity analysis under alternative plausible class distributions produced estimates ranging from 46 to 48 correct predictions, and therefore 48 was selected as the final submitted estimate.
+
+
+
 \end{itemize}
 
 % =============================================================================
@@ -355,10 +448,25 @@ Code and predictions in submission archive.
 \subsection{Accuracy estimate}
 \label{sec:estimate}
 
+
 \begin{itemize}[leftmargin=*, nosep]
   \item \textbf{Formula:} $\sum_c (\hat{r}_c \times n_c / N) \times 57$ where $N = 100$ -- weighted accuracy, not BA $\times$ 57
   \item \textbf{Calculation:} $(0.32 \times 1.00 + 0.36 \times 0.78 + 0.32 \times 0.74) \times 57 = 47.8 \to 48$
   \item \textbf{Sensitivity:} uniform proportions $\to$ 48, skewed $\to$ 46; submit 48
+
+
+The expected number of correctly classified validation samples was estimated using a weighted recall formulation rather than directly multiplying balanced accuracy by the number of validation samples. Specifically, the estimate was calculated as:
+
+\[
+\sum_c \left( \hat{r}_c \times \frac{n_c}{N} \right) \times 57
+\]
+
+where $\hat{r}_c$ denotes the estimated recall for class $c$, $n_c$ is the number of training samples belonging to class $c$, and $N = 100$ is the total number of training samples. Using the observed training class proportions and the per-class recalls of the final hierarchical classifier yielded the following estimate:
+\[
+(0.32 \times 1.00 + 0.36 \times 0.78 + 0.32 \times 0.74) \times 57 = 47.8 \approx 48
+\]
+
+Sensitivity analysis showed that the estimate remained relatively stable under alternative plausible class distributions. Assuming uniform subtype proportions still produced an estimate of 48 correctly classified samples, whereas more skewed distributions reduced the estimate to approximately 46. Based on these analyses, 48 was selected as the final submitted estimate.
 \end{itemize}
 
 \subsection{Improvements after draft}
