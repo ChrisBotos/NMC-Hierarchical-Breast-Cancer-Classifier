@@ -139,6 +139,8 @@ Inner CV folds in Stage~2 contain only $\sim$11 samples, insufficient to reliabl
 
 Pipeline differences were assessed using the Nadeau-Bengio corrected $t$-test \citep{nadeaubengio2003}, which accounts for non-independence in repeated CV, and bootstrap CIs (10,000 resamples) \citep{bouckaert2004evaluating}. The final submitted model (EN+NMC with plateau ensembling) was retrained on all 100 samples with fixed plateau membership and the same region-merging map applied to validation data.
 
+\input{figures/table1_results.tex}
+
 % =============================================================================
 \section{Results}
 \label{sec:results}
@@ -164,8 +166,6 @@ The hierarchical decomposition reversed the classifier ranking: NMC outperformed
 \label{sec:plateau}
 
 Plateau ensembling improved EN+NMC from BA2 $= 0.729$ to $0.759$ (+3.0~pp; Table~\ref{tab:results}). The gain scaled with grid size: EN (800 configs) gained +3.0~pp vs KW (32 configs) at +1.4~pp, explaining why EN+NMC(P) overtook KW+NMC(P) despite a weaker base BA2 (0.729 vs 0.736).
-
-\input{figures/table1_results.tex}
 
 \subsection{Single best biomarker region}
 \label{sec:biomarker}
