@@ -76,3 +76,4 @@ Thumbs.db
 
 # ===== Notebooks (keep structure, ignore outputs) =====
 notebooks/*.html
+/reports/latex_draft_report/temp_report_changes

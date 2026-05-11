@@ -51,7 +51,8 @@ FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 FLAT_DATA = (PROJECT_ROOT / "results" /
              "2026-04-22_server_run_flat_nested_CV_2x2" / "nested_cv_2x2" / "data")
 HIER_DATA = (PROJECT_ROOT / "results" /
-             "2026-04-24_server_run_v2" / "hierarchical_nested_cv" / "data")
+             "2026-04-25_final_hierarchical" / "hierarchical_nested_cv" / "data")
+GENE_MAP_PATH = PROJECT_ROOT / "data" / "BasepairToGeneMap.tsv"
 
 # Global style.
 plt.rcParams.update({
@@ -73,19 +74,42 @@ GREEN = '#228833'
 # Pipeline configuration (kw_nmc_kens excluded from all outputs).
 FLAT_PIPES = ['kw_nmc', 'kw_rf', 'en_nmc', 'en_rf']
 HIER_BASE_PIPES = ['kw_nmc', 'kw_rf', 'en_nmc', 'en_rf']
-HIER_PLAT_PIPES = ['kw_nmc_pens', 'en_nmc_pens', 'nmc_ensemble']
+HIER_PLAT_PIPES = ['kw_nmc_pens', 'en_nmc_pens', 'nmc_pens_ensemble']
 
 PIPE_LABELS = {
     'kw_nmc': 'KW+NMC', 'kw_rf': 'KW+RF',
     'en_nmc': 'EN+NMC', 'en_rf': 'EN+RF',
     'kw_nmc_pens': 'KW+NMC(P)', 'en_nmc_pens': 'EN+NMC(P)',
-    'nmc_ensemble': 'Ensemble',
+    'nmc_pens_ensemble': 'Ensemble',
 }
 PIPE_COLORS = {
     'kw_nmc': BLUE, 'kw_rf': ORANGE,
     'en_nmc': BLUE, 'en_rf': ORANGE,
     'kw_nmc_pens': BLUE, 'en_nmc_pens': BLUE,
-    'nmc_ensemble': BLUE,
+    'nmc_pens_ensemble': BLUE,
+}
+
+# Chromosome colors for Figure 3 (colorblind-safe, distinct hues).
+CHR_COLORS = {
+    'chr5': '#EE6677',   # Red/pink.
+    'chr6': '#228833',   # Green.
+    'chr12': '#4477AA',  # Blue.
+    'chr15': '#CCBB44',  # Yellow.
+    'chr16': '#AA3377',  # Purple.
+}
+CHR_COLOR_DEFAULT = '#BBBBBB'  # Grey for other chromosomes.
+
+# Well-known cancer genes for annotation.
+CANCER_GENES = {
+    'CDK4', 'MDM2', 'ERBB2', 'ERBB3', 'TP53', 'BRCA1', 'BRCA2', 'RB1',
+    'MYC', 'CCND1', 'PTEN', 'PIK3CA', 'AKT1', 'EGFR', 'FGFR1', 'FGFR2',
+    'ESR1', 'PGR', 'GATA3', 'FOXA1', 'MAP3K1', 'CDH1', 'RUNX1', 'TBX3',
+    'FGF19', 'FGF3', 'FGF4', 'KRAS', 'NRAS', 'BRAF', 'APC', 'SMAD4',
+    'KMT2C', 'KMT2D', 'NF1', 'NF2', 'CYLD', 'PALB2', 'ATM', 'CHEK2',
+    'RAD51C', 'RAD51D', 'MLH1', 'MSH2', 'NCOR1', 'MEN1', 'CDKN2A',
+    'CREBBP', 'EP300', 'ARID1A', 'SMARCA4', 'CTCF', 'STAG2', 'BIRC3',
+    'BCL2', 'MCL1', 'CUL3', 'NOTCH1', 'NOTCH2', 'IRF4', 'MYB', 'SHH',
+    'WNT', 'FOXO3', 'PTCH1', 'SMO', 'GLI1', 'GLI2',
 }
 
 
@@ -119,7 +143,7 @@ def load_hierarchical_results():
     all_pipes = HIER_BASE_PIPES + HIER_PLAT_PIPES
     frames = []
     for pipe in all_pipes:
-        for r in range(1, 51):
+        for r in range(1001, 1201):
             fpath = HIER_DATA / f"fold_results_{pipe}_r{r}.csv"
             if fpath.exists():
                 df = pd.read_csv(fpath)
@@ -128,6 +152,17 @@ def load_hierarchical_results():
                                   'combined_bal_acc', 'stage2_n_features',
                                   'y_true', 'y_pred']])
     return pd.concat(frames, ignore_index=True)
+
+
+def load_gene_map():
+    """Load the basepair-to-gene mapping table.
+
+    Returns:
+        pd.DataFrame: Gene map with Chromosome, Start, End, Gene columns.
+    """
+    return pd.read_csv(GENE_MAP_PATH, sep='\t',
+                       dtype={'Chromosome': str, 'Start': int,
+                              'End': int, 'Gene': str})
 
 
 """Helpers"""
@@ -171,6 +206,36 @@ def per_class_recalls(df, pipe_col):
             total = sum(1 for t in all_true if t.strip() == cls)
             recalls[cls] = correct / total if total > 0 else 0.0
         results[pipe] = recalls
+    return results
+
+
+def per_repeat_class_recalls(df, pipe_col):
+    """Compute per-class recall per repeat for SD estimation.
+
+    Args:
+        df (pd.DataFrame): Fold-level results with y_true and y_pred columns.
+        pipe_col (str): Column name for pipeline identifier.
+
+    Returns:
+        dict: pipeline -> {'HER2+': array, 'HR+': array, 'Triple Neg': array}
+              where each array contains per-repeat recall values.
+    """
+    results = {}
+    for pipe, grp in df.groupby(pipe_col):
+        repeat_recalls = {'HER2+': [], 'HR+': [], 'Triple Neg': []}
+        for repeat_id, rgrp in grp.groupby('repeat'):
+            all_true, all_pred = [], []
+            for _, row in rgrp.iterrows():
+                all_true.extend(str(row['y_true']).split(','))
+                all_pred.extend(str(row['y_pred']).split(','))
+            for cls in ['HER2+', 'HR+', 'Triple Neg']:
+                correct = sum(1 for t, p in zip(all_true, all_pred)
+                             if t.strip() == cls and p.strip() == cls)
+                total = sum(1 for t in all_true if t.strip() == cls)
+                repeat_recalls[cls].append(
+                    correct / total if total > 0 else 0.0)
+        results[pipe] = {cls: np.array(vals)
+                         for cls, vals in repeat_recalls.items()}
     return results
 
 
@@ -220,27 +285,79 @@ def shorten_region(name):
     return name
 
 
+def get_chromosome(region_name):
+    """Extract chromosome name from a region identifier.
+
+    Args:
+        region_name (str): Region name like chr17_35076296_35282086.
+
+    Returns:
+        str: Chromosome name like chr17.
+    """
+    return region_name.split('_')[0]
+
+
+def find_best_gene(region_name, gene_map_df):
+    """Find the most prominent gene overlapping a genomic region.
+
+    Prioritizes well-known cancer genes. If none found, returns the first
+    overlapping gene. Returns empty string if no overlap.
+
+    Args:
+        region_name (str): Region name like chr12_36739877_67332062.
+        gene_map_df (pd.DataFrame): Gene map with Chromosome, Start, End, Gene.
+
+    Returns:
+        str: Gene name or empty string.
+    """
+    parts = region_name.split('_')
+    if len(parts) < 3:
+        return ''
+    chrom_num = parts[0].replace('chr', '')
+    start = int(parts[1])
+    end = int(parts[2])
+
+    # Filter gene map for overlapping genes on this chromosome.
+    mask = ((gene_map_df['Chromosome'].astype(str) == chrom_num) &
+            (gene_map_df['Start'] < end) &
+            (gene_map_df['End'] > start))
+    overlapping = gene_map_df.loc[mask, 'Gene'].unique()
+
+    if len(overlapping) == 0:
+        return ''
+
+    # Prefer well-known cancer genes.
+    cancer_hits = [g for g in overlapping if g in CANCER_GENES]
+    if cancer_hits:
+        return cancer_hits[0]
+    return overlapping[0]
+
+
 # =========================================================================
 # FIGURE 1 - Methodology flowchart
 # =========================================================================
 
 def generate_fig1():
-    """Generate the methodology flowchart (Figure 1, full-width)."""
-    fig, ax = plt.subplots(1, 1, figsize=(7.0, 5.0))
+    """Generate the methodology flowchart (Figure 1, full-width).
+
+    Uses a uniform two-color scheme: light gray for shared steps, light blue
+    for the experimental paths. A clean downward flow converges through a
+    model selection step before the final model.
+    """
+    fig, ax = plt.subplots(1, 1, figsize=(7.0, 6.0))
     ax.set_xlim(0, 14)
-    ax.set_ylim(-0.5, 11.5)
+    ax.set_ylim(-0.5, 13.0)
     ax.axis('off')
 
-    gf, ge = '#E8E8E8', '#666666'   # Grey (shared steps).
-    bf, be = '#D4E6F1', '#2874A6'   # Blue (flat path).
-    grf, gre = '#D5F5E3', '#1E8449' # Green (hierarchical path).
-    goldf, golde = '#FEF9E7', '#B7950B'  # Gold (final model).
+    # Two-color scheme: gray (shared), blue accent (experimental paths).
+    gf, ge = '#EDEDED', '#555555'  # Gray fill, gray edge.
+    af, ae = '#D6E4F0', '#3A6EA5'  # Accent blue fill, accent blue edge.
     LS = 0.30  # Line spacing in data coords.
 
     def box(x, y, w, h, fc, ec, lines, fs=7, bold1=True):
         """Draw rounded-rect box with multi-line text."""
         ax.add_patch(FancyBboxPatch(
-            (x, y), w, h, boxstyle='round,pad=0.12',
+            (x, y), w, h, boxstyle='round,pad=0.15',
             facecolor=fc, edgecolor=ec, linewidth=1.0, zorder=2))
         cx, cy = x + w / 2, y + h / 2
         top = cy + (len(lines) - 1) * LS / 2
@@ -249,67 +366,118 @@ def generate_fig1():
             ax.text(cx, top - i * LS, ln, ha='center', va='center',
                     fontsize=fs, fontweight=fw, zorder=3, fontfamily='serif')
 
-    def arrow(x1, y1, x2, y2, cs='arc3,rad=0'):
-        """Draw arrow."""
+    def arrow(x1, y1, x2, y2):
+        """Draw straight arrow."""
         ax.add_patch(FancyArrowPatch(
             (x1, y1), (x2, y2), arrowstyle='->', mutation_scale=12,
-            connectionstyle=cs, color='#333333', linewidth=1.0, zorder=1))
+            connectionstyle='arc3,rad=0', color='#333333',
+            linewidth=1.0, zorder=1))
 
-    bw, bh, bht = 3.4, 0.85, 1.15
-    cl, cc, cr = 3.3, 7.0, 10.7
-    yd, ym, yc = 10.0, 8.6, 7.2
-    yb, ys, yp, yfin = 5.5, 3.8, 2.3, 0.7
+    def arrow_curved(x1, y1, x2, y2, rad=0.15):
+        """Draw curved arrow."""
+        ax.add_patch(FancyArrowPatch(
+            (x1, y1), (x2, y2), arrowstyle='->', mutation_scale=12,
+            connectionstyle=f'arc3,rad={rad}', color='#333333',
+            linewidth=1.0, zorder=1))
 
-    # Shared steps.
-    box(cc-bw/2, yd, bw, bh, gf, ge,
-        ['DATA', '100 samples, 2834 regions, 3 classes'])
-    box(cc-bw/2, ym, bw, bh, gf, ge,
-        ['REGION MERGING', 'Pearson r > 0.8 --> 273 segments'])
-    box(cc-bw/2, yc, bw, bh, gf, ge,
-        ['OUTER CV', 'Repeated stratified 5-fold (R repeats)'])
-    arrow(cc, yd, cc, ym+bh)
-    arrow(cc, ym, cc, yc+bh)
+    # Dimensions.
+    bw = 3.6   # Box width.
+    bh = 0.9   # Standard box height.
+    bht = 1.2  # Tall box height (3 lines).
+    cc = 7.0   # Center x.
+    cl = 3.2   # Left column center.
+    cr = 10.8  # Right column center.
 
-    # Flat path.
-    box(cl-bw/2, yb, bw, bht, bf, be,
-        ['FLAT 3-CLASS', '[KW / EN] x [NMC / RF]', 'Inner 5-fold CV tuning'])
-    arrow(cc-bw/2, yc+bh*0.4, cl+bw/2, yb+bht, cs='arc3,rad=0.15')
-    ax.text(cl, yb-0.2, '4 pipelines, 50 repeats x 5 folds = 250',
-            ha='center', va='top', fontsize=6, style='italic', color='#555555')
+    # Y positions (top to bottom).
+    y_data = 11.6
+    y_merge = 10.2
+    y_cv = 8.8
+    y_flat = 6.8
+    y_s1 = 6.8
+    y_s2 = 5.1
+    y_plat = 3.6
+    y_select = 2.0
+    y_final = 0.5
 
-    # Hierarchical Stage 1.
-    box(cr-bw/2, yb, bw, bh, grf, gre,
-        ['STAGE 1: HER2+ vs rest', 'Fixed KW+RF, k=5, BA1=1.0'])
-    arrow(cc+bw/2, yc+bh*0.4, cr-bw/2, yb+bh, cs='arc3,rad=-0.15')
+    # ---- Shared steps (gray) ----
+    box(cc - bw / 2, y_data, bw, bh, gf, ge,
+        ['DATA', '100 samples, 2,834 regions, 3 classes'])
+    box(cc - bw / 2, y_merge, bw, bh, gf, ge,
+        ['REGION MERGING', 'Pearson r > 0.8, 273 segments'])
+    box(cc - bw / 2, y_cv, bw, bh, gf, ge,
+        ['OUTER CV', 'Repeated stratified 5-fold'])
+    arrow(cc, y_data, cc, y_merge + bh)
+    arrow(cc, y_merge, cc, y_cv + bh)
 
-    # Stage 2.
-    box(cr-bw/2, ys, bw, bht, grf, gre,
-        ['STAGE 2: HR+ vs TN', '[KW / EN] x [NMC / RF]', 'Inner 5-fold CV tuning'])
-    arrow(cr, yb, cr, ys+bht)
-    ax.text(cr+bw/2+0.15, (yb+ys+bht)/2, 'non-HER2+\nsamples',
-            ha='left', va='center', fontsize=5.5, style='italic', color='#555555')
-    ax.text(cr, ys-0.2, '4 pipelines, 200 repeats x 5 folds = 1000',
-            ha='center', va='top', fontsize=6, style='italic', color='#555555')
+    # ---- Flat path (accent blue) ----
+    box(cl - bw / 2, y_flat, bw, bht, af, ae,
+        ['FLAT 3-CLASS',
+         '[KW / EN] x [NMC / RF]',
+         'Inner 5-fold CV tuning',
+         '50 repeats x 5 folds = 250'],
+        fs=6.5)
+    arrow_curved(cc - bw / 2, y_cv + bh * 0.3,
+                 cl + bw / 2, y_flat + bht, rad=0.15)
 
-    # Plateau.
-    box(cr-bw/2, yp, bw, bh, grf, gre,
-        ['PLATEAU ENSEMBLING', 'Top configs by inner score'])
-    arrow(cr, ys, cr, yp+bh)
+    # ---- Hierarchical path (accent blue) ----
+    box(cr - bw / 2, y_s1, bw, bh, af, ae,
+        ['STAGE 1: HER2+ vs rest',
+         'Fixed KW+RF, k = 5, BA1 = 1.0'],
+        fs=6.5)
+    arrow_curved(cc + bw / 2, y_cv + bh * 0.3,
+                 cr - bw / 2, y_s1 + bh, rad=-0.15)
 
-    # Final model.
-    box(cc-bw/2, yfin, bw, bh, goldf, golde,
-        ['FINAL MODEL', 'EN+NMC plateau, all 100 samples'])
-    arrow(cl, yb, cc-bw/2, yfin+bh*0.5, cs='arc3,rad=0.2')
-    arrow(cr, yp, cc+bw/2, yfin+bh*0.5, cs='arc3,rad=-0.2')
-    arrow(cc, yfin, cc, yfin-0.25)
-    ax.text(cc, yfin-0.35, 'Predictions (57 validation samples)',
-            ha='center', va='top', fontsize=6.5, style='italic', color='#333333')
+    box(cr - bw / 2, y_s2, bw, bht, af, ae,
+        ['STAGE 2: HR+ vs TN',
+         '[KW / EN] x [NMC / RF]',
+         'Inner 5-fold CV tuning',
+         '200 repeats x 5 folds = 1,000'],
+        fs=6.5)
+    arrow(cr, y_s1, cr, y_s2 + bht)
+    ax.text(cr + bw / 2 + 0.15, (y_s1 + y_s2 + bht) / 2,
+            'non-HER2+\nsamples',
+            ha='left', va='center', fontsize=5.5, style='italic',
+            color='#555555')
 
-    # Group labels.
-    ax.text(cl, yb+bht+0.25, 'Flat experiment',
-            ha='center', va='bottom', fontsize=8, fontweight='bold', color=be)
-    ax.text(cr, yb+bh+0.25, 'Hierarchical experiment',
-            ha='center', va='bottom', fontsize=8, fontweight='bold', color=gre)
+    box(cr - bw / 2, y_plat, bw, bh, af, ae,
+        ['PLATEAU ENSEMBLING',
+         'Top configs by inner score'])
+    arrow(cr, y_s2, cr, y_plat + bh)
+
+    # ---- Group labels ----
+    ax.text(cl, y_flat + bht + 0.25, 'Flat experiment',
+            ha='center', va='bottom', fontsize=8, fontweight='bold',
+            color=ae)
+    ax.text(cr, y_s1 + bh + 0.25, 'Hierarchical experiment',
+            ha='center', va='bottom', fontsize=8, fontweight='bold',
+            color=ae)
+
+    # ---- Model selection (gray, convergence point) ----
+    box(cc - bw / 2, y_select, bw, bh, gf, ge,
+        ['MODEL SELECTION',
+         'Best pipeline by BA2'])
+    arrow_curved(cl, y_flat, cc - bw / 2, y_select + bh * 0.5, rad=0.2)
+    arrow_curved(cr, y_plat, cc + bw / 2, y_select + bh * 0.5, rad=-0.2)
+
+    # ---- Final model (gray) ----
+    box(cc - bw / 2, y_final, bw, bh, gf, ge,
+        ['FINAL MODEL',
+         'EN+NMC(P)',
+         'Retrained on 100 samples'])
+    arrow(cc, y_select, cc, y_final + bh)
+    arrow(cc, y_final, cc, y_final - 0.25)
+    ax.text(cc, y_final - 0.35, 'Predictions (57 validation samples)',
+            ha='center', va='top', fontsize=6.5, style='italic',
+            color='#333333')
+
+    # ---- Legend ----
+    shared_patch = mpatches.Patch(facecolor=gf, edgecolor=ge,
+                                  linewidth=0.8, label='Shared steps')
+    expt_patch = mpatches.Patch(facecolor=af, edgecolor=ae,
+                                linewidth=0.8, label='Experimental paths')
+    ax.legend(handles=[shared_patch, expt_patch], loc='upper right',
+              fontsize=6.5, framealpha=0.9, edgecolor='#CCCCCC',
+              bbox_to_anchor=(0.98, 0.98))
 
     plt.tight_layout(pad=0.3)
     fig.savefig(FIGURES_DIR / 'fig1_workflow.pdf', bbox_inches='tight', dpi=300)
@@ -329,6 +497,7 @@ def generate_fig2():
     hierarchical combined BA on the same y-axis).
     Panel B (bottom, full width): Confusion matrices for best flat (KW+RF)
     and best hierarchical (EN+NMC(P)) pipelines, side by side with colorbar.
+    Zero cells use regular font weight; non-zero cells use bold.
     """
     flat_df = load_flat_results()
     hier_df = load_hierarchical_results()
@@ -443,8 +612,10 @@ def generate_fig2():
             for j in range(3):
                 v = cm[i, j]
                 c = 'white' if v > 0.5 else 'black'
+                # De-emphasize near-zero cells with regular font weight.
+                fw = 'normal' if v < 0.01 else 'bold'
                 ax.text(j, i, f'{v:.2f}', ha='center', va='center',
-                        fontsize=11, color=c, fontweight='bold')
+                        fontsize=11, color=c, fontweight=fw)
 
     # Shared colorbar.
     fig.colorbar(im, cax=ax_cb, label='Recall (row-normalized)')
@@ -463,16 +634,17 @@ def generate_fig2():
 # =========================================================================
 
 def generate_fig3():
-    """Generate feature selection stability figure (Figure 3, single-column).
+    """Generate feature selection stability figure (Figure 3, full-width).
 
     Left: frequency drop-off curve across all features.
-    Right: top 10 most frequently selected regions.
+    Right: top 15 most frequently selected regions, color-coded by chromosome,
+    with gene name annotations where available.
     Data from EN+NMC(P) pipeline (best hierarchical).
     """
     # Load Stage 2 features for en_nmc_pens.
     feat_counter = Counter()
     frames = []
-    for r in range(1, 51):
+    for r in range(1001, 1201):
         fpath = HIER_DATA / f"fold_results_en_nmc_pens_r{r}.csv"
         if fpath.exists():
             df = pd.read_csv(fpath, usecols=['stage2_features'])
@@ -492,8 +664,11 @@ def generate_fig3():
     all_feats = feat_counter.most_common()
     all_freqs = [c / total_folds for _, c in all_feats]
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 3.0),
-                                    gridspec_kw={'width_ratios': [1.8, 1]})
+    # Load gene map for annotations.
+    gene_map_df = load_gene_map()
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.0, 3.8),
+                                    gridspec_kw={'width_ratios': [1.6, 1]})
 
     # Left: drop-off curve.
     ax1.plot(range(len(all_freqs)), all_freqs, color=BLUE, linewidth=1.2)
@@ -512,16 +687,29 @@ def generate_fig3():
     ax1.text(-0.02, 1.06, '(A)', transform=ax1.transAxes,
              fontsize=10, fontweight='bold', va='top')
 
-    # Right: top 10 regions as horizontal bars.
-    top_n = 10
+    # Right: top 15 regions as horizontal bars, color-coded by chromosome.
+    top_n = 15
     top = feat_counter.most_common(top_n)
-    names = [shorten_region(f[0]) for f in top]
+
+    # Build labels with gene annotations.
+    names = []
+    bar_colors = []
+    for feat_name, _ in top:
+        short = shorten_region(feat_name)
+        gene = find_best_gene(feat_name, gene_map_df)
+        if gene:
+            short = f'{short} ({gene})'
+        names.append(short)
+        chrom = get_chromosome(feat_name)
+        bar_colors.append(CHR_COLORS.get(chrom, CHR_COLOR_DEFAULT))
+
     freqs = [f[1] / total_folds for f in top]
 
     y_pos = np.arange(top_n)
-    ax2.barh(y_pos, freqs, color=BLUE, alpha=0.7, edgecolor=BLUE, linewidth=0.3)
+    ax2.barh(y_pos, freqs, color=bar_colors, alpha=0.8,
+             edgecolor=[c for c in bar_colors], linewidth=0.3)
     ax2.set_yticks(y_pos)
-    ax2.set_yticklabels(names, fontsize=5.5)
+    ax2.set_yticklabels(names, fontsize=5.0)
     ax2.set_xlabel('Frequency')
     ax2.invert_yaxis()
     ax2.set_xlim(0, 1.05)
@@ -529,6 +717,17 @@ def generate_fig3():
     ax2.set_axisbelow(True)
     ax2.text(-0.02, 1.06, '(B)', transform=ax2.transAxes,
              fontsize=10, fontweight='bold', va='top')
+
+    # Chromosome color legend.
+    chr_legend_handles = []
+    for chrom in ['chr5', 'chr6', 'chr12', 'chr15', 'chr16']:
+        chr_legend_handles.append(
+            mpatches.Patch(color=CHR_COLORS[chrom], alpha=0.8, label=chrom))
+    chr_legend_handles.append(
+        mpatches.Patch(color=CHR_COLOR_DEFAULT, alpha=0.8, label='other'))
+    ax2.legend(handles=chr_legend_handles, loc='lower right',
+               fontsize=5, framealpha=0.9, ncol=2,
+               handlelength=1.0, handletextpad=0.3, columnspacing=0.5)
 
     plt.tight_layout(pad=1.0)
     fig.savefig(FIGURES_DIR / 'fig3_features.pdf', bbox_inches='tight', dpi=300)
@@ -545,74 +744,137 @@ def generate_table1():
     """Generate LaTeX summary table with pipeline performance metrics.
 
     Uses consistent terminology: BA (3-class), BA2 (Stage 2), BA1 = 1.0.
+    All values reported as mean +/- SD of per-repeat means.
     """
     flat_df = load_flat_results()
     hier_df = load_hierarchical_results()
 
     flat_rec = per_class_recalls(flat_df, 'pipeline')
     hier_rec = per_class_recalls(hier_df, 'stage2_pipeline')
+    flat_rec_sd = per_repeat_class_recalls(flat_df, 'pipeline')
+    hier_rec_sd = per_repeat_class_recalls(hier_df, 'stage2_pipeline')
 
     rows = []
     for pipe in FLAT_PIPES:
         sub = flat_df[flat_df['pipeline'] == pipe]
-        ba = sub.groupby('repeat')['balanced_accuracy'].mean().mean()
+        repeat_ba = sub.groupby('repeat')['balanced_accuracy'].mean()
+        ba_mean, ba_sd = repeat_ba.mean(), repeat_ba.std()
         feat = sub['n_features_selected'].median()
         r = flat_rec.get(pipe, {})
-        rows.append(dict(group='Flat', label=PIPE_LABELS[pipe], ba=ba, ba2=None,
-                         her2=r.get('HER2+', 0), hr=r.get('HR+', 0),
-                         tn=r.get('Triple Neg', 0), feat=feat))
+        rsd = flat_rec_sd.get(pipe, {})
+        rows.append(dict(
+            group='Flat', label=PIPE_LABELS[pipe],
+            ba=ba_mean, ba_sd=ba_sd, ba2=None, ba2_sd=None,
+            her2=r.get('HER2+', 0),
+            her2_sd=rsd.get('HER2+', np.zeros(1)).std(),
+            hr=r.get('HR+', 0),
+            hr_sd=rsd.get('HR+', np.zeros(1)).std(),
+            tn=r.get('Triple Neg', 0),
+            tn_sd=rsd.get('Triple Neg', np.zeros(1)).std(),
+            feat=feat, pipe_key=pipe))
 
     for pipe in HIER_BASE_PIPES:
         sub = hier_df[hier_df['stage2_pipeline'] == pipe]
-        ba = sub.groupby('repeat')['combined_bal_acc'].mean().mean()
-        ba2 = sub.groupby('repeat')['stage2_bal_acc'].mean().mean()
+        repeat_ba = sub.groupby('repeat')['combined_bal_acc'].mean()
+        ba_mean, ba_sd = repeat_ba.mean(), repeat_ba.std()
+        repeat_ba2 = sub.groupby('repeat')['stage2_bal_acc'].mean()
+        ba2_mean, ba2_sd = repeat_ba2.mean(), repeat_ba2.std()
         feat = sub['stage2_n_features'].median()
         r = hier_rec.get(pipe, {})
-        rows.append(dict(group='Hier. (base)', label=PIPE_LABELS[pipe],
-                         ba=ba, ba2=ba2,
-                         her2=r.get('HER2+', 0), hr=r.get('HR+', 0),
-                         tn=r.get('Triple Neg', 0), feat=feat))
+        rsd = hier_rec_sd.get(pipe, {})
+        rows.append(dict(
+            group='Hier. (base)', label=PIPE_LABELS[pipe],
+            ba=ba_mean, ba_sd=ba_sd, ba2=ba2_mean, ba2_sd=ba2_sd,
+            her2=r.get('HER2+', 0),
+            her2_sd=rsd.get('HER2+', np.zeros(1)).std(),
+            hr=r.get('HR+', 0),
+            hr_sd=rsd.get('HR+', np.zeros(1)).std(),
+            tn=r.get('Triple Neg', 0),
+            tn_sd=rsd.get('Triple Neg', np.zeros(1)).std(),
+            feat=feat, pipe_key=pipe))
 
     for pipe in HIER_PLAT_PIPES:
         sub = hier_df[hier_df['stage2_pipeline'] == pipe]
         if len(sub) == 0:
             continue
-        ba = sub.groupby('repeat')['combined_bal_acc'].mean().mean()
-        ba2 = sub.groupby('repeat')['stage2_bal_acc'].mean().mean()
+        repeat_ba = sub.groupby('repeat')['combined_bal_acc'].mean()
+        ba_mean, ba_sd = repeat_ba.mean(), repeat_ba.std()
+        repeat_ba2 = sub.groupby('repeat')['stage2_bal_acc'].mean()
+        ba2_mean, ba2_sd = repeat_ba2.mean(), repeat_ba2.std()
         feat = sub['stage2_n_features'].median()
         r = hier_rec.get(pipe, {})
-        rows.append(dict(group='Hier. (plateau)', label=PIPE_LABELS[pipe],
-                         ba=ba, ba2=ba2,
-                         her2=r.get('HER2+', 0), hr=r.get('HR+', 0),
-                         tn=r.get('Triple Neg', 0), feat=feat))
+        rsd = hier_rec_sd.get(pipe, {})
+        rows.append(dict(
+            group='Hier. (plateau)', label=PIPE_LABELS[pipe],
+            ba=ba_mean, ba_sd=ba_sd, ba2=ba2_mean, ba2_sd=ba2_sd,
+            her2=r.get('HER2+', 0),
+            her2_sd=rsd.get('HER2+', np.zeros(1)).std(),
+            hr=r.get('HR+', 0),
+            hr_sd=rsd.get('HR+', np.zeros(1)).std(),
+            tn=r.get('Triple Neg', 0),
+            tn_sd=rsd.get('Triple Neg', np.zeros(1)).std(),
+            feat=feat, pipe_key=pipe))
 
     best = {
         'ba': max(r['ba'] for r in rows),
-        'ba2': max((r['ba2'] for r in rows if r['ba2'] is not None), default=0),
+        'ba2': max((r['ba2'] for r in rows if r['ba2'] is not None),
+                   default=0),
         'her2': max(r['her2'] for r in rows),
         'hr': max(r['hr'] for r in rows),
         'tn': max(r['tn'] for r in rows),
     }
 
-    def fmt(val, bv, null='--'):
-        """Format value, bold if best."""
+    def fmt(val, sd, bv, null='--'):
+        """Format value as mean +/- SD, bold the mean if best.
+
+        Args:
+            val (float or None): Mean value.
+            sd (float or None): Standard deviation.
+            bv (float): Best value for bolding comparison.
+            null (str): String to return if val is None.
+
+        Returns:
+            str: Formatted LaTeX string.
+        """
         if val is None:
             return null
-        s = f'{val:.3f}'
-        return f'\\textbf{{{s}}}' if abs(val - bv) < 1e-6 else s
+        mean_str = f'{val:.3f}'
+        sd_str = f'{sd:.3f}' if sd is not None else '0.000'
+        if abs(val - bv) < 1e-6:
+            return f'\\textbf{{{mean_str}}}$\\pm${sd_str}'
+        return f'{mean_str}$\\pm${sd_str}'
+
+    def fmt_feat(val, pipe_key):
+        """Format the median k column, using -- for Ensemble.
+
+        Args:
+            val (float): Median number of features.
+            pipe_key (str): Pipeline key.
+
+        Returns:
+            str: Formatted string.
+        """
+        if pipe_key == 'nmc_pens_ensemble':
+            return '--'
+        return f'{val:.0f}'
 
     lines = [
-        r'\begin{table}[t]',
+        r'\begin{table*}[t]',
         r'\centering',
         r'\caption{Pipeline performance summary. BA is 3-class balanced '
         r'accuracy; BA2 is Stage~2 balanced accuracy (HR+ vs TN). '
-        r'BA1\,=\,1.0 for all hierarchical pipelines. Per-class recalls '
-        r'pooled over all outer folds. Best values per column in bold.}',
+        r'BA1\,=\,1.0 for all hierarchical pipelines. '
+        r'Values are mean\,$\pm$\,SD of per-repeat means. '
+        r'Per-class columns show mean\,$\pm$\,SD of per-repeat recalls. '
+        r'Med.\,$k$ is the median number of features selected across outer '
+        r'folds. Best mean values per column in bold.}',
         r'\label{tab:results}',
-        r'\small',
+        r'\footnotesize',
+        r'\setlength{\tabcolsep}{3.5pt}',
         r'\begin{tabular}{llcccccc}',
         r'\toprule',
-        r'Experiment & Pipeline & BA & BA2 & HER2+ & HR+ & TN & Feat. \\',
+        r'Experiment & Pipeline & BA & BA2 & HER2+ & HR+ & TN '
+        r'& Med.\,$k$ \\',
         r'\midrule',
     ]
 
@@ -627,14 +889,14 @@ def generate_table1():
             grp = ''
         lines.append(
             f"  {grp} & {row['label']} & "
-            f"{fmt(row['ba'], best['ba'])} & "
-            f"{fmt(row['ba2'], best['ba2'])} & "
-            f"{fmt(row['her2'], best['her2'])} & "
-            f"{fmt(row['hr'], best['hr'])} & "
-            f"{fmt(row['tn'], best['tn'])} & "
-            f"{row['feat']:.0f} \\\\")
+            f"{fmt(row['ba'], row['ba_sd'], best['ba'])} & "
+            f"{fmt(row['ba2'], row.get('ba2_sd'), best['ba2'])} & "
+            f"{fmt(row['her2'], row['her2_sd'], best['her2'])} & "
+            f"{fmt(row['hr'], row['hr_sd'], best['hr'])} & "
+            f"{fmt(row['tn'], row['tn_sd'], best['tn'])} & "
+            f"{fmt_feat(row['feat'], row['pipe_key'])} \\\\")
 
-    lines += [r'\bottomrule', r'\end{tabular}', r'\end{table}']
+    lines += [r'\bottomrule', r'\end{tabular}', r'\end{table*}']
 
     content = '\n'.join(lines)
     path = FIGURES_DIR / 'table1_results.tex'

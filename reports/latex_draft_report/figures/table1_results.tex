@@ -1,25 +1,26 @@
-\begin{table}[t]
+\begin{table*}[t]
 \centering
-\caption{Pipeline performance summary. BA is 3-class balanced accuracy; BA2 is Stage~2 balanced accuracy (HR+ vs TN). BA1\,=\,1.0 for all hierarchical pipelines. Per-class recalls pooled over all outer folds. Best values per column in bold.}
+\caption{Pipeline performance summary. BA is 3-class balanced accuracy; BA1 is Stage~1 balanced accuracy (HER2+ vs non_HER2+) BA1\,=\,1.0 for all hierarchical pipelines. BA2 is Stage~2 balanced accuracy (HR+ vs TN). Values are mean\,$\pm$\,SD of per-repeat means. Per-class columns show mean\,$\pm$\,SD of per-repeat recalls. Med.\,$k$ is the median number of features selected across outer folds. Best mean values per column in bold.}
 \label{tab:results}
-\small
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{llcccccc}
 \toprule
-Experiment & Pipeline & BA & BA2 & HER2+ & HR+ & TN & Feat. \\
+Experiment & Pipeline & BA & BA2 & HER2+ & HR+ & TN & Med.\,$k$ \\
 \midrule
-  Flat & KW+NMC & 0.631 & -- & 0.764 & 0.623 & 0.507 & 15 \\
-   & KW+RF & 0.791 & -- & 0.994 & 0.736 & 0.641 & 75 \\
-   & EN+NMC & 0.746 & -- & 0.909 & 0.698 & 0.630 & 10 \\
-   & EN+RF & 0.770 & -- & 0.998 & 0.696 & 0.616 & 20 \\
+  Flat & KW+NMC & 0.631$\pm$0.031 & -- & 0.764$\pm$0.069 & 0.623$\pm$0.064 & 0.507$\pm$0.079 & 15 \\
+   & KW+RF & 0.791$\pm$0.025 & -- & 0.994$\pm$0.014 & 0.736$\pm$0.056 & 0.641$\pm$0.056 & 75 \\
+   & EN+NMC & 0.746$\pm$0.032 & -- & 0.909$\pm$0.035 & 0.698$\pm$0.047 & 0.630$\pm$0.066 & 10 \\
+   & EN+RF & 0.770$\pm$0.029 & -- & 0.998$\pm$0.008 & 0.696$\pm$0.064 & 0.616$\pm$0.058 & 20 \\
 \midrule
-  Hier. (base) & KW+NMC & 0.819 & 0.728 & \textbf{1.000} & 0.760 & 0.697 & 30 \\
-   & KW+RF & 0.809 & 0.714 & \textbf{1.000} & 0.733 & 0.693 & 50 \\
-   & EN+NMC & 0.816 & 0.724 & \textbf{1.000} & 0.726 & 0.722 & 20 \\
-   & EN+RF & 0.791 & 0.687 & \textbf{1.000} & 0.720 & 0.652 & 20 \\
+  Hier. (base) & KW+NMC & 0.824$\pm$0.031 & 0.736$\pm$0.046 & \textbf{1.000}$\pm$0.000 & 0.760$\pm$0.056 & 0.712$\pm$0.068 & 30 \\
+   & KW+RF & 0.814$\pm$0.029 & 0.721$\pm$0.044 & \textbf{1.000}$\pm$0.000 & 0.748$\pm$0.058 & 0.692$\pm$0.057 & 30 \\
+   & EN+NMC & 0.819$\pm$0.026 & 0.729$\pm$0.040 & \textbf{1.000}$\pm$0.000 & 0.729$\pm$0.051 & 0.730$\pm$0.058 & 20 \\
+   & EN+RF & 0.794$\pm$0.031 & 0.691$\pm$0.046 & \textbf{1.000}$\pm$0.000 & 0.726$\pm$0.058 & 0.655$\pm$0.070 & 50 \\
 \midrule
-  Hier. (plateau) & KW+NMC(P) & 0.826 & 0.739 & \textbf{1.000} & \textbf{0.767} & 0.711 & 100 \\
-   & EN+NMC(P) & \textbf{0.834} & \textbf{0.751} & \textbf{1.000} & 0.766 & \textbf{0.736} & 92 \\
-   & Ensemble & 0.828 & 0.742 & \textbf{1.000} & 0.752 & 0.732 & 0 \\
+  Hier. (plateau) & KW+NMC(P) & 0.834$\pm$0.026 & 0.750$\pm$0.040 & \textbf{1.000}$\pm$0.000 & 0.773$\pm$0.047 & 0.727$\pm$0.064 & 100 \\
+   & EN+NMC(P) & \textbf{0.840}$\pm$0.022 & \textbf{0.759}$\pm$0.032 & \textbf{1.000}$\pm$0.000 & 0.777$\pm$0.045 & \textbf{0.741}$\pm$0.047 & 81 \\
+   & Ensemble & 0.838$\pm$0.025 & 0.757$\pm$0.037 & \textbf{1.000}$\pm$0.000 & \textbf{0.778}$\pm$0.046 & 0.735$\pm$0.056 & -- \\
 \bottomrule
 \end{tabular}
-\end{table}
+\end{table*}
