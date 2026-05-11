@@ -727,7 +727,8 @@ def generate_fig3():
         mpatches.Patch(color=CHR_COLOR_DEFAULT, alpha=0.8, label='other'))
     ax2.legend(handles=chr_legend_handles, loc='lower right',
                fontsize=5, framealpha=0.9, ncol=2,
-               handlelength=1.0, handletextpad=0.3, columnspacing=0.5)
+               handlelength=1.0, handletextpad=0.3, columnspacing=0.5,
+               bbox_to_anchor=(1.55, 0.0))
 
     plt.tight_layout(pad=1.0)
     fig.savefig(FIGURES_DIR / 'fig3_features.pdf', bbox_inches='tight', dpi=300)
