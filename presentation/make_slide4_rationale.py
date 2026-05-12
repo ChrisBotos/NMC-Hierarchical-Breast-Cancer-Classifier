@@ -180,8 +180,8 @@ def draw_panel_a(ax, repeat_ba2, summary):
 
     # Annotate the best-mean line.
     ax.text(
-        0.759, len(order) + 0.3, '0.759',
-        fontsize=15, color='#8B6914', fontweight='bold',
+        0.73, len(order) - 0.7, "BA2 = 0.759",
+        fontsize=44, color='#8B6914', fontweight='bold',
         ha='center', va='bottom',
     )
     ax.text(

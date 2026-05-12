@@ -161,91 +161,114 @@ def main():
     ax.axis('off')
 
     # ------------------------------------------------------------------ #
-    # Layout grid.                                                        #
-    # The main flow line sits at cy=0.42 so HER2+ branch has room above. #
+    # Layout grid: diagonal flow from top-left to bottom-right.           #
+    # No overlaps between Stage 1 and Stage 2.                            #
     # ------------------------------------------------------------------ #
-    cy = 0.42
-    bh = 0.32
-    bt = cy + bh / 2
-    bb = cy - bh / 2
+    bh = 0.22
 
-    # Column positions: (left_edge, width).
-    x1, w1 = 0.01, 0.085           # Raw Data.
-    x2, w2 = 0.125, 0.095          # Region Merging.
-    x3, w3 = 0.255, 0.185          # Stage 1 (wider for title text).
-    dx     = 0.475                  # Diamond x-centre.
-    x4, w4 = 0.53, 0.175           # Stage 2.
-    x5, w5 = 0.83, 0.16            # Output.
+    # Box 1: Raw Data (top-left).
+    x1, w1 = 0.01, 0.12
+    y1 = 0.75
 
-    g = 0.012                       # Arrow gap from box edge.
+    # Box 2: Region Merging (moving down and right).
+    x2, w2 = 0.17, 0.12
+    y2 = 0.60
+
+    # Box 3: Stage 1 (continuing down-right, no overlap with Merging).
+    x3, w3 = 0.32, 0.16
+    y3 = 0.46
+
+    # Diamond: decision point.
+    dx, dy = 0.54, 0.46
+
+    # Box 4: Stage 2 (further right and down, no overlap).
+    x4, w4 = 0.60, 0.15
+    y4 = 0.28
+
+    # HER2+ output (upper right, between diamond and output).
+    her2_x = 0.65
+    her2_y = 0.78
+
+    # HR+/TN labels (above Stage 2, aligned vertically with HER2+).
+    hr_x = 0.67
+    hr_y = 0.62
+    tn_x = 0.69
+    tn_y = 0.46
+
+    # Box 5: Output (far right, collects all paths).
+    x5, w5 = 0.82, 0.16
+    y5 = 0.43
+    oh = 0.36
 
     # ================================================================== #
     # BOX 1 - Raw aCGH Data.                                             #
     # ================================================================== #
-    box(ax, x1, bb, w1, bh, C['data'], C['border'])
-    txt(ax, x1 + w1 / 2, bt - 0.03, "Raw aCGH\nData",
-        fontsize=13, fontweight='bold', va='top')
+    box(ax, x1, y1 - bh / 2, w1, bh, C['data'], C['border'])
+    txt(ax, x1 + w1 / 2, y1 + 0.03, "Raw aCGH\nData",
+        fontsize=13, fontweight='bold', va='bottom')
     for i, s in enumerate(["100 samples", "2,834 regions", "CN: {-1,0,1,2}"]):
-        txt(ax, x1 + w1 / 2, cy - 0.02 - i * 0.045, s, fontsize=10)
+        txt(ax, x1 + w1 / 2, y1 - 0.015 - i * 0.035, s, fontsize=9.5)
 
     # ================================================================== #
     # ARROW 1 -> 2.                                                      #
     # ================================================================== #
-    arr(ax, x1 + w1 + g, cy, x2 - g, cy)
+    arr(ax, x1 + w1 * 0.85, y1 + bh / 2 * 0.7, x2 + w2 * 0.15, y2 + bh / 2 * 0.7,
+        lw=2.0, rad=0.1)
 
     # ================================================================== #
     # BOX 2 - Region Merging.                                            #
     # ================================================================== #
-    box(ax, x2, bb, w2, bh, C['preproc'], C['preproc_dark'])
-    txt(ax, x2 + w2 / 2, bt - 0.03, "Region\nMerging",
-        fontsize=13, fontweight='bold', va='top')
+    box(ax, x2, y2 - bh / 2, w2, bh, C['preproc'], C['preproc_dark'])
+    txt(ax, x2 + w2 / 2, y2 + 0.03, "Region\nMerging",
+        fontsize=13, fontweight='bold', va='bottom')
     for i, s in enumerate(["Label-free", "Pearson r > 0.8", "Adjacent collapse"]):
-        txt(ax, x2 + w2 / 2, cy - 0.02 - i * 0.045, s, fontsize=10)
-    txt(ax, x2 + w2 / 2, bb - 0.025, "2,834 --> 273",
-        fontsize=11, fontweight='bold', color=C['preproc_dark'], va='top')
+        txt(ax, x2 + w2 / 2, y2 - 0.015 - i * 0.035, s, fontsize=9.5)
+    txt(ax, x2 + w2 / 2, y2 - bh / 2 - 0.025, "2,834 --> 273",
+        fontsize=10, fontweight='bold', color=C['preproc_dark'], va='top')
 
     # ================================================================== #
     # ARROW 2 -> 3.                                                      #
     # ================================================================== #
-    arr(ax, x2 + w2 + g, cy, x3 - g, cy)
+    arr(ax, x2 + w2 * 0.85, y2 + bh / 2 * 0.7, x3 + w3 * 0.15, y3 + bh / 2 * 0.7,
+        lw=2.0, rad=0.1)
 
     # ================================================================== #
     # BOX 3 - Stage 1.                                                   #
     # ================================================================== #
-    box(ax, x3, bb, w3, bh, C['stage1'], C['stage1_dark'], lw=2)
-    txt(ax, x3 + w3 / 2, bt - 0.02, "Stage 1:\nHER2+ vs Rest",
-        fontsize=12, fontweight='bold', va='top')
+    box(ax, x3, y3 - bh / 2, w3, bh, C['stage1'], C['stage1_dark'], lw=2)
+    txt(ax, x3 + w3 / 2, y3 + 0.03, "Stage 1:\nHER2+ vs Rest",
+        fontsize=12, fontweight='bold', va='bottom')
     for i, s in enumerate([
         "KW top-5 + RF (500 trees)",
         "Balanced weights",
         "FIXED (no tuning)",
     ]):
-        txt(ax, x3 + w3 / 2, cy + 0.005 - i * 0.045, s, fontsize=10)
+        txt(ax, x3 + w3 / 2, y3 - 0.01 - i * 0.035, s, fontsize=9.5)
 
     # Gold BA=1.0 badge.
     bx3c = x3 + w3 / 2
-    bby = cy - 0.13
-    bbw, bbh = 0.058, 0.035
+    bby = y3 - 0.11
+    bbw, bbh = 0.058, 0.032
     box(ax, bx3c - bbw / 2, bby - bbh / 2, bbw, bbh,
         C['highlight'], C['border'], lw=1.2, zorder=4)
-    txt(ax, bx3c, bby, "BA = 1.0", fontsize=9.5, fontweight='bold')
+    txt(ax, bx3c, bby, "BA = 1.0", fontsize=9, fontweight='bold')
 
     # Below-box annotation.
-    txt(ax, x3 + w3 / 2, bb - 0.02, "5 chr17 features (ERBB2)",
-        fontsize=11, fontweight='bold', color=C['stage1_dark'], va='top')
+    txt(ax, x3 + w3 / 2, y3 - bh / 2 - 0.025, "5 chr17 features (ERBB2)",
+        fontsize=10, fontweight='bold', color=C['stage1_dark'], va='top')
 
     # ================================================================== #
     # ARROW Stage 1 -> diamond.                                          #
     # ================================================================== #
-    arr(ax, x3 + w3 + g, cy, dx - 0.015, cy)
+    arr(ax, x3 + w3 * 0.9, y3 + bh / 2 * 0.5, dx - 0.02, dy, lw=2.0, rad=0.05)
 
     # ================================================================== #
     # DECISION DIAMOND.                                                  #
     # ================================================================== #
     ds = 0.022
     diamond = Polygon(
-        [(dx, cy + ds), (dx + ds * 0.7, cy),
-         (dx, cy - ds), (dx - ds * 0.7, cy), (dx, cy + ds)],
+        [(dx, dy + ds), (dx + ds * 0.7, dy),
+         (dx, dy - ds), (dx - ds * 0.7, dy), (dx, dy + ds)],
         closed=True, facecolor='white', edgecolor=C['border'],
         linewidth=1.5, zorder=6,
         transform=ax.transAxes, clip_on=False,
@@ -255,29 +278,28 @@ def main():
     # ================================================================== #
     # UPPER BRANCH - HER2+.                                              #
     # ================================================================== #
-    her2_w, her2_h = 0.06, 0.048
-    her2_x = dx - her2_w / 2
-    her2_y = 0.83
+    her2_w, her2_h = 0.06, 0.045
 
-    arr(ax, dx, cy + ds + 0.002, dx, her2_y - 0.002,
-        color=C['HER2'], lw=1.8)
-    label_box(ax, her2_x, her2_y, her2_w, her2_h, "HER2+", C['HER2'], fs=12)
-    txt(ax, dx - 0.04, 0.72, "Predicted\nHER2+",
+    arr(ax, dx + ds * 0.5, dy + ds + 0.01, her2_x + her2_w / 2, her2_y - her2_h / 2,
+        color=C['HER2'], lw=2.0, rad=-0.2)
+    label_box(ax, her2_x, her2_y - her2_h / 2, her2_w, her2_h, "HER2+", C['HER2'], fs=12)
+    txt(ax, her2_x - 0.07, her2_y - 0.08, "Predicted\nHER2+",
         fontsize=10, color=C['HER2'], ha='right')
 
     # ================================================================== #
     # LOWER BRANCH - Rest -> Stage 2.                                    #
     # ================================================================== #
-    arr(ax, dx + ds * 0.7 + 0.002, cy, x4 - g, cy, lw=2.0)
-    txt(ax, dx + 0.025, cy + 0.04, "Rest",
-        fontsize=11, fontweight='bold', color=C['text'], va='bottom')
+    arr(ax, dx + ds * 0.5, dy - ds - 0.01, x4 + w4 * 0.2, y4 + bh / 2 * 0.7,
+        lw=2.0, rad=0.15)
+    txt(ax, dx + 0.035, dy - 0.02, "Rest",
+        fontsize=11, fontweight='bold', color=C['text'], va='top')
 
     # ================================================================== #
     # BOX 4 - Stage 2.                                                   #
     # ================================================================== #
-    box(ax, x4, bb, w4, bh, C['stage2'], C['stage2_dark'], lw=2)
-    txt(ax, x4 + w4 / 2, bt - 0.02, "Stage 2:\nHR+ vs TN",
-        fontsize=12, fontweight='bold', va='top')
+    box(ax, x4, y4 - bh / 2, w4, bh, C['stage2'], C['stage2_dark'], lw=2)
+    txt(ax, x4 + w4 / 2, y4 + 0.03, "Stage 2:\nHR+ vs TN",
+        fontsize=12, fontweight='bold', va='bottom')
     for i, s in enumerate([
         "Elastic Net selector",
         "C=0.046, l1=0.1, k=50",
@@ -285,90 +307,84 @@ def main():
         "Plateau ensemble:",
         "top 15 configs pooled",
     ]):
-        txt(ax, x4 + w4 / 2, cy + 0.02 - i * 0.04, s, fontsize=10)
+        txt(ax, x4 + w4 / 2, y4 - 0.005 - i * 0.034, s, fontsize=8.5)
 
     # Below-box annotations.
-    txt(ax, x4 + w4 / 2, bb - 0.02, "~82 features/fold",
-        fontsize=11, fontweight='bold', color=C['stage2_dark'], va='top')
-    txt(ax, x4 + w4 / 2, bb - 0.05,
+    txt(ax, x4 + w4 / 2, y4 - bh / 2 - 0.025, "~82 features/fold",
+        fontsize=10, fontweight='bold', color=C['stage2_dark'], va='top')
+    txt(ax, x4 + w4 / 2, y4 - bh / 2 - 0.05,
         "chr6p, chr12q, chr5q, chr16, chr22",
-        fontsize=10, fontweight='bold', fontstyle='italic',
+        fontsize=9, fontweight='bold', fontstyle='italic',
         color=C['stage2_dark'], va='top')
 
     # ================================================================== #
-    # CLASS LABEL BOXES from Stage 2.                                    #
+    # CLASS LABEL BOXES from Stage 2 (above Stage 2, vertically aligned). #
     # ================================================================== #
-    lw2, lh2 = 0.042, 0.042
+    lw2, lh2 = 0.038, 0.04
 
-    hr_x = x4 + w4 + 0.04
-    hr_y = cy + 0.06
-    arr(ax, x4 + w4 + g, cy + 0.03, hr_x, hr_y + lh2 / 2,
-        color=C['HR'], lw=1.5)
-    label_box(ax, hr_x, hr_y, lw2, lh2, "HR+", C['HR'], fs=11)
+    # Arrows from top of Stage 2 going upward to labels.
+    arr(ax, x4 + w4 * 0.4, y4 + bh / 2, hr_x + lw2 / 2, hr_y - lh2 / 2,
+        color=C['HR'], lw=1.5, rad=0.08)
+    label_box(ax, hr_x, hr_y - lh2 / 2, lw2, lh2, "HR+", C['HR'], fs=11)
 
-    tn_x = x4 + w4 + 0.04
-    tn_y = cy - 0.10
-    arr(ax, x4 + w4 + g, cy - 0.03, tn_x, tn_y + lh2 / 2,
-        color=C['TN'], lw=1.5)
-    label_box(ax, tn_x, tn_y, lw2, lh2, "TN", C['TN'], fs=11)
+    arr(ax, x4 + w4 * 0.6, y4 + bh / 2, tn_x + lw2 / 2, tn_y - lh2 / 2,
+        color=C['TN'], lw=1.5, rad=0.1)
+    label_box(ax, tn_x, tn_y - lh2 / 2, lw2, lh2, "TN", C['TN'], fs=11)
 
     # ================================================================== #
     # BOX 5 - Output.                                                    #
     # ================================================================== #
-    oh = 0.34
-    ob = cy - oh / 2
-    box(ax, x5, ob, w5, oh, C['output'], C['border'], lw=1.5)
-    txt(ax, x5 + w5 / 2, cy + oh / 2 - 0.025, "3-Class Prediction",
-        fontsize=13, fontweight='bold', va='top', color='white')
+    box(ax, x5, y5 - oh / 2, w5, oh, C['output'], C['border'], lw=1.5)
+    txt(ax, x5 + w5 / 2, y5 + oh / 2 - 0.03, "3-Class Prediction",
+        fontsize=12, fontweight='bold', va='top', color='white')
 
     # Three small coloured dots/boxes inside output to show classes.
     cdot_x = x5 + 0.015
-    cdot_w = 0.012
+    cdot_w = 0.010
     for i, (col, lab) in enumerate([
         (C['HER2'], "HER2+"),
         (C['HR'], "HR+"),
         (C['TN'], "Triple Neg"),
     ]):
-        cdot_y = cy + 0.04 - i * 0.045
+        cdot_y = y5 + 0.08 - i * 0.045
         box(ax, cdot_x, cdot_y - 0.01, cdot_w, 0.02,
             col, C['border'], lw=0.6, zorder=4)
         txt(ax, cdot_x + cdot_w + 0.01, cdot_y, lab,
-            fontsize=10, color='white', ha='left', fontweight='bold')
+            fontsize=8.5, color='white', ha='left', fontweight='bold')
 
     # Estimate text at bottom of output box.
-    txt(ax, x5 + w5 / 2, cy - 0.075, "Estimate:",
-        fontsize=10.5, fontweight='bold', color='white')
-    txt(ax, x5 + w5 / 2, cy - 0.11, "48/57 correct (~84.2%)",
-        fontsize=10, color='white')
+    txt(ax, x5 + w5 / 2, y5 - 0.10, "Estimate:",
+        fontsize=9.5, fontweight='bold', color='white')
+    txt(ax, x5 + w5 / 2, y5 - 0.14, "48/57 correct (~84.2%)",
+        fontsize=9, color='white')
 
     # ================================================================== #
-    # CONVERGING ARROWS to output box.                                   #
+    # CONVERGING ARROWS to output box (from vertically aligned labels).  #
     # ================================================================== #
-    # From HER2+ box right edge, sweeping right to output top.
-    arr(ax, her2_x + her2_w, her2_y + her2_h / 2,
-        x5 + w5 / 2, cy + oh / 2 + 0.005,
-        color=C['HER2'], lw=1.5, rad=-0.25)
-    # From HR+ to output left edge.
-    arr(ax, hr_x + lw2, hr_y + lh2 / 2,
-        x5, cy + 0.04,
-        color=C['HR'], lw=1.5)
-    # From TN to output left edge.
-    arr(ax, tn_x + lw2, tn_y + lh2 / 2,
-        x5, cy - 0.04,
-        color=C['TN'], lw=1.5)
+    # From HER2+ box, sweeping down-right to output top.
+    arr(ax, her2_x + her2_w * 0.8, her2_y + her2_h / 2 * 0.5,
+        x5 + w5 * 0.3, y5 + oh / 2 * 0.7,
+        color=C['HER2'], lw=1.5, rad=-0.2)
+    # From HR+ to output left edge, middle-upper.
+    arr(ax, hr_x + lw2 * 0.8, hr_y + lh2 * 0.2,
+        x5, y5 + 0.06,
+        color=C['HR'], lw=1.5, rad=-0.08)
+    # From TN to output left edge, middle-lower.
+    arr(ax, tn_x + lw2 * 0.8, tn_y + lh2 * 0.2,
+        x5, y5 - 0.04,
+        color=C['TN'], lw=1.5, rad=-0.12)
 
     # ================================================================== #
-    # DIMENSION ANNOTATIONS along the top.                               #
+    # DIMENSION ANNOTATIONS.                                             #
     # ================================================================== #
-    ty = bt + 0.04
-    for xx, s in [
-        (x1 + w1 / 2, "n=100, p=2,834"),
-        (x2 + w2 / 2, "n=100, p=273"),
-        (x3 + w3 / 2, "k=5 features"),
-        (x4 + w4 / 2, "~82 features"),
-    ]:
-        txt(ax, xx, ty, s, fontsize=11, fontweight='bold', color='#555555',
-            fontstyle='italic', va='bottom')
+    txt(ax, x1 + w1 / 2, y1 - bh / 2 - 0.04, "n=100\np=2,834",
+        fontsize=9.5, fontweight='bold', color='#555555', fontstyle='italic', va='top')
+    txt(ax, x2 + w2 / 2, y2 - bh / 2 - 0.04, "n=100\np=273",
+        fontsize=9.5, fontweight='bold', color='#555555', fontstyle='italic', va='top')
+    txt(ax, x3 + w3 / 2, y3 - bh / 2 - 0.04, "k=5\nfeatures",
+        fontsize=9.5, fontweight='bold', color='#555555', fontstyle='italic', va='top')
+    txt(ax, x4 + w4 / 2, y4 - bh / 2 - 0.08, "~82\nfeatures",
+        fontsize=9.5, fontweight='bold', color='#555555', fontstyle='italic', va='top')
 
     # ================================================================== #
     # LEGEND - bottom left.                                              #

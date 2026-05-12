@@ -168,7 +168,7 @@ def _draw_column2(ax):
                    fontsize=11)
 
     # Fold bars - show one representative repeat.
-    _centered_text(ax, col_cx, 0.855,
+    _centered_text(ax, col_cx, 0.860,
                    "One repeat (5 outer folds):", fontsize=10,
                    fontstyle='italic')
 
@@ -215,7 +215,7 @@ def _draw_column2(ax):
                                    color=C['text'])
 
         # Fold label on right.
-        _centered_text(ax, col_r + 0.005, by + bar_h / 2,
+        _centered_text(ax, col_r - 0.01, by + bar_h / 2,
                        f"F{i+1}", fontsize=9, ha='left',
                        color=C['text'])
 
@@ -453,9 +453,9 @@ def _draw_column3(ax):
     # Convergence arrows from all three output boxes to final box.
     # HER2+ arrow routes down through the gap between the gray CV box
     # (right edge x=0.63) and Stage 2 (left edge x=0.665), centred at ~0.648.
-    _arrow(ax, (her2_box_x, her2_y + her2_h / 2),
-           (final_x + 0.01, final_y + final_h / 2),
-           connectionstyle='arc3,rad=0.13', lw=1.5, color=C['HER2'],
+    _arrow(ax, (her2_box_x - 0.0097, her2_y + her2_h / 2),
+           (final_x - 0.005, final_y + final_h / 2),
+           connectionstyle='arc3,rad=0.13', lw=2, color=C['HER2'],
            mutation_scale=12, zorder=4)
     # HR+ straight down.
     _arrow(ax, (hr_x, out_y), (col_cx - 0.02, final_y + final_h + 0.003),
@@ -481,9 +481,9 @@ def _draw_dividers(ax):
 def _draw_panel_labels(ax):
     """Draw A, B, C panel labels in corners of each column."""
     labels = [
-        (0.005, 0.995, "A"),
-        (0.265, 0.995, "B"),
-        (0.650, 0.995, "C"),
+        (0.005, 1.016, "A"),
+        (0.265, 1.016, "B"),
+        (0.650, 1.016, "C"),
     ]
     for x, y, lbl in labels:
         ax.text(x, y, lbl, fontsize=16, fontweight='bold',
