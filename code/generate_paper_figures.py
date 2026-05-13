@@ -12,8 +12,8 @@ Description:
     Generates the final publication-quality figures and LaTeX table for the
     research paper. Produces exactly 3 figures + 1 table:
       Figure 1: Methodology flowchart.
-      Figure 2: Multi-panel results (3-class BA violins + confusion matrices).
-      Figure 3: Feature selection stability curve with top regions.
+      Figure 2: Feature selection stability curve with top regions.
+      Figure 3: Multi-panel results (3-class BA violins + confusion matrices).
       Table 1:  Summary statistics LaTeX code.
 
     Metric glossary (see docs/figure_glossary.md):
@@ -44,7 +44,7 @@ from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 # Resolve paths from script location.
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-FIGURES_DIR = PROJECT_ROOT / "reports" / "latex_draft_report" / "figures"
+FIGURES_DIR = PROJECT_ROOT / "reports" / "latex_final_report" / "figures"
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
 # Data paths.
@@ -89,7 +89,7 @@ PIPE_COLORS = {
     'nmc_pens_ensemble': BLUE,
 }
 
-# Chromosome colors for Figure 3 (colorblind-safe, distinct hues).
+# Chromosome colors for Figure 2 (colorblind-safe, distinct hues).
 CHR_COLORS = {
     'chr5': '#EE6677',   # Red/pink.
     'chr6': '#228833',   # Green.
@@ -487,11 +487,11 @@ def generate_fig1():
 
 
 # =========================================================================
-# FIGURE 2 - Multi-panel: (A) 3-class BA violins, (B) confusion matrices
+# FIGURE 3 - Multi-panel: (A) 3-class BA violins, (B) confusion matrices
 # =========================================================================
 
 def generate_fig2():
-    """Generate the main results figure (Figure 2, full-width, stacked panels).
+    """Generate the main results figure (Figure 3, full-width, stacked panels).
 
     Panel A (top, full width): 3-class BA violin comparison (flat BA and
     hierarchical combined BA on the same y-axis).
@@ -507,7 +507,7 @@ def generate_fig2():
     hier_means = per_repeat_means(hier_df, 'combined_bal_acc', 'stage2_pipeline')
 
     fig = plt.figure(figsize=(7.0, 6.2))
-    gs = fig.add_gridspec(2, 1, height_ratios=[1.1, 1], hspace=0.55)
+    gs = fig.add_gridspec(2, 1, height_ratios=[1.5, 0.7], hspace=0.45)
 
     # ---- Panel A: 3-class BA violins (top row, full width) ----
     ax_a = fig.add_subplot(gs[0])
@@ -623,18 +623,18 @@ def generate_fig2():
     ax_cm1.text(-0.08, 1.12, '(B)', transform=ax_cm1.transAxes,
                 fontsize=11, fontweight='bold', va='top')
 
-    fig.savefig(FIGURES_DIR / 'fig2_results.pdf', bbox_inches='tight', dpi=300)
-    fig.savefig(FIGURES_DIR / 'fig2_results.png', bbox_inches='tight', dpi=300)
+    fig.savefig(FIGURES_DIR / 'fig3_results.pdf', bbox_inches='tight', dpi=300)
+    fig.savefig(FIGURES_DIR / 'fig3_results.png', bbox_inches='tight', dpi=300)
     plt.close(fig)
-    print(f"  Saved fig2_results")
+    print(f"  Saved fig3_results")
 
 
 # =========================================================================
-# FIGURE 3 - Feature selection stability
+# FIGURE 2 - Feature selection stability
 # =========================================================================
 
 def generate_fig3():
-    """Generate feature selection stability figure (Figure 3, full-width).
+    """Generate feature selection stability figure (Figure 2, full-width).
 
     Left: frequency drop-off curve across all features.
     Right: top 15 most frequently selected regions, color-coded by chromosome,
@@ -731,10 +731,10 @@ def generate_fig3():
                bbox_to_anchor=(1.55, 0.0))
 
     plt.tight_layout(pad=1.0)
-    fig.savefig(FIGURES_DIR / 'fig3_features.pdf', bbox_inches='tight', dpi=300)
-    fig.savefig(FIGURES_DIR / 'fig3_features.png', bbox_inches='tight', dpi=300)
+    fig.savefig(FIGURES_DIR / 'fig2_features.pdf', bbox_inches='tight', dpi=300)
+    fig.savefig(FIGURES_DIR / 'fig2_features.png', bbox_inches='tight', dpi=300)
     plt.close(fig)
-    print(f"  Saved fig3_features")
+    print(f"  Saved fig2_features")
 
 
 # =========================================================================
@@ -918,11 +918,11 @@ def main():
     print("[1/4] Methodology flowchart...")
     generate_fig1()
 
-    print("\n[2/4] Results (3-class BA + confusion matrices)...")
-    generate_fig2()
-
-    print("\n[3/4] Feature selection stability...")
+    print("\n[2/4] Feature selection stability...")
     generate_fig3()
+
+    print("\n[3/4] Results (3-class BA + confusion matrices)...")
+    generate_fig2()
 
     print("\n[4/4] LaTeX summary table...")
     generate_table1()

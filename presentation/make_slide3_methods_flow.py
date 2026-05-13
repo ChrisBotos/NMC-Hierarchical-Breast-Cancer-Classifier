@@ -223,8 +223,8 @@ def main():
         fontsize=13, fontweight='bold', va='bottom')
     for i, s in enumerate(["Label-free", "Pearson r > 0.8", "Adjacent collapse"]):
         txt(ax, x2 + w2 / 2, y2 - 0.015 - i * 0.035, s, fontsize=9.5)
-    txt(ax, x2 + w2 / 2, y2 - bh / 2 - 0.025, "2,834 --> 273",
-        fontsize=10, fontweight='bold', color=C['preproc_dark'], va='top')
+    txt(ax, x2 + w2 / 2, y2 - bh / 2 - 0.04, "2,834 --> 273",
+        fontsize=11, fontweight='bold', color=C['preproc_dark'], va='top')
 
     # ================================================================== #
     # ARROW 2 -> 3.                                                      #
@@ -254,8 +254,8 @@ def main():
     txt(ax, bx3c, bby, "BA = 1.0", fontsize=9, fontweight='bold')
 
     # Below-box annotation.
-    txt(ax, x3 + w3 / 2, y3 - bh / 2 - 0.025, "5 chr17 features (ERBB2)",
-        fontsize=10, fontweight='bold', color=C['stage1_dark'], va='top')
+    txt(ax, x3 + w3 / 2, y3 - bh / 2 - 0.04, "5 chr17 features (ERBB2)",
+        fontsize=11, fontweight='bold', color=C['stage1_dark'], va='top')
 
     # ================================================================== #
     # ARROW Stage 1 -> diamond.                                          #
@@ -310,11 +310,11 @@ def main():
         txt(ax, x4 + w4 / 2, y4 - 0.005 - i * 0.034, s, fontsize=8.5)
 
     # Below-box annotations.
-    txt(ax, x4 + w4 / 2, y4 - bh / 2 - 0.025, "~82 features/fold",
-        fontsize=10, fontweight='bold', color=C['stage2_dark'], va='top')
-    txt(ax, x4 + w4 / 2, y4 - bh / 2 - 0.05,
+    txt(ax, x4 + w4 / 2, y4 - bh / 2 - 0.06, "~82 features/fold",
+        fontsize=11, fontweight='bold', color=C['stage2_dark'], va='top')
+    txt(ax, x4 + w4 / 2, y4 - bh / 2 - 0.095,
         "chr6p, chr12q, chr5q, chr16, chr22",
-        fontsize=9, fontweight='bold', fontstyle='italic',
+        fontsize=10, fontweight='bold', fontstyle='italic',
         color=C['stage2_dark'], va='top')
 
     # ================================================================== #
@@ -377,14 +377,18 @@ def main():
     # ================================================================== #
     # DIMENSION ANNOTATIONS.                                             #
     # ================================================================== #
-    txt(ax, x1 + w1 / 2, y1 - bh / 2 - 0.04, "n=100\np=2,834",
-        fontsize=9.5, fontweight='bold', color='#555555', fontstyle='italic', va='top')
-    txt(ax, x2 + w2 / 2, y2 - bh / 2 - 0.04, "n=100\np=273",
-        fontsize=9.5, fontweight='bold', color='#555555', fontstyle='italic', va='top')
-    txt(ax, x3 + w3 / 2, y3 - bh / 2 - 0.04, "k=5\nfeatures",
-        fontsize=9.5, fontweight='bold', color='#555555', fontstyle='italic', va='top')
-    txt(ax, x4 + w4 / 2, y4 - bh / 2 - 0.08, "~82\nfeatures",
-        fontsize=9.5, fontweight='bold', color='#555555', fontstyle='italic', va='top')
+    txt(ax, x1 + w1 / 2, y1 - bh / 2 - 0.06, "n=100\np=2,834",
+        fontsize=11, fontweight='bold', color='#555555', fontstyle='italic',
+        va='top', linespacing=1.4)
+    txt(ax, x2 + w2 / 2, y2 - bh / 2 - 0.06, "n=100\np=273",
+        fontsize=11, fontweight='bold', color='#555555', fontstyle='italic',
+        va='top', linespacing=1.4)
+    txt(ax, x3 + w3 / 2, y3 - bh / 2 - 0.06, "k=5\nfeatures",
+        fontsize=11, fontweight='bold', color='#555555', fontstyle='italic',
+        va='top', linespacing=1.4)
+    txt(ax, x4 + w4 / 2, y4 - bh / 2 - 0.13, "~82\nfeatures",
+        fontsize=11, fontweight='bold', color='#555555', fontstyle='italic',
+        va='top', linespacing=1.4)
 
     # ================================================================== #
     # LEGEND - bottom left.                                              #
