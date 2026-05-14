@@ -20,6 +20,7 @@
 \usepackage{enumitem}
 \usepackage{authblk}
 \usepackage{dblfloatfix}
+\usepackage{placeins}
 \usepackage{titlesec}
 
 % ---- Layout tightening ----
@@ -33,6 +34,20 @@
 \setlength{\columnsep}{16pt}
 \titlespacing*{\section}{0pt}{8pt plus 2pt minus 2pt}{4pt plus 2pt minus 2pt}
 \titlespacing*{\subsection}{0pt}{6pt plus 2pt minus 2pt}{3pt plus 2pt minus 2pt}
+
+% ---- Caption font size ----
+\captionsetup{font=small, labelfont=bf}
+
+% ---- Aggressive float placement ----
+\renewcommand{\dbltopfraction}{0.95}
+\renewcommand{\dblfloatpagefraction}{0.7}
+\setcounter{dbltopnumber}{3}
+\setcounter{totalnumber}{5}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\textfraction}{0.05}
+\setlength{\dbltextfloatsep}{4pt plus 2pt minus 2pt}
+\setlength{\intextsep}{4pt plus 2pt minus 2pt}
 
 % ---- Figure path ----
 \graphicspath{{figures/}}
@@ -91,7 +106,7 @@ Code and predictions are provided in the submission archive.
 
 Breast cancer comprises molecular subtypes, including HER2-positive (HER2+), hormone receptor-positive (HR+), and triple-negative (TN), that differ in prognosis and require distinct therapeutic strategies \citep{perou2000molecular, sorlie2001gene}. Array Comparative Genomic Hybridization (aCGH) enables genome-wide detection of DNA copy-number (CN) alterations; after segmentation and calling \citep{vandewiel2007cghcall, vandewiel2011preprocessing}, it produces high-dimensional discrete profiles suitable for classification. The present study classifies breast cancer subtypes from such CN profiles using 100 labelled training samples and 57 unlabelled validation samples, a typical high-dimensional, low-sample-size challenge.
 
-\citet{wessels2005protocol} demonstrated that simple classifiers with univariate feature filtering match or outperform complex pipelines on continuous expression data \citep{vantveer2002gene}, and \citet{haury2011influence} confirmed that univariate selection achieves competitive accuracy while offering better feature stability. However, these findings pertain to continuous data; whether they extend to discrete aCGH profiles and multi-class settings has not been tested. We therefore ask: does the Wessels principle hold for discrete CN data, and how do feature redundancy and multi-class structure affect classifier selection? To answer this, we employ a $2 \times 2$ factorial design comparing simple and complex feature selection and classification methods via nested cross-validation (CV), and explore a hierarchical decomposition motivated by the observation that HER2+ samples are trivially separable while HR+ vs TN confusion is the true bottleneck.
+\citet{wessels2005protocol} demonstrated that simple classifiers with univariate feature filtering match or outperform complex pipelines on continuous expression data \citep{vantveer2002gene}, and \citet{haury2011influence} confirmed that univariate selection achieves competitive accuracy while offering better feature stability. However, these findings pertain to continuous data; whether they extend to discrete aCGH profiles and multi-class settings has not been tested. Discrete CN calls compress dynamic range into four ordinal levels ($-1, 0, +1, +2$), introducing extensive ties that may alter which classifiers and feature ranking methods are effective. We therefore ask: does the Wessels principle hold for discrete CN data, and how do feature redundancy and multi-class structure affect classifier selection? To answer this, we employ a $2 \times 2$ factorial design comparing simple and complex feature selection and classification methods via nested cross-validation (CV), and explore a hierarchical decomposition motivated by the observation that HER2+ samples are trivially separable while HR+ vs TN confusion is the true bottleneck.
 
 % =============================================================================
 \section{Methods}
@@ -131,14 +146,14 @@ We employed nested, stratified, repeated 5-fold CV \citep{wessels2005protocol, a
 \begin{figure*}[!t]
   \centering
   \includegraphics[width=\textwidth]{fig1_workflow.pdf}
-  \caption{Nested CV workflow. The outer loop (200 repeats $\times$ 5 folds) estimates performance; the inner loop tunes hyperparameters. Stage~1 separates HER2+ (BA1\,=\,1.000); Stage~2 classifies HR+ vs TN. Feature selection occurs inside each inner fold.}
+  \caption{Nested CV workflow. Grey boxes denote shared preprocessing steps; blue boxes denote experimental paths that vary across pipeline variants. The outer loop (200 repeats $\times$ 5 folds) estimates generalisation performance; the inner 5-fold loop tunes hyperparameters. Stage~1 separates HER2+ from non-HER2+ samples using a fixed KW+RF classifier (BA1\,=\,1.000); Stage~2 classifies the remaining samples as HR+ or TN. All feature selection and hyperparameter tuning occur strictly within inner folds.}
   \label{fig:workflow}
 \end{figure*}
 
 \begin{figure*}[!b]
   \centering
   \includegraphics[width=0.75\textwidth]{fig2_features.pdf}
-  \caption{Feature selection stability for EN+NMC(P) Stage~2. \textbf{(A)}~Selection frequency across 1,000 outer folds for all 273 segments. \textbf{(B)}~Top 15 regions, color-coded by chromosome. Chr12 and chr5 dominate, distinct from the chr17 ERBB2 signal in Stage~1.}
+  \caption{Feature selection stability for EN+NMC(P) Stage~2. \textbf{(A)}~Selection frequency (fraction of 1,000 outer folds in which each feature was selected) for all 273 merged segments, ranked from most to least frequently selected. The dashed line marks 50\% selection frequency; 69 regions exceed this threshold, indicating a core set of stable features. \textbf{(B)}~The 15 most frequently selected regions with mapped gene names, color-coded by chromosome. Chr12 (yellow) and chr5 (pink) dominate Stage~2 feature selection, distinct from the chr17 ERBB2 signal that drives Stage~1.}
   \label{fig:features}
 \end{figure*}
 
@@ -161,17 +176,17 @@ Pipeline differences were assessed using the Nadeau-Bengio corrected $t$-test \c
 \subsection{Flat 2x2 experiment}
 \label{sec:results-flat}
 
-In the flat setting, RF outperformed NMC regardless of feature selector: KW+RF achieved BA $= 0.791$ vs $0.631$ for KW+NMC (\autoref{tab:results}). HER2+ recall was high across all pipelines (0.764-0.998), but TN recall ranged from only 0.507 to 0.641 (\autoref{fig:results}B, left), identifying HR+ vs TN confusion as the bottleneck.
+In the flat setting, RF outperformed NMC regardless of feature selector: KW+RF achieved BA $= 0.791$ vs $0.631$ for KW+NMC (\autoref{tab:results}). HER2+ recall was high across all pipelines (0.764-0.998), but TN recall ranged from only 0.507 to 0.641 (\autoref{fig:results}B, left), identifying HR+ vs TN confusion as the bottleneck. This is expected given the strong chr17q12 ERBB2 amplification signal that distinguishes HER2+ tumours, whereas HR+ and TN subtypes share more similar copy-number landscapes and require subtler discriminative features.
 
 \subsection{Hierarchical classifier}
 \label{sec:results-hierarchical}
 
-The hierarchical decomposition reversed the classifier ranking: NMC outperformed RF in Stage~2 (HR+ vs TN), with bootstrap CIs excluding zero for all NMC-vs-RF pairs. EN+NMC(P) achieved the best BA $= 0.840$ and BA2 $= 0.759$ (\autoref{tab:results}; \autoref{fig:results}). The Nadeau-Bengio test found no significant pairwise differences, consistent with its conservative nature for repeated CV.
+The hierarchical decomposition reversed the classifier ranking: NMC outperformed RF in Stage~2 (HR+ vs TN), with bootstrap CIs excluding zero for all NMC-vs-RF pairs. EN+NMC(P) achieved the best BA $= 0.840$ and BA2 $= 0.759$ (\autoref{tab:results}; \autoref{fig:results}). This reversal suggests that RF's flat superiority was driven by its ability to separate HER2+ rather than by better HR+ vs TN discrimination, where NMC's simpler decision boundaries prove more appropriate given the limited Stage~2 sample size ($n = 68$). The Nadeau-Bengio test found no significant pairwise differences, consistent with its conservative nature for repeated CV.
 
 \begin{figure*}[!t]
   \centering
   \includegraphics[width=\textwidth]{fig3_results.pdf}
-  \caption{Model comparison. \textbf{(A)}~BA distributions per pipeline (50 repeats flat, 200 hierarchical). All hierarchical variants outperform the best flat pipeline. \textbf{(B)}~Confusion matrices for KW+RF (flat, left) and EN+NMC(P) (hierarchical, right), pooled over all outer folds.}
+  \caption{Model comparison. \textbf{(A)}~Distributions of 3-class balanced accuracy across outer CV repeats for each pipeline. Blue violins denote NMC-based pipelines; red violins denote RF-based pipelines. Horizontal lines within each violin mark the median. Flat pipelines use 50 repeats; hierarchical pipelines use 200. All hierarchical variants outperform the best flat pipeline (KW+RF). \textbf{(B)}~Row-normalized confusion matrices for KW+RF (flat, left) and EN+NMC(P) (hierarchical, right), pooled over all outer folds. Cell values represent per-class recall; the color scale ranges from 0 (white) to 1 (dark blue).}
   \label{fig:results}
 \end{figure*}
 
@@ -199,7 +214,7 @@ Three methodological refinements improved accuracy beyond the initial draft subm
 \section{Discussion}
 \label{sec:discussion}
 
-The Wessels principle is conditional on problem structure. In the flat 3-class setting, RF outperformed NMC (BA $= 0.791$ vs $0.631$; \autoref{fig:results}A), apparently contradicting findings on continuous expression data. After hierarchical decomposition removed the trivially separable HER2+ class, NMC outperformed RF in the binary HR+ vs TN problem. The HER2+ class acted as a confounder: its perfect separability inflated RF's advantage in the 3-class setting. In both settings, feature selector choice mattered less than classifier choice, consistent with \citet{wessels2005protocol}. The discovered biomarker regions harbor genes with established roles in breast cancer biology: chr17q12 contains *ERBB2* (HER2 receptor tyrosine kinase), while Stage~2 signals map to *CDK4* and *MDM2* on chr12q (cell cycle regulation and p53 antagonism) and *PIK3R1* on chr5q (PI3K/AKT pathway activation), consistent with known molecular differences between luminal (HR+) and basal-like (TN) subtypes \citep{chin2006genomic, sorlie2001gene}.
+The Wessels principle is conditional on problem structure. In the flat 3-class setting, RF outperformed NMC (BA $= 0.791$ vs $0.631$; \autoref{fig:results}A), apparently contradicting findings on continuous expression data. After hierarchical decomposition removed the trivially separable HER2+ class, NMC outperformed RF in the binary HR+ vs TN problem. The HER2+ class acted as a confounder: its perfect separability inflated RF's advantage in the 3-class setting. In both settings, feature selector choice mattered less than classifier choice, consistent with \citet{wessels2005protocol}. Geometrically, NMC's centroid-based decision rule is well-suited to Stage~2: with only 68 samples in 273 dimensions, RF's flexible boundaries are prone to overfitting, whereas the centroid provides a stable linear separator. The two-stage architecture also mirrors clinical practice, where HER2 status is assessed first via immunohistochemistry, and subsequent ER/PR testing distinguishes HR+ from TN; this alignment suggests the decomposition reflects genuine biological organisation rather than a statistical artifact. The discovered biomarker regions harbor genes with established roles in breast cancer biology: chr17q12 contains *ERBB2* (HER2 receptor tyrosine kinase), while Stage~2 signals map to *CDK4* and *MDM2* on chr12q (cell cycle regulation and p53 antagonism) and *PIK3R1* on chr5q (PI3K/AKT pathway activation), consistent with known molecular differences between luminal (HR+) and basal-like (TN) subtypes \citep{chin2006genomic, sorlie2001gene}.
 
 Limitations include the small sample size ($n = 100$, 68 for Stage~2) and discrete CN representation. Approximately 10 samples were consistently misclassified ($>$80\% across 1,000 test appearances; \autoref{fig:results}B), suggesting the BA2 $\approx 0.759$ ceiling reflects irreducible noise rather than classifier capacity. Future work could integrate expression data for multi-omic classification and test whether the hierarchical NMC advantage generalises to larger cohorts. In conclusion, simple classifiers can outperform complex ones on discrete aCGH data, but only when multi-class structure is decomposed to match the underlying biology.
 
