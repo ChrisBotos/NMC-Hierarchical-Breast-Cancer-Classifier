@@ -97,7 +97,9 @@ def pairwise_wilcoxon(wide_df, groups, log):
     if n_after < n_before:
         log.info(
             "Dropped %d incomplete rows (%d -> %d) for paired tests.",
-            n_before - n_after, n_before, n_after,
+            n_before - n_after,
+            n_before,
+            n_after,
         )
     if n_after < 3:
         log.warning("Fewer than 3 complete rows; skipping statistical tests.")
@@ -113,7 +115,8 @@ def pairwise_wilcoxon(wide_df, groups, log):
         friedman_stat, friedman_p = stats.wilcoxon(samples[0], samples[1])
         log.info(
             "Wilcoxon signed-rank (2 groups): W=%.4f, p=%.6f",
-            friedman_stat, friedman_p,
+            friedman_stat,
+            friedman_p,
         )
 
     if friedman_p >= 0.05:
@@ -129,17 +132,23 @@ def pairwise_wilcoxon(wide_df, groups, log):
             a, b = groups[i], groups[j]
             stat_val, p_val = stats.wilcoxon(clean[a].values, clean[b].values)
             p_corrected = apply_bonferroni(p_val, n_comparisons)
-            pairwise_rows.append({
-                "pipeline_a": a,
-                "pipeline_b": b,
-                "statistic": round(stat_val, 4),
-                "p_value": p_val,
-                "p_corrected": p_corrected,
-                "significant": p_corrected < 0.05,
-            })
+            pairwise_rows.append(
+                {
+                    "pipeline_a": a,
+                    "pipeline_b": b,
+                    "statistic": round(stat_val, 4),
+                    "p_value": p_val,
+                    "p_corrected": p_corrected,
+                    "significant": p_corrected < 0.05,
+                }
+            )
             log.info(
                 "  %s vs %s: W=%.1f, p=%.6f, p_corrected=%.6f %s",
-                a, b, stat_val, p_val, p_corrected,
+                a,
+                b,
+                stat_val,
+                p_val,
+                p_corrected,
                 "*" if p_corrected < 0.05 else "",
             )
 
@@ -186,7 +195,11 @@ def nadeau_bengio_test(pivot_df, pipeline_names, k, n_samples, log):
     log.info(
         "Nadeau-Bengio tests: k=%d folds, r=%d repeats, "
         "n_test=%d, n_train=%d, correction_factor=%.4f",
-        k, r, n_test, n_train, correction,
+        k,
+        r,
+        n_test,
+        n_train,
+        correction,
     )
 
     rows = []
@@ -208,20 +221,27 @@ def nadeau_bengio_test(pivot_df, pipeline_names, k, n_samples, log):
                 p_val = 2.0 * (1.0 - stats.t.cdf(abs(t_stat), df=kr - 1))
 
             p_corrected = apply_bonferroni(p_val, n_comparisons)
-            rows.append({
-                "pipeline_a": a,
-                "pipeline_b": b,
-                "mean_diff": round(d_bar, 6),
-                "t_statistic": round(t_stat, 4),
-                "df": kr - 1,
-                "p_value": p_val,
-                "p_corrected": p_corrected,
-                "significant": p_corrected < 0.05,
-            })
+            rows.append(
+                {
+                    "pipeline_a": a,
+                    "pipeline_b": b,
+                    "mean_diff": round(d_bar, 6),
+                    "t_statistic": round(t_stat, 4),
+                    "df": kr - 1,
+                    "p_value": p_val,
+                    "p_corrected": p_corrected,
+                    "significant": p_corrected < 0.05,
+                }
+            )
             log.info(
-                "  %s vs %s: diff=%.4f, t=%.3f, df=%d, p=%.6f, "
-                "p_corrected=%.6f %s",
-                a, b, d_bar, t_stat, kr - 1, p_val, p_corrected,
+                "  %s vs %s: diff=%.4f, t=%.3f, df=%d, p=%.6f, " "p_corrected=%.6f %s",
+                a,
+                b,
+                d_bar,
+                t_stat,
+                kr - 1,
+                p_val,
+                p_corrected,
                 "*" if p_corrected < 0.05 else "",
             )
 

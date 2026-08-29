@@ -1,10 +1,10 @@
 """
 Group 9.
 Authors:
-    Alexandros Michailidis (2903034).
-    Antonie Wagner (2903383).
-    Christos Botos (2878553).
-    Yan Qiao (2874296).
+    Alexandros Michailidis.
+    Antonie Wagner.
+    Christos Botos.
+    Yan Qiao.
 Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
 Script Name: run_full_workflow.py.
@@ -49,33 +49,45 @@ def build_steps(run_name):
         (
             "Phase 0: Exploration (raw data)",
             [
-                sys.executable, str(CODE_DIR / "data_exploration_phase.py"),
-                "--name", run_name,
+                sys.executable,
+                str(CODE_DIR / "data_exploration_phase.py"),
+                "--name",
+                run_name,
             ],
         ),
         (
             "Phase 1: Preprocessing (region merging)",
             [
-                sys.executable, str(CODE_DIR / "preprocessing_phase.py"),
-                "--name", run_name,
+                sys.executable,
+                str(CODE_DIR / "preprocessing_phase.py"),
+                "--name",
+                run_name,
             ],
         ),
         (
             "Phase 0: Exploration (merged data)",
             [
-                sys.executable, str(CODE_DIR / "data_exploration_phase.py"),
-                "--input", str(merged_data),
-                "--tag", "merged",
-                "--name", run_name,
+                sys.executable,
+                str(CODE_DIR / "data_exploration_phase.py"),
+                "--input",
+                str(merged_data),
+                "--tag",
+                "merged",
+                "--name",
+                run_name,
             ],
         ),
         (
             "Comparison: Raw vs Merged",
             [
-                sys.executable, str(CODE_DIR / "compare_explorations.py"),
-                "--name", run_name,
-                "--label-a", "Raw (2834 regions)",
-                "--label-b", "Merged (273 segments)",
+                sys.executable,
+                str(CODE_DIR / "compare_explorations.py"),
+                "--name",
+                run_name,
+                "--label-a",
+                "Raw (2834 regions)",
+                "--label-b",
+                "Merged (273 segments)",
             ],
         ),
     ]
@@ -88,7 +100,9 @@ def main():
         description="Orchestrator: run the full analysis workflow.",
     )
     parser.add_argument(
-        "--name", type=str, default="default_run",
+        "--name",
+        type=str,
+        default="default_run",
         help="Run name for the results directory (default: default_run).",
     )
     args = parser.parse_args()

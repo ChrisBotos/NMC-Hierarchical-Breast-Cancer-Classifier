@@ -99,8 +99,7 @@ class ElasticNetSelector(BaseEstimator, TransformerMixin):
         random_state (int): Random seed for the solver.
     """
 
-    def __init__(self, C=1.0, l1_ratio=0.5, top_k=10, max_iter=10000,
-                 random_state=42):
+    def __init__(self, C=1.0, l1_ratio=0.5, top_k=10, max_iter=10000, random_state=42):
         self.C = C
         self.l1_ratio = l1_ratio
         self.top_k = top_k
@@ -126,8 +125,7 @@ class ElasticNetSelector(BaseEstimator, TransformerMixin):
         n_features = X.shape[1]
         if self.top_k > n_features:
             raise ValueError(
-                f"top_k={self.top_k} exceeds the number of features "
-                f"({n_features})."
+                f"top_k={self.top_k} exceeds the number of features " f"({n_features})."
             )
 
         model = LogisticRegression(
@@ -198,8 +196,7 @@ class NearestCentroidWithProba(NearestCentroid):
             (identical to original behavior).
     """
 
-    def __init__(self, metric="euclidean", shrink_threshold=None,
-                 class_weight=None):
+    def __init__(self, metric="euclidean", shrink_threshold=None, class_weight=None):
         super().__init__(metric=metric, shrink_threshold=shrink_threshold)
         self.class_weight = class_weight
 
@@ -219,10 +216,9 @@ class NearestCentroidWithProba(NearestCentroid):
             # Compute log(n_total / (n_classes * n_per_class)) for each class.
             n_total = len(y)
             n_classes = len(self.classes_)
-            log_weights = np.array([
-                np.log(n_total / (n_classes * np.sum(y == c)))
-                for c in self.classes_
-            ])
+            log_weights = np.array(
+                [np.log(n_total / (n_classes * np.sum(y == c))) for c in self.classes_]
+            )
             self.log_weights_ = log_weights
         else:
             self.log_weights_ = None

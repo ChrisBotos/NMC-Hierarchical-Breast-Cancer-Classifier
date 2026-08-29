@@ -1,10 +1,10 @@
 """
 Group 9.
 Authors:
-    Alexandros Michailidis (2903034).
-    Antonie Wagner (2903383).
-    Christos Botos (2878553).
-    Yan Qiao (2874296).
+    Alexandros Michailidis.
+    Antonie Wagner.
+    Christos Botos.
+    Yan Qiao.
 Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
 Script Name: make_slide2_accuracy_table.py.
@@ -24,8 +24,8 @@ Dependencies:
 
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -63,7 +63,12 @@ DISPLAY_NAMES = {
 
 
 """Pipelines without a meaningful single feature count."""
-ENSEMBLE_PIPELINES = {"nmc_pens_ensemble", "nmc_ensemble", "standalone_en_pens", "standalone_en"}
+ENSEMBLE_PIPELINES = {
+    "nmc_pens_ensemble",
+    "nmc_ensemble",
+    "standalone_en_pens",
+    "standalone_en",
+}
 
 SUBMITTED_PIPELINE = "en_nmc_pens"
 
@@ -98,13 +103,26 @@ def load_data(project_root: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFr
         tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: BA2 summary,
             combined BA summary, and all fold results.
     """
-    base = project_root / "results" / "2026-04-25_final_hierarchical" / "nested_cv_analysis" / "data"
+    base = (
+        project_root
+        / "results"
+        / "2026-04-25_final_hierarchical"
+        / "nested_cv_analysis"
+        / "data"
+    )
     ba2_summary = pd.read_csv(base / "summary_statistics.csv")
     combined_summary = pd.read_csv(base / "summary_statistics_combined_ba.csv")
     all_folds = pd.read_csv(
         base / "all_fold_results.csv",
-        usecols=["pipeline", "repeat", "outer_fold", "stage2_bal_acc",
-                 "balanced_accuracy", "y_true", "y_pred"],
+        usecols=[
+            "pipeline",
+            "repeat",
+            "outer_fold",
+            "stage2_bal_acc",
+            "balanced_accuracy",
+            "y_true",
+            "y_pred",
+        ],
     )
 
     # Compute per-fold plain accuracy from y_true and y_pred.
@@ -166,7 +184,9 @@ def build_table_data(
         on="pipeline",
         suffixes=("_ba2", "_comb"),
     )
-    merged = merged.sort_values("mean_bal_acc_ba2", ascending=False).reset_index(drop=True)
+    merged = merged.sort_values("mean_bal_acc_ba2", ascending=False).reset_index(
+        drop=True
+    )
     return merged
 
 
@@ -229,7 +249,9 @@ def draw_table(fig: plt.Figure, table_data: pd.DataFrame) -> None:
         h = HEADER_HEIGHT
 
         rect = mpatches.FancyBboxPatch(
-            (x0, header_bot), w, h,
+            (x0, header_bot),
+            w,
+            h,
             boxstyle="square,pad=0",
             facecolor=C["header_bg"],
             edgecolor=C["border"],
@@ -276,7 +298,9 @@ def draw_table(fig: plt.Figure, table_data: pd.DataFrame) -> None:
         ba2_str = f"{row['mean_bal_acc_ba2']:.3f} +/- {row['std_bal_acc_ba2']:.3f}"
         comb_str = f"{row['mean_bal_acc_comb']:.3f} +/- {row['std_bal_acc_comb']:.3f}"
         auroc_str = f"{row['mean_auroc']:.3f}"
-        acc_str = f"{row['mean_accuracy']:.3f}" if pd.notna(row.get('mean_accuracy')) else "-"
+        acc_str = (
+            f"{row['mean_accuracy']:.3f}" if pd.notna(row.get("mean_accuracy")) else "-"
+        )
         if pid in ENSEMBLE_PIPELINES:
             feat_str = "-"
         else:
@@ -300,7 +324,9 @@ def draw_table(fig: plt.Figure, table_data: pd.DataFrame) -> None:
 
             # Draw cell background.
             rect = mpatches.FancyBboxPatch(
-                (x0, row_bot), w, ROW_HEIGHT,
+                (x0, row_bot),
+                w,
+                ROW_HEIGHT,
                 boxstyle="square,pad=0",
                 facecolor=bg,
                 edgecolor=C["border"],
@@ -345,7 +371,9 @@ def draw_table(fig: plt.Figure, table_data: pd.DataFrame) -> None:
         # Gold left-edge accent for submitted row.
         if is_submitted:
             accent = mpatches.FancyBboxPatch(
-                (TABLE_LEFT, row_bot), 0.004, ROW_HEIGHT,
+                (TABLE_LEFT, row_bot),
+                0.004,
+                ROW_HEIGHT,
                 boxstyle="square,pad=0",
                 facecolor=C["highlight"],
                 edgecolor="none",
@@ -485,7 +513,9 @@ def draw_strip_plot(
     # Axis formatting.
     ax.set_yticks(y_positions)
     ax.set_yticklabels([""] * n_rows)
-    ax.set_xlabel("BA2 (Stage 2 Balanced Accuracy)", fontsize=11, fontfamily="sans-serif")
+    ax.set_xlabel(
+        "BA2 (Stage 2 Balanced Accuracy)", fontsize=11, fontfamily="sans-serif"
+    )
     ax.invert_yaxis()
     ax.set_ylim(n_rows - 0.5, -0.5)
     ax.tick_params(axis="x", labelsize=10)
@@ -508,7 +538,8 @@ def draw_strip_plot(
 
     # Legend for mean marker.
     diamond_handle = plt.Line2D(
-        [0], [0],
+        [0],
+        [0],
         marker="D",
         color="white",
         markerfacecolor=C["text"],
@@ -518,7 +549,8 @@ def draw_strip_plot(
         linewidth=0,
     )
     dashed_handle = plt.Line2D(
-        [0], [0],
+        [0],
+        [0],
         color=C["highlight"],
         linestyle="--",
         linewidth=1.2,

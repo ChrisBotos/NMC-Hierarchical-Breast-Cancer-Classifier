@@ -47,7 +47,8 @@ def load_gene_map(data_dir):
         {"X": "23", "Y": "24"},
     )
     gene_map_df["Chromosome"] = pd.to_numeric(
-        gene_map_df["Chromosome"], errors="coerce",
+        gene_map_df["Chromosome"],
+        errors="coerce",
     )
     gene_map_df = gene_map_df.dropna(subset=["Chromosome"])
     gene_map_df["Chromosome"] = gene_map_df["Chromosome"].astype(int)

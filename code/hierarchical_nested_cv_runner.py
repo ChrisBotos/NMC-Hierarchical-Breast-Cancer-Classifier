@@ -1,10 +1,10 @@
 """
 Group 9.
 Authors:
-    Alexandros Michailidis (2903034).
-    Antonie Wagner (2903383).
-    Christos Botos (2878553).
-    Yan Qiao (2874296).
+    Alexandros Michailidis.
+    Antonie Wagner.
+    Christos Botos.
+    Yan Qiao.
 Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
 Script Name: hierarchical_nested_cv_runner.py.

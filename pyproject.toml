@@ -52,6 +52,8 @@ extend-exclude = "code/predictions_file_format_check_v2\\.py"
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+# Kept byte-for-byte as the course issued it, so no linter rewrites it.
+extend-exclude = ["code/predictions_file_format_check_v2.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
@@ -64,9 +66,6 @@ ignore = ["E501"]
 # directory of scripts rather than an installed package. That bootstrap has
 # to run before the import it enables, so E402 is structural here.
 "code/*.py" = ["E402"]
-# Provided by the course as the reference checker for the submission format
-# and kept verbatim, so its style is not ours to change.
-"code/predictions_file_format_check_v2.py" = ["E402", "E722", "E712", "F841"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

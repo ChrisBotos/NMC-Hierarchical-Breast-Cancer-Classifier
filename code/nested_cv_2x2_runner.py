@@ -1,10 +1,10 @@
 """
 Group 9.
 Authors:
-    Alexandros Michailidis (2903034).
-    Antonie Wagner (2903383).
-    Christos Botos (2878553).
-    Yan Qiao (2874296).
+    Alexandros Michailidis.
+    Antonie Wagner.
+    Christos Botos.
+    Yan Qiao.
 Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
 Script Name: nested_cv_2x2_runner.py.
@@ -71,9 +71,20 @@ rich.traceback.install()
 """Single-Repeat Nested CV Runner"""
 
 
-def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
-                      param_grid, config, log, ckpt_path=None,
-                      prior_folds=None, details_dir=None):
+def run_single_repeat(
+    X,
+    y,
+    le,
+    feature_names,
+    pipeline_name,
+    repeat_seed,
+    param_grid,
+    config,
+    log,
+    ckpt_path=None,
+    prior_folds=None,
+    details_dir=None,
+):
     """Run outer CV for one pipeline and one repeat seed.
 
     Constructs a fresh pipeline per repeat so stochastic components
@@ -114,11 +125,15 @@ def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
     n_completed = len(prior_folds) if prior_folds else 0
 
     pipeline = build_pipeline(
-        pipeline_name, random_state=repeat_seed, config=config,
+        pipeline_name,
+        random_state=repeat_seed,
+        config=config,
     )
 
     inner_cv = StratifiedKFold(
-        n_splits=inner_folds, shuffle=True, random_state=100 + repeat_seed,
+        n_splits=inner_folds,
+        shuffle=True,
+        random_state=100 + repeat_seed,
     )
 
     grid_search = GridSearchCV(
@@ -131,7 +146,9 @@ def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
     )
 
     outer_cv = StratifiedKFold(
-        n_splits=outer_folds, shuffle=True, random_state=repeat_seed,
+        n_splits=outer_folds,
+        shuffle=True,
+        random_state=repeat_seed,
     )
 
     # Start from checkpoint if available.
@@ -163,7 +180,10 @@ def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
         # Secondary metric: macro-averaged one-vs-rest AUROC from predict_proba.
         y_proba = best_pipeline.predict_proba(X_test)
         auroc = roc_auc_score(
-            y_test, y_proba, multi_class="ovr", average="macro",
+            y_test,
+            y_proba,
+            multi_class="ovr",
+            average="macro",
         )
 
         fold_elapsed = time.perf_counter() - fold_start
@@ -205,13 +225,20 @@ def run_single_repeat(X, y, le, feature_names, pipeline_name, repeat_seed,
             fold_dir.mkdir(parents=True, exist_ok=True)
             save_inner_cv_results(fold_dir, fold_idx, grid_search.cv_results_)
             save_fold_features_flat(
-                fold_dir, fold_idx, feature_names, selector,
+                fold_dir,
+                fold_idx,
+                feature_names,
+                selector,
             )
 
         log.info(
             "  Fold %d: bal_acc=%.4f  auroc=%.4f  inner_best=%.4f  "
             "n_features=%d  (%.1fs)",
-            fold_idx, bal_acc, auroc, best_inner_score, n_features,
+            fold_idx,
+            bal_acc,
+            auroc,
+            best_inner_score,
+            n_features,
             fold_elapsed,
         )
 
@@ -268,7 +295,7 @@ def parse_args():
         type=Path,
         default=None,
         help="Path to merged training TSV. Defaults to preprocessing "
-             "handoff inside the run directory, then legacy path.",
+        "handoff inside the run directory, then legacy path.",
     )
     parser.add_argument(
         "--clinical",
@@ -311,7 +338,8 @@ def main():
     # Set up run directory and logging (non-destructive for parallel jobs).
     tag = f"{args.pipeline}_r{args.repeat}"
     fig_dir, data_dir, log_dir, run_dir = get_run_dirs_no_replace(
-        args.name, "nested_cv_2x2",
+        args.name,
+        "nested_cv_2x2",
     )
     log, console = setup_logging("nested_cv_2x2_runner", tag=tag, log_dir=log_dir)
 
@@ -323,7 +351,9 @@ def main():
     # Early exit if this job is already complete.
     out_csv = csv_path(data_dir, args.pipeline, args.repeat)
     if args.skip_if_complete and out_csv.exists():
-        log.info("Final CSV already exists: %s. Skipping (--skip-if-complete).", out_csv)
+        log.info(
+            "Final CSV already exists: %s. Skipping (--skip-if-complete).", out_csv
+        )
         return
 
     # Checkpoint handling.
@@ -363,8 +393,17 @@ def main():
     job_start = time.perf_counter()
 
     fold_results = run_single_repeat(
-        X, y, le, feature_names, args.pipeline, args.repeat, param_grid,
-        config, log, ckpt_path=ckpt, prior_folds=prior_folds,
+        X,
+        y,
+        le,
+        feature_names,
+        args.pipeline,
+        args.repeat,
+        param_grid,
+        config,
+        log,
+        ckpt_path=ckpt,
+        prior_folds=prior_folds,
         details_dir=details_dir,
     )
 
@@ -393,7 +432,8 @@ def main():
 
     # Save run config snapshot.
     save_config(
-        run_dir, "nested_cv_2x2_runner",
+        run_dir,
+        "nested_cv_2x2_runner",
         pipeline=args.pipeline,
         repeat=args.repeat,
         config_file=config["_config_path"],

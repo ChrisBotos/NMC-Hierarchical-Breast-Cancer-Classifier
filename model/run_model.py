@@ -1,10 +1,10 @@
 """
 Group 9.
 Authors:
-    Alexandros Michailidis (2903034).
-    Antonie Wagner (2903383).
-    Christos Botos (2878553).
-    Yan Qiao (2874296).
+    Alexandros Michailidis.
+    Antonie Wagner.
+    Christos Botos.
+    Yan Qiao.
 Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
 Script Name: run_model.py.
@@ -35,12 +35,6 @@ import pandas as pd
 _CODE_DIR = Path(__file__).resolve().parent.parent / "code"
 if str(_CODE_DIR) not in sys.path:
     sys.path.insert(0, str(_CODE_DIR))
-
-from utils.cv_components import (  # noqa: E402
-    ElasticNetSelector,
-    KruskalWallisSelector,
-    NearestCentroidWithProba,
-)
 
 
 def build_consensus_matrix(cn_df, merge_map, sample_cols):
@@ -131,7 +125,7 @@ def main():
 
     """Stage 2: HR+ vs Triple Neg"""
 
-    mask = (pred_s1 == 0)
+    mask = pred_s1 == 0
     X_val_s2 = X_val[mask]
 
     probs = [m.predict_proba(X_val_s2) for m in stage2_models]

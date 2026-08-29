@@ -7,12 +7,12 @@ test:
 	pytest tests/ -v
 
 lint:
-	ruff check code/ tests/
-	black --check code/ tests/
+	ruff check code/ tests/ presentation/ model/
+	black --check code/ tests/ presentation/ model/
 
 format:
-	black code/ tests/
-	ruff check --fix code/ tests/
+	black code/ tests/ presentation/ model/
+	ruff check --fix code/ tests/ presentation/ model/
 
 ci-check: lint test
 	@echo "All CI checks passed."

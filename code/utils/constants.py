@@ -53,9 +53,15 @@ PIPELINE_COLORS = {
 
 # Canonical ordering for all hierarchical pipeline variants.
 PIPELINE_NAMES = (
-    "kw_nmc", "en_nmc", "kw_rf", "en_rf", "standalone_en",
+    "kw_nmc",
+    "en_nmc",
+    "kw_rf",
+    "en_rf",
+    "standalone_en",
     "nmc_ensemble",
-    "kw_nmc_pens", "standalone_en_pens", "en_nmc_pens",
+    "kw_nmc_pens",
+    "standalone_en_pens",
+    "en_nmc_pens",
     "nmc_pens_ensemble",
 )
 
