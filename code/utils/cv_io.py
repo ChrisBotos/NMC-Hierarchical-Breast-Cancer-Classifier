@@ -6,7 +6,6 @@ CV runner scripts.
 """
 
 import json
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -112,8 +111,9 @@ def load_checkpoint(ckpt_path, log):
     return data["fold_results"]
 
 
-def save_checkpoint(ckpt_path, fold_results, pipeline_name, repeat_seed,
-                    pipeline_key="pipeline"):
+def save_checkpoint(
+    ckpt_path, fold_results, pipeline_name, repeat_seed, pipeline_key="pipeline"
+):
     """Write fold results to a checkpoint file.
 
     Args:
@@ -270,11 +270,13 @@ def save_fold_features_flat(fold_dir, fold_idx, feature_names, selector):
     scores = get_selector_scores(selector)
     selected_set = set(selector.indices_.tolist())
 
-    df = pd.DataFrame({
-        "feature_name": feature_names,
-        "score": np.round(scores, 6),
-        "selected": [i in selected_set for i in range(len(feature_names))],
-    })
+    df = pd.DataFrame(
+        {
+            "feature_name": feature_names,
+            "score": np.round(scores, 6),
+            "selected": [i in selected_set for i in range(len(feature_names))],
+        }
+    )
     # Sort by score descending for readability.
     df = df.sort_values("score", ascending=False).reset_index(drop=True)
 
@@ -282,8 +284,9 @@ def save_fold_features_flat(fold_dir, fold_idx, feature_names, selector):
     df.to_csv(out_path, index=False)
 
 
-def save_fold_features_hierarchical(fold_dir, fold_idx, feature_names,
-                                    stage1_selector, stage2_selector):
+def save_fold_features_hierarchical(
+    fold_dir, fold_idx, feature_names, stage1_selector, stage2_selector
+):
     """Save full feature rankings for both stages of a hierarchical fold.
 
     Args:
@@ -299,13 +302,15 @@ def save_fold_features_hierarchical(fold_dir, fold_idx, feature_names,
     s2_scores = get_selector_scores(stage2_selector)
     s2_selected = set(stage2_selector.indices_.tolist())
 
-    df = pd.DataFrame({
-        "feature_name": feature_names,
-        "stage1_kw_score": np.round(s1_scores, 6),
-        "stage1_selected": [i in s1_selected for i in range(len(feature_names))],
-        "stage2_score": np.round(s2_scores, 6),
-        "stage2_selected": [i in s2_selected for i in range(len(feature_names))],
-    })
+    df = pd.DataFrame(
+        {
+            "feature_name": feature_names,
+            "stage1_kw_score": np.round(s1_scores, 6),
+            "stage1_selected": [i in s1_selected for i in range(len(feature_names))],
+            "stage2_score": np.round(s2_scores, 6),
+            "stage2_selected": [i in s2_selected for i in range(len(feature_names))],
+        }
+    )
     # Sort by stage2 score descending as the primary interest.
     df = df.sort_values("stage2_score", ascending=False).reset_index(drop=True)
 

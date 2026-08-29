@@ -31,10 +31,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import rich.traceback
-
 from utils import (
     DATA_DIR,
-    PROJECT_DIR,
     SUBTYPE_COLORS,
     SUBTYPE_ORDER,
     apply_plot_style,
@@ -154,26 +152,35 @@ def make_comparison_figure(data_a, data_b, label_a, label_b, clinical_df, fig_pa
             subtitle (str): Text annotation inside the panel.
         """
         for subtype in SUBTYPE_ORDER:
-            mask = [l == subtype for l in sample_labels]
+            mask = [name == subtype for name in sample_labels]
             ax.scatter(
-                X_2d[mask, 0], X_2d[mask, 1],
-                c=SUBTYPE_COLORS[subtype], label=subtype,
-                s=30, alpha=0.8, edgecolors="black", linewidths=0.2,
+                X_2d[mask, 0],
+                X_2d[mask, 1],
+                c=SUBTYPE_COLORS[subtype],
+                label=subtype,
+                s=30,
+                alpha=0.8,
+                edgecolors="black",
+                linewidths=0.2,
             )
-        ax.text(0.02, 0.98, f"({panel_label}) {subtitle}",
-                transform=ax.transAxes, fontsize=9,
-                fontweight="bold", va="top")
+        ax.text(
+            0.02,
+            0.98,
+            f"({panel_label}) {subtitle}",
+            transform=ax.transAxes,
+            fontsize=9,
+            fontweight="bold",
+            va="top",
+        )
         ax.spines[["top", "right"]].set_visible(False)
 
     # (a) PCA A.
-    scatter_by_subtype(axes[0, 0], pca_a[:, :2], labels_a,
-                       "a", label_a)
+    scatter_by_subtype(axes[0, 0], pca_a[:, :2], labels_a, "a", label_a)
     axes[0, 0].set_xlabel(f"PC1 ({var_a[0]*100:.1f}% variance)")
     axes[0, 0].set_ylabel(f"PC2 ({var_a[1]*100:.1f}% variance)")
 
     # (b) PCA B.
-    scatter_by_subtype(axes[0, 1], pca_b[:, :2], labels_b,
-                       "b", label_b)
+    scatter_by_subtype(axes[0, 1], pca_b[:, :2], labels_b, "b", label_b)
     axes[0, 1].set_xlabel(f"PC1 ({var_b[0]*100:.1f}% variance)")
     axes[0, 1].set_ylabel(f"PC2 ({var_b[1]*100:.1f}% variance)")
     axes[0, 1].legend(framealpha=0.9, loc="upper right")
@@ -181,28 +188,34 @@ def make_comparison_figure(data_a, data_b, label_a, label_b, clinical_df, fig_pa
     # (c) Cumulative variance overlay.
     ax = axes[0, 2]
     pcs = range(1, len(var_a) + 1)
-    ax.plot(pcs, np.cumsum(var_a) * 100, "o-", color="#3C5488",
-            markersize=4, label=label_a)
-    ax.plot(pcs, np.cumsum(var_b) * 100, "s-", color="#00A087",
-            markersize=4, label=label_b)
+    ax.plot(
+        pcs, np.cumsum(var_a) * 100, "o-", color="#3C5488", markersize=4, label=label_a
+    )
+    ax.plot(
+        pcs, np.cumsum(var_b) * 100, "s-", color="#00A087", markersize=4, label=label_b
+    )
     ax.set_xlabel("Number of principal components")
     ax.set_ylabel("Cumulative variance explained (%)")
     ax.set_xticks(list(pcs))
     ax.legend(fontsize=7)
     ax.spines[["top", "right"]].set_visible(False)
-    ax.text(0.02, 0.98, "(c) Cumulative variance",
-            transform=ax.transAxes, fontsize=9,
-            fontweight="bold", va="top")
+    ax.text(
+        0.02,
+        0.98,
+        "(c) Cumulative variance",
+        transform=ax.transAxes,
+        fontsize=9,
+        fontweight="bold",
+        va="top",
+    )
 
     # (d) t-SNE A.
-    scatter_by_subtype(axes[1, 0], tsne_a, labels_a,
-                       "d", f"{label_a} (perplexity=30)")
+    scatter_by_subtype(axes[1, 0], tsne_a, labels_a, "d", f"{label_a} (perplexity=30)")
     axes[1, 0].set_xlabel("t-SNE dimension 1 (arbitrary units)")
     axes[1, 0].set_ylabel("t-SNE dimension 2 (arbitrary units)")
 
     # (e) t-SNE B.
-    scatter_by_subtype(axes[1, 1], tsne_b, labels_b,
-                       "e", f"{label_b} (perplexity=30)")
+    scatter_by_subtype(axes[1, 1], tsne_b, labels_b, "e", f"{label_b} (perplexity=30)")
     axes[1, 1].set_xlabel("t-SNE dimension 1 (arbitrary units)")
     axes[1, 1].set_ylabel("t-SNE dimension 2 (arbitrary units)")
 
@@ -219,38 +232,73 @@ def make_comparison_figure(data_a, data_b, label_a, label_b, clinical_df, fig_pa
 
     x = np.arange(len(metric_names))
     width = 0.3
-    bars_a = ax.bar(x - width / 2, vals_a, width, color="#3C5488",
-                    edgecolor="black", linewidth=0.3, label=label_a)
-    bars_b = ax.bar(x + width / 2, vals_b, width, color="#00A087",
-                    edgecolor="black", linewidth=0.3, label=label_b)
+    bars_a = ax.bar(
+        x - width / 2,
+        vals_a,
+        width,
+        color="#3C5488",
+        edgecolor="black",
+        linewidth=0.3,
+        label=label_a,
+    )
+    bars_b = ax.bar(
+        x + width / 2,
+        vals_b,
+        width,
+        color="#00A087",
+        edgecolor="black",
+        linewidth=0.3,
+        label=label_b,
+    )
 
     for bar in bars_a:
         h = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, h + 0.5,
-                f"{h:.1f}",
-                ha="center", va="bottom", fontsize=7)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            h + 0.5,
+            f"{h:.1f}",
+            ha="center",
+            va="bottom",
+            fontsize=7,
+        )
     for bar in bars_b:
         h = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2, h + 0.5,
-                f"{h:.1f}",
-                ha="center", va="bottom", fontsize=7)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2,
+            h + 0.5,
+            f"{h:.1f}",
+            ha="center",
+            va="bottom",
+            fontsize=7,
+        )
 
     ax.set_xticks(x)
     ax.set_xticklabels(metric_names, fontsize=7)
     ax.set_ylabel("Value (%)")
     ax.legend(fontsize=7)
     ax.spines[["top", "right"]].set_visible(False)
-    ax.text(0.02, 0.98, "(f) Summary metrics",
-            transform=ax.transAxes, fontsize=9,
-            fontweight="bold", va="top")
+    ax.text(
+        0.02,
+        0.98,
+        "(f) Summary metrics",
+        transform=ax.transAxes,
+        fontsize=9,
+        fontweight="bold",
+        va="top",
+    )
 
     # Annotate feature counts and raw Bonferroni numbers below the panel.
-    ax.text(0.5, -0.18,
-            f"Features: A = {n_features_a}, B = {n_features_b}. "
-            f"Bonferroni-significant: A = {bonf_a}/{n_features_a}, "
-            f"B = {bonf_b}/{n_features_b}.",
-            transform=ax.transAxes, fontsize=8, ha="center",
-            style="italic")
+    ax.text(
+        0.5,
+        -0.18,
+        f"Features: A = {n_features_a}, B = {n_features_b}. "
+        f"Bonferroni-significant: A = {bonf_a}/{n_features_a}, "
+        f"B = {bonf_b}/{n_features_b}.",
+        transform=ax.transAxes,
+        fontsize=8,
+        ha="center",
+        style="italic",
+    )
 
     fig.subplots_adjust(hspace=0.35, wspace=0.30)
     fig.savefig(fig_path)
@@ -283,29 +331,40 @@ def main():
         description="Compare two data exploration runs side-by-side.",
     )
     parser.add_argument(
-        "--name", type=str, default="default_run",
+        "--name",
+        type=str,
+        default="default_run",
         help="Run name for the results directory (default: default_run).",
     )
     parser.add_argument(
-        "--dir-a", type=Path, default=None,
+        "--dir-a",
+        type=Path,
+        default=None,
         help="Path to first exploration output directory. "
-             "Defaults to <run>/eda/data/.",
+        "Defaults to <run>/eda/data/.",
     )
     parser.add_argument(
-        "--dir-b", type=Path, default=None,
+        "--dir-b",
+        type=Path,
+        default=None,
         help="Path to second exploration output directory. "
-             "Defaults to <run>/eda_merged/data/.",
+        "Defaults to <run>/eda_merged/data/.",
     )
     parser.add_argument(
-        "--label-a", type=str, default=None,
+        "--label-a",
+        type=str,
+        default=None,
         help="Display label for dataset A (default: directory name).",
     )
     parser.add_argument(
-        "--label-b", type=str, default=None,
+        "--label-b",
+        type=str,
+        default=None,
         help="Display label for dataset B (default: directory name).",
     )
     parser.add_argument(
-        "--clinical", type=Path,
+        "--clinical",
+        type=Path,
         default=DATA_DIR / "Train_clinical.tsv",
         help="Path to clinical labels TSV.",
     )
@@ -313,7 +372,8 @@ def main():
 
     # Set up run directory and logging.
     fig_dir, data_dir, log_dir, run_dir = get_run_dirs(
-        args.name, "compare_explorations",
+        args.name,
+        "compare_explorations",
     )
     log, console = setup_logging("compare_explorations", log_dir=log_dir)
     apply_plot_style(scale="compact")
@@ -341,7 +401,9 @@ def main():
                 "%s is missing required files: %s\n"
                 "Expected files: %s\n"
                 "Run data_exploration_phase.py first to generate them.",
-                dir_path, ", ".join(missing), ", ".join(REQUIRED_FILES),
+                dir_path,
+                ", ".join(missing),
+                ", ".join(REQUIRED_FILES),
             )
             sys.exit(1)
 
@@ -358,7 +420,11 @@ def main():
     log.info("")
 
     make_comparison_figure(
-        data_a, data_b, label_a, label_b, clinical_df,
+        data_a,
+        data_b,
+        label_a,
+        label_b,
+        clinical_df,
         fig_dir / "01_comparison.png",
     )
 

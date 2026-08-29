@@ -1,4 +1,4 @@
-"""Configuration file loader for the TB-Project.
+"""Configuration file loader for the NMC-Hierarchical-Breast-Cancer-Classifier.
 
 Loads YAML configuration files from configs/ and provides
 accessor functions for experiment parameters. Supports bare names
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import yaml
 
-# code/utils/config_loader.py -> code/utils -> code -> TB-Project.
+# code/utils/config_loader.py -> code/utils -> code -> NMC-Hierarchical-Breast-Cancer-Classifier.
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 CONFIG_DIR = PROJECT_DIR / "configs"
 DEFAULT_CONFIG = CONFIG_DIR / "local.yaml"

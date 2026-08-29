@@ -30,15 +30,13 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import rich.traceback
+from rich.console import Console
+from rich.table import Table
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import balanced_accuracy_score
 from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import LabelEncoder
-
-import rich.traceback
-from rich.console import Console
-from rich.table import Table
 
 rich.traceback.install()
 
@@ -52,8 +50,7 @@ from utils.paths import _find_or_create_run_dir
 console = Console()
 
 
-def run_stage1_grid(X, y_binary, rf_grid, n_repeats=10, n_folds=5,
-                    seed=42):
+def run_stage1_grid(X, y_binary, rf_grid, n_repeats=10, n_folds=5, seed=42):
     """Evaluate RF hyperparameter combos for Stage 1 via repeated CV.
 
     For each combo, runs repeated stratified k-fold and records
@@ -73,7 +70,9 @@ def run_stage1_grid(X, y_binary, rf_grid, n_repeats=10, n_folds=5,
             mean_margin, min_margin, std_margin.
     """
     cv = RepeatedStratifiedKFold(
-        n_splits=n_folds, n_repeats=n_repeats, random_state=seed,
+        n_splits=n_folds,
+        n_repeats=n_repeats,
+        random_state=seed,
     )
 
     results = []
@@ -86,15 +85,20 @@ def run_stage1_grid(X, y_binary, rf_grid, n_repeats=10, n_folds=5,
             X_train, X_test = X[train_idx], X[test_idx]
             y_train, y_test = y_binary[train_idx], y_binary[test_idx]
 
-            pipe = Pipeline([
-                ("selector", KruskalWallisSelector(k=5)),
-                ("clf", RandomForestClassifier(
-                    class_weight="balanced",
-                    random_state=seed,
-                    n_jobs=1,
-                    **params,
-                )),
-            ])
+            pipe = Pipeline(
+                [
+                    ("selector", KruskalWallisSelector(k=5)),
+                    (
+                        "clf",
+                        RandomForestClassifier(
+                            class_weight="balanced",
+                            random_state=seed,
+                            n_jobs=1,
+                            **params,
+                        ),
+                    ),
+                ]
+            )
 
             pipe.fit(X_train, y_train)
             proba = pipe.predict_proba(X_test)
@@ -128,11 +132,14 @@ def main():
         description="Select Stage 1 RF hyperparameters by prediction margin.",
     )
     parser.add_argument(
-        "--name", default="final_hierarchical",
+        "--name",
+        default="final_hierarchical",
         help="Run name (default: final_hierarchical).",
     )
     parser.add_argument(
-        "--repeats", type=int, default=10,
+        "--repeats",
+        type=int,
+        default=10,
         help="Number of CV repeats (default: 10).",
     )
     args = parser.parse_args()
@@ -145,7 +152,8 @@ def main():
         Path(__file__).resolve().parent.parent / "data" / "Train_clinical.tsv"
     )
     X, y, le, feature_names, sample_names = load_cv_data(
-        merged_path, clinical_path,
+        merged_path,
+        clinical_path,
     )
 
     # Binary labels: HER2+ = 1, rest = 0.
@@ -164,21 +172,30 @@ def main():
 
     rf_grid = []
     for n_est, depth, leaf, feat in product(
-        n_estimators_vals, max_depth_vals,
-        min_samples_leaf_vals, max_features_vals,
+        n_estimators_vals,
+        max_depth_vals,
+        min_samples_leaf_vals,
+        max_features_vals,
     ):
-        rf_grid.append({
-            "n_estimators": n_est,
-            "max_depth": depth,
-            "min_samples_leaf": leaf,
-            "max_features": feat,
-        })
+        rf_grid.append(
+            {
+                "n_estimators": n_est,
+                "max_depth": depth,
+                "min_samples_leaf": leaf,
+                "max_features": feat,
+            }
+        )
 
-    console.print(f"Testing {len(rf_grid)} RF configurations "
-                  f"({args.repeats} repeats x 5 folds each).")
+    console.print(
+        f"Testing {len(rf_grid)} RF configurations "
+        f"({args.repeats} repeats x 5 folds each)."
+    )
 
     results_df = run_stage1_grid(
-        X, y_binary, rf_grid, n_repeats=args.repeats,
+        X,
+        y_binary,
+        rf_grid,
+        n_repeats=args.repeats,
     )
 
     # Sort by min_margin descending (most robust first).
@@ -197,7 +214,9 @@ def main():
 
     for _, row in results_df.head(10).iterrows():
         depth_str = str(row["max_depth"]) if row["max_depth"] is not None else "None"
-        feat_str = str(row["max_features"]) if row["max_features"] is not None else "None"
+        feat_str = (
+            str(row["max_features"]) if row["max_features"] is not None else "None"
+        )
         table.add_row(
             str(int(row["n_estimators"])),
             depth_str,
@@ -217,11 +236,13 @@ def main():
     console.print("[bold]Recommended Stage 1 RF configuration:[/bold]")
     console.print(f"  n_estimators:    {int(best['n_estimators'])}")
     depth_val = best["max_depth"]
-    console.print(f"  max_depth:       {depth_val if depth_val is not None else 'None'}")
+    console.print(
+        f"  max_depth:       {depth_val if depth_val is not None else 'None'}"
+    )
     console.print(f"  min_samples_leaf: {int(best['min_samples_leaf'])}")
     feat_val = best["max_features"]
     console.print(f"  max_features:    {feat_val if feat_val is not None else 'None'}")
-    console.print(f"  class_weight:    balanced")
+    console.print("  class_weight:    balanced")
     console.print(f"  Min margin:      {best['min_margin']:.4f}")
     console.print(f"  Mean BA:         {best['mean_ba']:.4f}")
 

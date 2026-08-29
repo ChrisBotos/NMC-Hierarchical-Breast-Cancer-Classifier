@@ -4,14 +4,14 @@ Summary of all figures produced by `code/preprocessing_phase.py` and key numeric
 
 ---
 
-## Figure 01 — Regions per Chromosome Before and After Merging (`01_regions_per_chromosome.png`)
+## Figure 01 - Regions per Chromosome Before and After Merging (`01_regions_per_chromosome.png`)
 
 - **X-axis:** Chromosome (1-22, X).
 - **Y-axis:** Number of genomic regions.
 - **Blue bars:** Raw regions before merging. **Green bars:** Consensus segments after merging.
 - **Conclusion:** All chromosomes show substantial reduction. The overall count drops from 2834 raw regions to 273 consensus segments (90.4% reduction). Chromosome 18 has the highest reduction (98.2%, from 56 to 1 segment), while the X chromosome has the lowest (71.6%, from 74 to 21), indicating more heterogeneous CN profiles on chrX.
 
-## Figure 02 — Segment Size Distribution (`02_segment_size_distribution.png`)
+## Figure 02 - Segment Size Distribution (`02_segment_size_distribution.png`)
 
 - **X-axis:** Number of raw regions per consensus segment.
 - **Y-axis:** Number of consensus segments with that size.

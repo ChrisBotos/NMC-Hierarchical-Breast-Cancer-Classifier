@@ -1,4 +1,4 @@
-# CITATIONS.yaml - TB-Project (CATS)
+# CITATIONS.yaml - Hierarchical NMC breast cancer subtype classifier
 # Canonical citation registry for the project.
 # Usage: load_citations() from core_utils.citations to access programmatically.
 

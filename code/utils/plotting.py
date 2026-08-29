@@ -1,6 +1,5 @@
 """Matplotlib style configuration and reusable plotting helpers."""
 
-import numpy as np
 import matplotlib.pyplot as plt
 
 from utils.statistics import format_p_value
@@ -64,8 +63,13 @@ def annotate_heatmap(ax, data, fmt=".2f", raw_counts=None, threshold=0.6, fontsi
             else:
                 label = f"{data[i, j]:{fmt}}"
             ax.text(
-                j, i, label,
-                ha="center", va="center", fontsize=fontsize, color=text_color,
+                j,
+                i,
+                label,
+                ha="center",
+                va="center",
+                fontsize=fontsize,
+                color=text_color,
             )
 
 
@@ -114,13 +118,18 @@ def draw_significance_brackets(ax, pairwise_df, group_positions, data_by_group):
         ax.plot(
             [x1, x1, x2, x2],
             [y_bar, y_bar + bracket_height, y_bar + bracket_height, y_bar],
-            color=bracket_color, linewidth=0.8,
+            color=bracket_color,
+            linewidth=0.8,
         )
         p_text = format_p_value(row["p_corrected"])
         if is_sig:
             p_text += " *"
         ax.text(
-            (x1 + x2) / 2, y_bar + bracket_height,
-            p_text, ha="center", va="bottom", fontsize=6.5,
+            (x1 + x2) / 2,
+            y_bar + bracket_height,
+            p_text,
+            ha="center",
+            va="bottom",
+            fontsize=6.5,
             color=bracket_color,
         )

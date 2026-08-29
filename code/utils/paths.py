@@ -1,9 +1,8 @@
-"""Centralised path resolution for the TB-Project.
+"""Centralised path resolution for the NMC-Hierarchical-Breast-Cancer-Classifier.
 
 All paths are derived from the location of this file so scripts work
 from any working directory.
 """
-
 
 try:
     import fcntl
@@ -15,8 +14,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-
-# code/utils/paths.py -> code/utils -> code -> TB-Project.
+# code/utils/paths.py -> code/utils -> code -> NMC-Hierarchical-Breast-Cancer-Classifier.
 CODE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_DIR = CODE_DIR.parent
 DATA_DIR = PROJECT_DIR / "data"

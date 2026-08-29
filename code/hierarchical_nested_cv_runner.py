@@ -50,8 +50,6 @@ from rich.progress import track
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.metrics import balanced_accuracy_score, roc_auc_score
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 
 # Ensure the code/ directory is on sys.path so utils is importable.
 CODE_DIR = Path(__file__).resolve().parent
@@ -60,15 +58,11 @@ if str(CODE_DIR) not in sys.path:
 
 from utils.config_loader import get_grids, load_config
 from utils.constants import (
+    GRIDSEARCH_PIPELINES,
     MAX_PLATEAU_SIZE,
+    PIPELINE_NAMES,
     PLATEAU_ENSEMBLE_BASE,
     POSTHOC_ENSEMBLE_COMPONENTS,
-    GRIDSEARCH_PIPELINES,
-    PIPELINE_NAMES,
-)
-from utils.cv_components import (
-    KruskalWallisSelector,
-    NearestCentroidWithProba,
 )
 from utils.cv_config import build_pipeline, build_stage2_pipeline
 from utils.cv_io import (
@@ -90,12 +84,20 @@ rich.traceback.install()
 """Stage 1 Threshold Calibration"""
 
 
-
 """Stage 2 Dispatch Functions"""
 
 
-def run_stage2_gridsearch(X_train_s2, y_train_s2, X_test, pipeline_name,
-                          grid, inner_folds, repeat_seed, config, log):
+def run_stage2_gridsearch(
+    X_train_s2,
+    y_train_s2,
+    X_test,
+    pipeline_name,
+    grid,
+    inner_folds,
+    repeat_seed,
+    config,
+    log,
+):
     """Run Stage 2 via GridSearchCV for a standard pipeline.
 
     Args:
@@ -116,10 +118,13 @@ def run_stage2_gridsearch(X_train_s2, y_train_s2, X_test, pipeline_name,
             and en_converged is bool or None.
     """
     stage2_pipe = build_stage2_pipeline(
-        pipeline_name, random_state=repeat_seed, config=config,
+        pipeline_name,
+        random_state=repeat_seed,
+        config=config,
     )
     inner_cv = StratifiedKFold(
-        n_splits=inner_folds, shuffle=True,
+        n_splits=inner_folds,
+        shuffle=True,
         random_state=200 + repeat_seed,
     )
     gscv = GridSearchCV(
@@ -151,9 +156,17 @@ def run_stage2_gridsearch(X_train_s2, y_train_s2, X_test, pipeline_name,
     return proba_s2, best_s2, gscv.cv_results_, gscv.best_params_, en_converged
 
 
-def retrain_plateau_models(plateau_params, base_pipeline_name,
-                           X_train_s2, y_train_s2, X_test,
-                           repeat_seed, config, feature_names, log):
+def retrain_plateau_models(
+    plateau_params,
+    base_pipeline_name,
+    X_train_s2,
+    y_train_s2,
+    X_test,
+    repeat_seed,
+    config,
+    feature_names,
+    log,
+):
     """Retrain a fixed set of plateau models and average predictions.
 
     Takes a pre-computed list of plateau hyperparameter combinations
@@ -187,7 +200,9 @@ def retrain_plateau_models(plateau_params, base_pipeline_name,
 
     for rank, params in enumerate(plateau_params):
         pipe = build_stage2_pipeline(
-            base_pipeline_name, random_state=repeat_seed, config=config,
+            base_pipeline_name,
+            random_state=repeat_seed,
+            config=config,
         )
         pipe.set_params(**params)
 
@@ -213,7 +228,10 @@ def retrain_plateau_models(plateau_params, base_pipeline_name,
         if rank < 3 or rank == n_plateau - 1:
             log.info(
                 "      [%d/%d] n_features=%d, params=%s",
-                rank + 1, n_plateau, len(selected), params,
+                rank + 1,
+                n_plateau,
+                len(selected),
+                params,
             )
 
     avg_proba = np.mean(all_proba, axis=0)
@@ -232,15 +250,21 @@ def retrain_plateau_models(plateau_params, base_pipeline_name,
     best_params = plateau_params[0]
     log.info(
         "    Plateau features: union=%d, intersection=%d",
-        len(feature_union), len(feature_intersection),
+        len(feature_union),
+        len(feature_intersection),
     )
 
-    return (avg_proba, n_plateau, best_params, feature_union,
-            feature_intersection, feature_frequency)
+    return (
+        avg_proba,
+        n_plateau,
+        best_params,
+        feature_union,
+        feature_intersection,
+        feature_frequency,
+    )
 
 
-def compute_pooled_plateau(base_pipeline_name, run_dir, log,
-                           max_size=None):
+def compute_pooled_plateau(base_pipeline_name, run_dir, log, max_size=None):
     """Read all inner_cv.csv files for a base pipeline, pool scores,
     and identify the stable plateau.
 
@@ -271,7 +295,8 @@ def compute_pooled_plateau(base_pipeline_name, run_dir, log,
     if not csv_files:
         log.warning(
             "No inner_cv.csv files found for base pipeline '%s' in %s",
-            base_pipeline_name, run_dir,
+            base_pipeline_name,
+            run_dir,
         )
         return [], 0, 0.0, 0.0, 0.0, 0
 
@@ -299,7 +324,8 @@ def compute_pooled_plateau(base_pipeline_name, run_dir, log,
         log.warning(
             "Multiple inner_cv schemas found; using majority (%d files "
             "with %d combos). Skipping %d files with different schemas.",
-            schema_counts[best_schema], expected_n_rows,
+            schema_counts[best_schema],
+            expected_n_rows,
             len(csv_files) - schema_counts[best_schema],
         )
 
@@ -329,15 +355,14 @@ def compute_pooled_plateau(base_pipeline_name, run_dir, log,
     plateau_mask = pooled_mean >= threshold
     plateau_indices = np.where(plateau_mask)[0]
     # Sort by pooled score descending.
-    plateau_indices = plateau_indices[
-        np.argsort(pooled_mean[plateau_indices])[::-1]
-    ]
+    plateau_indices = plateau_indices[np.argsort(pooled_mean[plateau_indices])[::-1]]
 
     effective_max = MAX_PLATEAU_SIZE if max_size is None else max_size
     if effective_max > 0 and len(plateau_indices) > effective_max:
         log.info(
             "Pooled plateau capped: %d -> %d combos",
-            len(plateau_indices), effective_max,
+            len(plateau_indices),
+            effective_max,
         )
         plateau_indices = plateau_indices[:effective_max]
     elif effective_max == 0:
@@ -375,24 +400,30 @@ def compute_pooled_plateau(base_pipeline_name, run_dir, log,
     log.info(
         "Pooled plateau: %d of %d combos from %d fold files "
         "(best=%.4f, std=%.4f, threshold=%.4f)",
-        len(plateau_params_list), n_combos, n_files,
-        best_score, best_std, threshold,
+        len(plateau_params_list),
+        n_combos,
+        n_files,
+        best_score,
+        best_std,
+        threshold,
     )
     for i, params in enumerate(plateau_params_list):
         log.info(
             "  Plateau combo %d: score=%.4f, params=%s",
-            i + 1, float(pooled_mean[plateau_indices[i]]), params,
+            i + 1,
+            float(pooled_mean[plateau_indices[i]]),
+            params,
         )
 
-    return (plateau_params_list, n_combos, best_score,
-            best_std, threshold, n_files)
+    return (plateau_params_list, n_combos, best_score, best_std, threshold, n_files)
 
 
 """Mislabel Sensitivity Helpers"""
 
 
-def compute_metrics_excluding_mislabels(y_true_labels, y_pred_combined,
-                                        test_idx, mislabel_indices):
+def compute_metrics_excluding_mislabels(
+    y_true_labels, y_pred_combined, test_idx, mislabel_indices
+):
     """Compute balanced accuracy excluding suspected mislabel samples.
 
     Args:
@@ -414,7 +445,8 @@ def compute_metrics_excluding_mislabels(y_true_labels, y_pred_combined,
         return float("nan"), n_excluded
 
     ba_excl = balanced_accuracy_score(
-        y_true_labels[keep_mask], y_pred_combined[keep_mask],
+        y_true_labels[keep_mask],
+        y_pred_combined[keep_mask],
     )
     return round(ba_excl, 6), n_excluded
 
@@ -422,8 +454,9 @@ def compute_metrics_excluding_mislabels(y_true_labels, y_pred_combined,
 """Post-hoc Ensemble"""
 
 
-def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
-                         config, log, out_csv):
+def run_posthoc_ensemble(
+    ensemble_name, component_names, data_dir, repeat_seed, config, log, out_csv
+):
     """Average 3-class probabilities from completed component pipeline folds.
 
     Reads fold_results CSVs for each component pipeline (same repeat seed),
@@ -456,7 +489,8 @@ def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
             log.error(
                 "Component '%s' results not found: %s. "
                 "Run the component pipeline first.",
-                comp_name, comp_csv,
+                comp_name,
+                comp_csv,
             )
             sys.exit(1)
         comp_df = pd.read_csv(comp_csv)
@@ -486,7 +520,9 @@ def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
             if len(matching) != 1:
                 log.error(
                     "Expected 1 row for %s fold %d, got %d.",
-                    comp_name, fold_idx, len(matching),
+                    comp_name,
+                    fold_idx,
+                    len(matching),
                 )
                 sys.exit(1)
             comp_rows.append(matching.iloc[0])
@@ -505,9 +541,7 @@ def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
             )
 
         # Parse and average proba_combined arrays.
-        proba_list = [
-            np.array(json.loads(row["proba_combined"])) for row in comp_rows
-        ]
+        proba_list = [np.array(json.loads(row["proba_combined"])) for row in comp_rows]
         avg_proba = np.mean(proba_list, axis=0)
 
         # Compute predictions from averaged probabilities.
@@ -529,23 +563,32 @@ def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
 
         # AUROC via averaged 3-class probabilities.
         # Encode y_true as integers matching class_names order.
-        y_true_int = np.array([
-            list(class_names).index(label) for label in y_true_labels
-        ])
+        y_true_int = np.array(
+            [list(class_names).index(label) for label in y_true_labels]
+        )
         auroc = roc_auc_score(
-            y_true_int, avg_proba, multi_class="ovr", average="macro",
+            y_true_int,
+            avg_proba,
+            multi_class="ovr",
+            average="macro",
         )
 
         # Mislabel sensitivity analysis.
         test_idx = np.array([int(x) for x in ref_test_indices.split(",")])
         if mislabel_indices:
             combined_ba_excl, n_excluded = compute_metrics_excluding_mislabels(
-                y_true_labels, y_pred_combined, test_idx, mislabel_indices,
+                y_true_labels,
+                y_pred_combined,
+                test_idx,
+                mislabel_indices,
             )
             if mask_hrt.any():
                 test_idx_hrt = test_idx[mask_hrt]
                 s2_ba_excl, _ = compute_metrics_excluding_mislabels(
-                    y_true_s2, y_pred_s2, test_idx_hrt, mislabel_indices,
+                    y_true_s2,
+                    y_pred_s2,
+                    test_idx_hrt,
+                    mislabel_indices,
                 )
             else:
                 s2_ba_excl = float("nan")
@@ -573,10 +616,12 @@ def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
             "auroc_macro": round(auroc, 6),
             "stage2_best_inner": None,
             "stage2_best_inner_std": None,
-            "stage2_best_params": json.dumps({
-                "ensemble": "posthoc_avg",
-                "components": list(component_names),
-            }),
+            "stage2_best_params": json.dumps(
+                {
+                    "ensemble": "posthoc_avg",
+                    "components": list(component_names),
+                }
+            ),
             "stage1_n_features": s1_n_features,
             "stage2_n_features": 0,
             "stage1_features": s1_features,
@@ -587,12 +632,10 @@ def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
             "n_train_s2": int(comp_rows[0].get("n_train_s2", 0)),
             "n_routed_to_s2": int((y_pred_combined != "HER2+").sum()),
             "combined_bal_acc_excl": (
-                round(combined_ba_excl, 6)
-                if not np.isnan(combined_ba_excl) else None
+                round(combined_ba_excl, 6) if not np.isnan(combined_ba_excl) else None
             ),
             "stage2_bal_acc_excl": (
-                round(s2_ba_excl, 6)
-                if not np.isnan(s2_ba_excl) else None
+                round(s2_ba_excl, 6) if not np.isnan(s2_ba_excl) else None
             ),
             "n_excluded": n_excluded,
             "en_converged": None,
@@ -608,7 +651,11 @@ def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
 
         log.info(
             "  Fold %d: combined=%.4f  s2=%.4f  auroc=%.4f  (%.1fs)",
-            fold_idx, combined_bal_acc, stage2_bal_acc, auroc, fold_elapsed,
+            fold_idx,
+            combined_bal_acc,
+            stage2_bal_acc,
+            auroc,
+            fold_elapsed,
         )
 
     # Save fold results.
@@ -621,15 +668,18 @@ def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
     s2_scores = [r["stage2_bal_acc"] for r in fold_results]
     log.info(
         "Summary for %s repeat %d:",
-        ensemble_name, repeat_seed,
+        ensemble_name,
+        repeat_seed,
     )
     log.info(
         "  Combined (3-class): %.4f (+/- %.4f)",
-        np.mean(combined_scores), np.std(combined_scores),
+        np.mean(combined_scores),
+        np.std(combined_scores),
     )
     log.info(
         "  Stage 2 (HR+ vs TN): %.4f (+/- %.4f)",
-        np.nanmean(s2_scores), np.nanstd(s2_scores),
+        np.nanmean(s2_scores),
+        np.nanstd(s2_scores),
     )
 
     return fold_results
@@ -638,12 +688,25 @@ def run_posthoc_ensemble(ensemble_name, component_names, data_dir, repeat_seed,
 """Hierarchical Nested CV Runner"""
 
 
-def run_single_repeat(X, y, le, feature_names, sample_names,
-                         stage2_pipeline_name, repeat_seed, stage2_grid,
-                         config, log, ckpt_path=None, prior_folds=None,
-                         details_dir=None, plateau_params=None,
-                         pooled_best_score=None, pooled_best_std=None,
-                         pooled_n_files=None):
+def run_single_repeat(
+    X,
+    y,
+    le,
+    feature_names,
+    sample_names,
+    stage2_pipeline_name,
+    repeat_seed,
+    stage2_grid,
+    config,
+    log,
+    ckpt_path=None,
+    prior_folds=None,
+    details_dir=None,
+    plateau_params=None,
+    pooled_best_score=None,
+    pooled_best_std=None,
+    pooled_n_files=None,
+):
     """Run hierarchical outer CV for one Stage 2 pipeline and one repeat.
 
     Enhanced version with cost-sensitive NMC, k-ensemble/pipeline-ensemble
@@ -696,13 +759,17 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
 
     # Stage 1: binary KW+RF with k=5, no inner CV needed.
     stage1_pipe = build_pipeline(
-        "kw_rf", random_state=repeat_seed, config=config,
+        "kw_rf",
+        random_state=repeat_seed,
+        config=config,
     )
     stage1_pipe.set_params(selector__k=5)
 
     # Outer CV stratified on the original 3-class labels.
     outer_cv = StratifiedKFold(
-        n_splits=outer_folds, shuffle=True, random_state=repeat_seed,
+        n_splits=outer_folds,
+        shuffle=True,
+        random_state=repeat_seed,
     )
 
     fold_results = list(prior_folds) if prior_folds else []
@@ -760,10 +827,23 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
             # GridSearchCV is run per fold - just retrain and average.
             base_name = PLATEAU_ENSEMBLE_BASE[stage2_pipeline_name]
 
-            (proba_s2, n_plateau, best_plateau_params, feat_union,
-             feat_inter, feat_freq) = retrain_plateau_models(
-                plateau_params, base_name, X_train_s2, y_train_s2,
-                X_test, repeat_seed, config, feature_names, log,
+            (
+                proba_s2,
+                n_plateau,
+                best_plateau_params,
+                feat_union,
+                feat_inter,
+                feat_freq,
+            ) = retrain_plateau_models(
+                plateau_params,
+                base_name,
+                X_train_s2,
+                y_train_s2,
+                X_test,
+                repeat_seed,
+                config,
+                feature_names,
+                log,
             )
             s2_best_params = {
                 "ensemble": "plateau_pooled",
@@ -784,8 +864,15 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
             # Standard GridSearchCV path.
             proba_s2, best_s2, s2_cv_results, s2_best_params, en_converged = (
                 run_stage2_gridsearch(
-                    X_train_s2, y_train_s2, X_test, stage2_pipeline_name,
-                    stage2_grid, inner_folds, repeat_seed, config, log,
+                    X_train_s2,
+                    y_train_s2,
+                    X_test,
+                    stage2_pipeline_name,
+                    stage2_grid,
+                    inner_folds,
+                    repeat_seed,
+                    config,
+                    log,
                 )
             )
             if "selector" in best_s2.named_steps:
@@ -800,8 +887,7 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
         if not is_plateau_ensemble:
             s2_n_features = len(s2_selector.indices_) if s2_selector else 0
             s2_features = (
-                [feature_names[i] for i in s2_selector.indices_]
-                if s2_selector else []
+                [feature_names[i] for i in s2_selector.indices_] if s2_selector else []
             )
 
         # --- Diagnostic: Stage 2 accuracy on true HR+/TN test samples ---
@@ -810,8 +896,12 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
             y_test_s2 = (y_test[mask_test_hrt] == tn_idx).astype(int)
             # Use argmax of proba for Stage 2 predictions.
             y_pred_s2_diag = np.argmax(
-                proba_s2[mask_test_hrt] if proba_s2.shape[0] == len(y_test)
-                else proba_s2, axis=1,
+                (
+                    proba_s2[mask_test_hrt]
+                    if proba_s2.shape[0] == len(y_test)
+                    else proba_s2
+                ),
+                axis=1,
             )
             # Only use the mask_test_hrt subset of proba.
             s2_proba_hrt = proba_s2[mask_test_hrt]
@@ -822,7 +912,7 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
 
         # --- Combined 3-class predictions via routing ---
         y_pred_combined = np.empty(len(y_test), dtype=object)
-        her2_pred_mask = (y_pred_s1 == 1)
+        her2_pred_mask = y_pred_s1 == 1
         rest_pred_mask = ~her2_pred_mask
 
         y_pred_combined[her2_pred_mask] = "HER2+"
@@ -832,12 +922,15 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
             # Use argmax of Stage 2 proba for routed samples.
             s2_pred_rest = np.argmax(proba_s2[rest_pred_mask], axis=1)
             y_pred_combined[rest_pred_mask] = np.where(
-                s2_pred_rest == 1, "Triple Neg", "HR+",
+                s2_pred_rest == 1,
+                "Triple Neg",
+                "HR+",
             )
 
         y_true_labels = le.inverse_transform(y_test)
         combined_bal_acc = balanced_accuracy_score(
-            y_true_labels, y_pred_combined,
+            y_true_labels,
+            y_pred_combined,
         )
 
         # --- AUROC via Bayesian probability decomposition ---
@@ -850,13 +943,19 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
         proba_combined = np.column_stack([p_her2, p_hr, p_tn])
 
         auroc = roc_auc_score(
-            y_test, proba_combined, multi_class="ovr", average="macro",
+            y_test,
+            proba_combined,
+            multi_class="ovr",
+            average="macro",
         )
 
         # --- Mislabel sensitivity analysis ---
         if mislabel_indices:
             combined_ba_excl, n_excluded = compute_metrics_excluding_mislabels(
-                y_true_labels, y_pred_combined, test_idx, mislabel_indices,
+                y_true_labels,
+                y_pred_combined,
+                test_idx,
+                mislabel_indices,
             )
             # Stage 2 exclusion: only among HR+/TN test samples.
             if mask_test_hrt.any():
@@ -864,11 +963,14 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
                 y_true_s2_labels = y_true_labels[mask_test_hrt]
                 y_pred_s2_labels = np.where(
                     np.argmax(proba_s2[mask_test_hrt], axis=1) == 1,
-                    "Triple Neg", "HR+",
+                    "Triple Neg",
+                    "HR+",
                 )
                 s2_ba_excl, _ = compute_metrics_excluding_mislabels(
-                    y_true_s2_labels, y_pred_s2_labels,
-                    test_idx_hrt, mislabel_indices,
+                    y_true_s2_labels,
+                    y_pred_s2_labels,
+                    test_idx_hrt,
+                    mislabel_indices,
                 )
             else:
                 s2_ba_excl = float("nan")
@@ -889,16 +991,15 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
             "combined_bal_acc": round(combined_bal_acc, 6),
             "auroc_macro": round(auroc, 6),
             "stage2_best_inner": (
-                round(s2_best_inner, 6) if s2_best_inner is not None
-                else None
+                round(s2_best_inner, 6) if s2_best_inner is not None else None
             ),
             "stage2_best_inner_std": (
-                round(s2_best_inner_std, 6) if s2_best_inner_std is not None
-                else None
+                round(s2_best_inner_std, 6) if s2_best_inner_std is not None else None
             ),
             "stage2_best_params": (
                 json.dumps(s2_best_params, default=str)
-                if s2_best_params is not None else None
+                if s2_best_params is not None
+                else None
             ),
             "stage1_n_features": s1_n_features,
             "stage2_n_features": s2_n_features,
@@ -907,18 +1008,17 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
             "stage2_n_features_intersection": pens_n_features_intersection,
             "stage2_feature_frequency": (
                 json.dumps(pens_feature_frequency)
-                if pens_feature_frequency is not None else None
+                if pens_feature_frequency is not None
+                else None
             ),
             "n_test": len(y_test),
             "n_train_s2": int(mask_train_s2.sum()),
             "n_routed_to_s2": n_routed_s2,
             "combined_bal_acc_excl": (
-                round(combined_ba_excl, 6)
-                if not np.isnan(combined_ba_excl) else None
+                round(combined_ba_excl, 6) if not np.isnan(combined_ba_excl) else None
             ),
             "stage2_bal_acc_excl": (
-                round(s2_ba_excl, 6)
-                if not np.isnan(s2_ba_excl) else None
+                round(s2_ba_excl, 6) if not np.isnan(s2_ba_excl) else None
             ),
             "n_excluded": n_excluded,
             "en_converged": en_converged,
@@ -935,22 +1035,28 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
         # Save checkpoint after each fold.
         if ckpt_path is not None:
             save_checkpoint(
-                ckpt_path, fold_results, stage2_pipeline_name, repeat_seed,
+                ckpt_path,
+                fold_results,
+                stage2_pipeline_name,
+                repeat_seed,
                 pipeline_key="stage2_pipeline",
             )
 
         # Save detailed per-fold diagnostics.
         if details_dir is not None:
-            fold_dir = (
-                details_dir / stage2_pipeline_name / f"r{repeat_seed}"
-            )
+            fold_dir = details_dir / stage2_pipeline_name / f"r{repeat_seed}"
             fold_dir.mkdir(parents=True, exist_ok=True)
 
-            if stage2_pipeline_name in GRIDSEARCH_PIPELINES and s2_cv_results is not None:
+            if (
+                stage2_pipeline_name in GRIDSEARCH_PIPELINES
+                and s2_cv_results is not None
+            ):
                 save_inner_cv_results(fold_dir, fold_idx, s2_cv_results)
                 if s2_selector is not None:
                     save_fold_features_hierarchical(
-                        fold_dir, fold_idx, feature_names,
+                        fold_dir,
+                        fold_idx,
+                        feature_names,
                         stage1_selector=s1_selector,
                         stage2_selector=s2_selector,
                     )
@@ -974,10 +1080,15 @@ def run_single_repeat(X, y, le, feature_names, sample_names,
         log.info(
             "  Fold %d: s1=%.4f (t=%.2f)  s2=%.4f  combined=%.4f  "
             "auroc=%.4f  excl=%.4f (%d)  (%.1fs)",
-            fold_idx, stage1_bal_acc, best_threshold, stage2_bal_acc,
-            combined_bal_acc, auroc,
+            fold_idx,
+            stage1_bal_acc,
+            best_threshold,
+            stage2_bal_acc,
+            combined_bal_acc,
+            auroc,
             combined_ba_excl if not np.isnan(combined_ba_excl) else 0.0,
-            n_excluded, fold_elapsed,
+            n_excluded,
+            fold_elapsed,
         )
 
     return fold_results
@@ -1033,7 +1144,7 @@ def parse_args():
         type=Path,
         default=None,
         help="Path to merged training TSV. Defaults to preprocessing "
-             "handoff inside the run directory, then legacy path.",
+        "handoff inside the run directory, then legacy path.",
     )
     parser.add_argument(
         "--clinical",
@@ -1056,8 +1167,8 @@ def parse_args():
         type=int,
         default=-1,
         help="Override MAX_PLATEAU_SIZE for plateau ensembles. "
-             "-1 = use constant (default), 0 = no cap (all qualifying), "
-             "N > 0 = cap at N.",
+        "-1 = use constant (default), 0 = no cap (all qualifying), "
+        "N > 0 = cap at N.",
     )
     return parser.parse_args()
 
@@ -1088,10 +1199,13 @@ def main():
     # Set up run directory and logging.
     tag = f"{output_tag}_r{args.repeat}"
     fig_dir, data_dir, log_dir, run_dir = get_run_dirs_no_replace(
-        args.name, "hierarchical_nested_cv",
+        args.name,
+        "hierarchical_nested_cv",
     )
     log, console = setup_logging(
-        "hierarchical_nested_cv_runner", tag=tag, log_dir=log_dir,
+        "hierarchical_nested_cv_runner",
+        tag=tag,
+        log_dir=log_dir,
     )
 
     log.info("Run: %s", run_dir.name)
@@ -1121,17 +1235,24 @@ def main():
         component_names = POSTHOC_ENSEMBLE_COMPONENTS[args.pipeline]
         log.info(
             "Post-hoc ensemble: averaging %s components %s",
-            args.pipeline, component_names,
+            args.pipeline,
+            component_names,
         )
         job_start = time.perf_counter()
         run_posthoc_ensemble(
-            args.pipeline, component_names, data_dir, args.repeat,
-            config, log, out_csv,
+            args.pipeline,
+            component_names,
+            data_dir,
+            args.repeat,
+            config,
+            log,
+            out_csv,
         )
         job_elapsed = time.perf_counter() - job_start
         log.info("Total time: %.1fs", job_elapsed)
         save_config(
-            run_dir, "hierarchical_nested_cv_runner",
+            run_dir,
+            "hierarchical_nested_cv_runner",
             stage2_pipeline=args.pipeline,
             repeat=args.repeat,
             config_file=config["_config_path"],
@@ -1167,7 +1288,8 @@ def main():
     # Load data.
     log.info("Loading data...")
     X, y, le, feature_names, sample_names = load_cv_data(
-        args.input, args.clinical,
+        args.input,
+        args.clinical,
     )
     log.info("Loaded %d samples, %d features.", X.shape[0], X.shape[1])
     log.info("Classes: %s", le.classes_.tolist())
@@ -1188,7 +1310,9 @@ def main():
                 log.error(
                     "MISLABEL INDEX MISMATCH: index %d is '%s', expected '%s'. "
                     "Aborting to prevent incorrect sensitivity analysis.",
-                    idx, actual_name, expected_name,
+                    idx,
+                    actual_name,
+                    expected_name,
                 )
                 sys.exit(1)
         log.info(
@@ -1210,16 +1334,20 @@ def main():
     if args.pipeline in PLATEAU_ENSEMBLE_BASE:
         base_name = PLATEAU_ENSEMBLE_BASE[args.pipeline]
         plateau_max = None if mps == -1 else mps
-        (plateau_params, n_combos, pooled_best_score,
-         pooled_best_std, threshold, pooled_n_files) = (
-            compute_pooled_plateau(base_name, run_dir, log,
-                                   max_size=plateau_max)
-        )
+        (
+            plateau_params,
+            n_combos,
+            pooled_best_score,
+            pooled_best_std,
+            threshold,
+            pooled_n_files,
+        ) = compute_pooled_plateau(base_name, run_dir, log, max_size=plateau_max)
         if not plateau_params:
             log.error(
                 "No base pipeline inner_cv files found for '%s'. "
                 "Run the base pipeline (%s) first.",
-                args.pipeline, base_name,
+                args.pipeline,
+                base_name,
             )
             sys.exit(1)
 
@@ -1227,10 +1355,18 @@ def main():
     job_start = time.perf_counter()
 
     fold_results = run_single_repeat(
-        X, y, le, feature_names, sample_names,
-        args.pipeline, args.repeat,
-        stage2_grid, config, log,
-        ckpt_path=ckpt, prior_folds=prior_folds,
+        X,
+        y,
+        le,
+        feature_names,
+        sample_names,
+        args.pipeline,
+        args.repeat,
+        stage2_grid,
+        config,
+        log,
+        ckpt_path=ckpt,
+        prior_folds=prior_folds,
         details_dir=details_dir,
         plateau_params=plateau_params,
         pooled_best_score=pooled_best_score,
@@ -1249,26 +1385,31 @@ def main():
     log.info("Summary for %s repeat %d:", output_tag, args.repeat)
     log.info(
         "  Stage 1 (HER2+ vs rest):  %.4f (+/- %.4f)",
-        np.mean(s1_scores), np.std(s1_scores),
+        np.mean(s1_scores),
+        np.std(s1_scores),
     )
     log.info(
         "  Stage 2 (HR+ vs TN):      %.4f (+/- %.4f)",
-        np.nanmean(s2_scores), np.nanstd(s2_scores),
+        np.nanmean(s2_scores),
+        np.nanstd(s2_scores),
     )
     log.info(
         "  Combined (3-class):       %.4f (+/- %.4f)",
-        np.mean(combined_scores), np.std(combined_scores),
+        np.mean(combined_scores),
+        np.std(combined_scores),
     )
 
     # Sensitivity analysis summary.
     excl_scores = [
-        r["combined_bal_acc_excl"] for r in fold_results
+        r["combined_bal_acc_excl"]
+        for r in fold_results
         if r.get("combined_bal_acc_excl") is not None
     ]
     if excl_scores:
         log.info(
             "  Combined (excl mislabels): %.4f (+/- %.4f)",
-            np.mean(excl_scores), np.std(excl_scores),
+            np.mean(excl_scores),
+            np.std(excl_scores),
         )
 
     log.info(
@@ -1289,7 +1430,8 @@ def main():
 
     # Save run config snapshot.
     save_config(
-        run_dir, "hierarchical_nested_cv_runner",
+        run_dir,
+        "hierarchical_nested_cv_runner",
         stage2_pipeline=output_tag,
         repeat=args.repeat,
         config_file=config["_config_path"],

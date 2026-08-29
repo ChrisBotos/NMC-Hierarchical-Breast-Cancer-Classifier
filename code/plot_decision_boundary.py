@@ -27,8 +27,8 @@ import glob
 import sys
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
@@ -57,10 +57,13 @@ def load_sample_info(run_dir):
             list of sample identifiers.
     """
     merged_path = run_dir / "preprocessing" / "data" / "train_merged.tsv"
-    clinical_path = Path(__file__).resolve().parent.parent / "data" / "Train_clinical.tsv"
+    clinical_path = (
+        Path(__file__).resolve().parent.parent / "data" / "Train_clinical.tsv"
+    )
 
     X, y, le, feature_names, sample_names = load_cv_data(
-        merged_path, clinical_path,
+        merged_path,
+        clinical_path,
     )
     y_labels = le.inverse_transform(y)
     return X, y_labels, sample_names
@@ -109,8 +112,7 @@ def compute_misclassification_rates(data_dir, pipeline_name, n_samples):
     return misclass_rate, n_tested
 
 
-def plot_misclassification(X_pca, y_labels, misclass_en, misclass_pens,
-                           pca, fig_path):
+def plot_misclassification(X_pca, y_labels, misclass_en, misclass_pens, pca, fig_path):
     """Create the side-by-side per-sample misclassification figure.
 
     Args:
@@ -140,23 +142,37 @@ def plot_misclassification(X_pca, y_labels, misclass_en, misclass_pens,
     for ax, misclass, label in panels:
         # Plot HER2+ samples as small grey dots (always correct).
         ax.scatter(
-            X_pca[her2_mask, 0], X_pca[her2_mask, 1],
-            c="#CCCCCC", marker="D", s=25, edgecolors="#999999",
-            linewidths=0.4, label="HER2+ (always correct)", zorder=3,
+            X_pca[her2_mask, 0],
+            X_pca[her2_mask, 1],
+            c="#CCCCCC",
+            marker="D",
+            s=25,
+            edgecolors="#999999",
+            linewidths=0.4,
+            label="HER2+ (always correct)",
+            zorder=3,
         )
 
         # Plot Stage 2 samples coloured by misclassification rate.
         for cls_name, marker in CLASS_MARKERS.items():
-            cls_mask = (y_labels == cls_name)
-            sc = ax.scatter(
-                X_pca[cls_mask, 0], X_pca[cls_mask, 1],
-                c=misclass[cls_mask], cmap=cmap, norm=norm,
-                marker=marker, s=70, edgecolors="k", linewidths=0.6,
-                label=cls_name, zorder=5,
+            cls_mask = y_labels == cls_name
+            ax.scatter(
+                X_pca[cls_mask, 0],
+                X_pca[cls_mask, 1],
+                c=misclass[cls_mask],
+                cmap=cmap,
+                norm=norm,
+                marker=marker,
+                s=70,
+                edgecolors="k",
+                linewidths=0.6,
+                label=cls_name,
+                zorder=5,
             )
 
         ax.set_xlabel(
-            f"PC1 ({var_explained[0]:.1f}% variance)", fontsize=10,
+            f"PC1 ({var_explained[0]:.1f}% variance)",
+            fontsize=10,
         )
         ax.set_xlim(X_pca[:, 0].min() - 1, X_pca[:, 0].max() + 1)
         ax.set_ylim(X_pca[:, 1].min() - 1, X_pca[:, 1].max() + 1)
@@ -164,33 +180,54 @@ def plot_misclassification(X_pca, y_labels, misclass_en, misclass_pens,
         # Annotate mean Stage 2 misclassification rate.
         mean_misclass = misclass[s2_mask].mean()
         ax.text(
-            0.97, 0.97,
+            0.97,
+            0.97,
             f"Mean misclass.: {mean_misclass:.1%}",
-            transform=ax.transAxes, ha="right", va="top", fontsize=9,
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="white",
-                      edgecolor="#CCCCCC", alpha=0.9),
+            transform=ax.transAxes,
+            ha="right",
+            va="top",
+            fontsize=9,
+            bbox=dict(
+                boxstyle="round,pad=0.3",
+                facecolor="white",
+                edgecolor="#CCCCCC",
+                alpha=0.9,
+            ),
         )
 
         # Panel label below the plot.
         ax.text(
-            0.5, -0.16, label, transform=ax.transAxes,
-            ha="center", va="top", fontsize=11, fontweight="bold",
+            0.5,
+            -0.16,
+            label,
+            transform=ax.transAxes,
+            ha="center",
+            va="top",
+            fontsize=11,
+            fontweight="bold",
         )
 
     axes[0].set_ylabel(
-        f"PC2 ({var_explained[1]:.1f}% variance)", fontsize=10,
+        f"PC2 ({var_explained[1]:.1f}% variance)",
+        fontsize=10,
     )
     axes[0].legend(
-        loc="upper left", fontsize=8, framealpha=0.9, markerscale=0.8,
+        loc="upper left",
+        fontsize=8,
+        framealpha=0.9,
+        markerscale=0.8,
     )
 
     # Shared colour bar.
     cbar = fig.colorbar(
         plt.cm.ScalarMappable(norm=norm, cmap=cmap),
-        ax=axes, shrink=0.8, pad=0.02,
+        ax=axes,
+        shrink=0.8,
+        pad=0.02,
     )
     cbar.set_label(
-        "CV misclassification rate (200 repeats x 5 folds)", fontsize=9,
+        "CV misclassification rate (200 repeats x 5 folds)",
+        fontsize=9,
     )
 
     plt.tight_layout(rect=[0, 0.05, 0.92, 1])
@@ -205,7 +242,8 @@ def main():
         description="Plot per-sample CV misclassification for EN+NMC variants.",
     )
     parser.add_argument(
-        "--name", default="final_hierarchical",
+        "--name",
+        default="final_hierarchical",
         help="Run name (default: final_hierarchical).",
     )
     args = parser.parse_args()
@@ -220,38 +258,55 @@ def main():
     X, y_labels, sample_names = load_sample_info(run_dir)
     n_samples = len(y_labels)
     s2_mask = y_labels != "HER2+"
-    print(f"Total samples: {n_samples} "
-          f"(HER2+: {(~s2_mask).sum()}, Stage 2: {s2_mask.sum()})")
+    print(
+        f"Total samples: {n_samples} "
+        f"(HER2+: {(~s2_mask).sum()}, Stage 2: {s2_mask.sum()})"
+    )
 
     # Unsupervised PCA on all 100 samples (no label leakage).
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     pca = PCA(n_components=2, random_state=42)
     X_pca = pca.fit_transform(X_scaled)
-    print(f"PCA variance explained: "
-          f"{pca.explained_variance_ratio_.sum()*100:.1f}% "
-          f"({pca.explained_variance_ratio_[0]*100:.1f}% + "
-          f"{pca.explained_variance_ratio_[1]*100:.1f}%)")
+    print(
+        f"PCA variance explained: "
+        f"{pca.explained_variance_ratio_.sum()*100:.1f}% "
+        f"({pca.explained_variance_ratio_[0]*100:.1f}% + "
+        f"{pca.explained_variance_ratio_[1]*100:.1f}%)"
+    )
 
     # Compute per-sample misclassification rates from CV fold results.
     print("Computing misclassification rates for en_nmc...")
     misclass_en, n_tested_en = compute_misclassification_rates(
-        data_dir, "en_nmc", n_samples,
+        data_dir,
+        "en_nmc",
+        n_samples,
     )
-    print(f"  Stage 2 mean misclass: {misclass_en[s2_mask].mean():.3f}, "
-          f"  each sample tested ~{n_tested_en[s2_mask].mean():.0f} times")
+    print(
+        f"  Stage 2 mean misclass: {misclass_en[s2_mask].mean():.3f}, "
+        f"  each sample tested ~{n_tested_en[s2_mask].mean():.0f} times"
+    )
 
     print("Computing misclassification rates for en_nmc_pens...")
     misclass_pens, n_tested_pens = compute_misclassification_rates(
-        data_dir, "en_nmc_pens", n_samples,
+        data_dir,
+        "en_nmc_pens",
+        n_samples,
     )
-    print(f"  Stage 2 mean misclass: {misclass_pens[s2_mask].mean():.3f}, "
-          f"  each sample tested ~{n_tested_pens[s2_mask].mean():.0f} times")
+    print(
+        f"  Stage 2 mean misclass: {misclass_pens[s2_mask].mean():.3f}, "
+        f"  each sample tested ~{n_tested_pens[s2_mask].mean():.0f} times"
+    )
 
     # Plot.
     fig_path = fig_dir / "misclassification_en_nmc_vs_pens.png"
     plot_misclassification(
-        X_pca, y_labels, misclass_en, misclass_pens, pca, fig_path,
+        X_pca,
+        y_labels,
+        misclass_en,
+        misclass_pens,
+        pca,
+        fig_path,
     )
 
 

@@ -1,3 +1,8 @@
+# code/predictions_file_format_check_v2.py is the submission-format checker
+# provided by the course. It is kept byte-for-byte as issued so that it can be
+# diffed against the original, so every hook that would rewrite it excludes it.
+exclude: ^code/predictions_file_format_check_v2\.py$
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

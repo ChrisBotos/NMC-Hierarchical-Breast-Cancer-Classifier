@@ -1,4 +1,4 @@
-"""Shared utilities for the TB-Project pipeline.
+"""Shared utilities for the NMC-Hierarchical-Breast-Cancer-Classifier pipeline.
 
 Re-exports the most commonly used names for convenient access::
 
@@ -17,6 +17,24 @@ from utils.constants import (
     RANDOM_SEED,
     SUBTYPE_COLORS,
     SUBTYPE_ORDER,
+)
+from utils.cv_components import (
+    ElasticNetSelector,
+    KruskalWallisSelector,
+    NearestCentroidWithProba,
+)
+from utils.cv_config import (
+    FLAT_PIPELINE_NAMES,
+    build_pipeline,
+    build_stage2_pipeline,
+)
+from utils.cv_io import (
+    checkpoint_path,
+    csv_path,
+    load_checkpoint,
+    load_cv_data,
+    resolve_merged_input,
+    save_checkpoint,
 )
 from utils.data_helpers import get_sample_columns, get_sample_matrix, load_gene_map
 from utils.logging_setup import setup_logging
@@ -42,7 +60,11 @@ from utils.paths import (
     get_run_dirs_no_replace,
     save_config,
 )
-from utils.plotting import annotate_heatmap, apply_plot_style, draw_significance_brackets
+from utils.plotting import (
+    annotate_heatmap,
+    apply_plot_style,
+    draw_significance_brackets,
+)
 from utils.statistics import (
     apply_bonferroni,
     bonferroni_threshold,
@@ -50,24 +72,6 @@ from utils.statistics import (
     kruskal_wallis_per_region,
     nadeau_bengio_test,
     pairwise_wilcoxon,
-)
-from utils.cv_components import (
-    ElasticNetSelector,
-    KruskalWallisSelector,
-    NearestCentroidWithProba,
-)
-from utils.cv_config import (
-    FLAT_PIPELINE_NAMES,
-    build_pipeline,
-    build_stage2_pipeline,
-)
-from utils.cv_io import (
-    checkpoint_path,
-    csv_path,
-    load_checkpoint,
-    load_cv_data,
-    resolve_merged_input,
-    save_checkpoint,
 )
 
 __all__ = [

@@ -9,7 +9,7 @@ Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
 Script Name: data_exploration_phase.py.
 Description:
-    Phase 0 data exploration for the CATS breast cancer subtype
+    Phase 0 data exploration for the breast cancer subtype
     classification project. Produces publication-quality figures and
     logs summary statistics to console and log file. Supports running
     on alternative input data (e.g. merged segments) via --input and
@@ -39,11 +39,9 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.metrics import silhouette_score
-
 from utils import (
     CN_LABELS,
     DATA_DIR,
-    PROJECT_DIR,
     SUBTYPE_COLORS,
     SUBTYPE_ORDER,
     apply_plot_style,
@@ -82,7 +80,8 @@ def setup(run_name="default_run", tag=""):
     apply_plot_style()
 
     save_config(
-        run_dir, f"data_exploration_phase{'_' + tag if tag else ''}",
+        run_dir,
+        f"data_exploration_phase{'_' + tag if tag else ''}",
         phase_name=phase_name,
         tag=tag,
     )
@@ -143,8 +142,11 @@ def validate_data(cn_df, clinical_df):
         if out_of_range:
             log.warning("  Values outside [-1, 2] range: %s", sorted(out_of_range))
         else:
-            log.info("  Fractional values present (expected for median-consensus "
-                     "merged data): %s", sorted(fractional))
+            log.info(
+                "  Fractional values present (expected for median-consensus "
+                "merged data): %s",
+                sorted(fractional),
+            )
     else:
         log.info("  All values are discrete (-1, 0, 1, 2).")
 
@@ -173,10 +175,12 @@ def validate_data(cn_df, clinical_df):
     log.info("Overall CN value distribution:")
     flat = data.values.flatten()
     if fractional:
-        bins = {"Loss (CN <= -0.5)": (flat <= -0.5).sum(),
-                "Normal (-0.5 < CN < 0.5)": ((flat > -0.5) & (flat < 0.5)).sum(),
-                "Gain (0.5 <= CN < 1.5)": ((flat >= 0.5) & (flat < 1.5)).sum(),
-                "Amplification (CN >= 1.5)": (flat >= 1.5).sum()}
+        bins = {
+            "Loss (CN <= -0.5)": (flat <= -0.5).sum(),
+            "Normal (-0.5 < CN < 0.5)": ((flat > -0.5) & (flat < 0.5)).sum(),
+            "Gain (0.5 <= CN < 1.5)": ((flat >= 0.5) & (flat < 1.5)).sum(),
+            "Amplification (CN >= 1.5)": (flat >= 1.5).sum(),
+        }
         for label, count in bins.items():
             pct = count / len(flat) * 100
             log.info("  %-30s: %8d  (%.1f%%)", label, count, pct)
@@ -304,16 +308,25 @@ def plot_genome_frequency(cn_df, clinical_df):
         gain_freq = ((subtype_data >= 1).sum(axis=1)) / n
         loss_freq = -((subtype_data == -1).sum(axis=1)) / n
 
-        ax.fill_between(genome_pos, 0, gain_freq, color="#E64B35", alpha=0.7, linewidth=0)
-        ax.fill_between(genome_pos, 0, loss_freq, color="#3C5488", alpha=0.7, linewidth=0)
+        ax.fill_between(
+            genome_pos, 0, gain_freq, color="#E64B35", alpha=0.7, linewidth=0
+        )
+        ax.fill_between(
+            genome_pos, 0, loss_freq, color="#3C5488", alpha=0.7, linewidth=0
+        )
         ax.axhline(0, color="black", linewidth=0.5)
         ax.set_ylabel("Fraction of samples")
         ax.set_ylim(-1, 1)
         ax.set_yticks([-1, -0.5, 0, 0.5, 1])
         ax.text(
-            0.01, 0.95, f"{subtype} (n={n})",
-            transform=ax.transAxes, fontweight="bold", fontsize=10,
-            va="top", color=SUBTYPE_COLORS[subtype],
+            0.01,
+            0.95,
+            f"{subtype} (n={n})",
+            transform=ax.transAxes,
+            fontweight="bold",
+            fontsize=10,
+            va="top",
+            color=SUBTYPE_COLORS[subtype],
         )
 
         # Chromosome boundaries.
@@ -334,7 +347,9 @@ def plot_genome_frequency(cn_df, clinical_df):
         Patch(facecolor="#E64B35", alpha=0.7, label="Gain / Amplification"),
         Patch(facecolor="#3C5488", alpha=0.7, label="Loss"),
     ]
-    axes[0].legend(handles=legend_elements, loc="upper right", framealpha=0.9, fontsize=8)
+    axes[0].legend(
+        handles=legend_elements, loc="upper right", framealpha=0.9, fontsize=8
+    )
 
     fig.subplots_adjust(hspace=0.1)
     fig.savefig(FIG_DIR / "02_genome_wide_frequency.png")
@@ -372,15 +387,21 @@ def plot_pca(cn_df, clinical_df):
     log.info("Variance explained by first 10 PCs:")
     for i, v in enumerate(explained):
         log.info("  PC%d: %.3f (%.1f%%)", i + 1, v, v * 100)
-    log.info("  Cumulative (PC1-10): %.3f (%.1f%%)", explained.sum(), explained.sum() * 100)
+    log.info(
+        "  Cumulative (PC1-10): %.3f (%.1f%%)", explained.sum(), explained.sum() * 100
+    )
 
     # Scree plot + 2D scatter.
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
     # Scree plot.
     ax = axes[0]
-    ax.bar(range(1, 11), explained * 100, color="#4DBBD5", edgecolor="black", linewidth=0.3)
-    ax.plot(range(1, 11), np.cumsum(explained) * 100, "o-", color="#E64B35", markersize=4)
+    ax.bar(
+        range(1, 11), explained * 100, color="#4DBBD5", edgecolor="black", linewidth=0.3
+    )
+    ax.plot(
+        range(1, 11), np.cumsum(explained) * 100, "o-", color="#E64B35", markersize=4
+    )
     ax.set_xlabel("Principal component")
     ax.set_ylabel("Variance explained (%)")
     ax.set_xticks(range(1, 11))
@@ -389,17 +410,23 @@ def plot_pca(cn_df, clinical_df):
     ax.legend(
         [plt.Line2D([0], [0], color="#E64B35", marker="o", markersize=4)],
         ["Cumulative variance"],
-        fontsize=7, loc="center right",
+        fontsize=7,
+        loc="center right",
     )
 
     # 2D scatter.
     ax = axes[1]
     for subtype in SUBTYPE_ORDER:
-        mask = [l == subtype for l in labels]
+        mask = [label == subtype for label in labels]
         ax.scatter(
-            X_pca[mask, 0], X_pca[mask, 1],
-            c=SUBTYPE_COLORS[subtype], label=subtype,
-            s=40, alpha=0.8, edgecolors="black", linewidths=0.3,
+            X_pca[mask, 0],
+            X_pca[mask, 1],
+            c=SUBTYPE_COLORS[subtype],
+            label=subtype,
+            s=40,
+            alpha=0.8,
+            edgecolors="black",
+            linewidths=0.3,
         )
     ax.set_xlabel(f"PC1 ({explained[0]*100:.1f}% variance)")
     ax.set_ylabel(f"PC2 ({explained[1]*100:.1f}% variance)")
@@ -419,11 +446,13 @@ def plot_pca(cn_df, clinical_df):
     pca_df.index.name = "Sample"
     pca_df.to_csv(OUT_DIR / "pca_coordinates.tsv", sep="\t")
 
-    var_df = pd.DataFrame({
-        "PC": [f"PC{i+1}" for i in range(10)],
-        "variance_explained": explained,
-        "cumulative": np.cumsum(explained),
-    })
+    var_df = pd.DataFrame(
+        {
+            "PC": [f"PC{i+1}" for i in range(10)],
+            "variance_explained": explained,
+            "cumulative": np.cumsum(explained),
+        }
+    )
     var_df.to_csv(OUT_DIR / "pca_variance_explained.tsv", sep="\t", index=False)
     log.info("Saved: pca_coordinates.tsv, pca_variance_explained.tsv")
     log.info("")
@@ -462,17 +491,26 @@ def plot_tsne(cn_df, clinical_df):
         tsne_embeddings[perp] = X_tsne
 
         for subtype in SUBTYPE_ORDER:
-            mask = [l == subtype for l in labels]
+            mask = [label == subtype for label in labels]
             ax.scatter(
-                X_tsne[mask, 0], X_tsne[mask, 1],
-                c=SUBTYPE_COLORS[subtype], label=subtype,
-                s=40, alpha=0.8, edgecolors="black", linewidths=0.3,
+                X_tsne[mask, 0],
+                X_tsne[mask, 1],
+                c=SUBTYPE_COLORS[subtype],
+                label=subtype,
+                s=40,
+                alpha=0.8,
+                edgecolors="black",
+                linewidths=0.3,
             )
         ax.set_xlabel("t-SNE dimension 1 (arbitrary units)")
         ax.set_ylabel("t-SNE dimension 2 (arbitrary units)")
         ax.text(
-            0.02, 0.98, f"perplexity = {perp}",
-            transform=ax.transAxes, fontsize=9, va="top",
+            0.02,
+            0.98,
+            f"perplexity = {perp}",
+            transform=ax.transAxes,
+            fontsize=9,
+            va="top",
         )
         ax.spines[["top", "right"]].set_visible(False)
 
@@ -484,7 +522,9 @@ def plot_tsne(cn_df, clinical_df):
     # Save t-SNE embeddings for each perplexity.
     for perp, X_emb in tsne_embeddings.items():
         tsne_df = pd.DataFrame(
-            X_emb, index=sample_cols, columns=["tSNE1", "tSNE2"],
+            X_emb,
+            index=sample_cols,
+            columns=["tSNE1", "tSNE2"],
         )
         tsne_df.index.name = "Sample"
         tsne_df.to_csv(OUT_DIR / f"tsne_perp{perp}.tsv", sep="\t")
@@ -523,7 +563,10 @@ def plot_clustering(cn_df, clinical_df):
     fig, ax = plt.subplots(figsize=(14, 5))
 
     dendrogram(
-        Z, ax=ax, leaf_rotation=90, leaf_font_size=6,
+        Z,
+        ax=ax,
+        leaf_rotation=90,
+        leaf_font_size=6,
         labels=[f"{s} ({label_map[s]})" for s in sample_cols],
         color_threshold=0,
         above_threshold_color="grey",
@@ -544,10 +587,15 @@ def plot_clustering(cn_df, clinical_df):
 
     # Legend with silhouette annotation.
     legend_elements = [Patch(facecolor=c, label=s) for s, c in SUBTYPE_COLORS.items()]
-    leg = ax.legend(handles=legend_elements, loc="upper right", framealpha=0.9)
+    ax.legend(handles=legend_elements, loc="upper right", framealpha=0.9)
     ax.text(
-        0.99, 0.78, f"Silhouette score (k=3) = {sil:.3f}",
-        transform=ax.transAxes, fontsize=8, ha="right", va="top",
+        0.99,
+        0.78,
+        f"Silhouette score (k=3) = {sil:.3f}",
+        transform=ax.transAxes,
+        fontsize=8,
+        ha="right",
+        va="top",
         bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
     )
 
@@ -593,7 +641,16 @@ def statistical_tests(cn_df, clinical_df, gene_map_df):
 
     log.info("")
     log.info("%d regions passing Bonferroni correction:", sig_bonf.sum())
-    log.info("%4s %3s %12s %12s %8s %12s %s", "Rank", "Chr", "Start", "End", "H-stat", "p-value", "Gene(s)")
+    log.info(
+        "%4s %3s %12s %12s %8s %12s %s",
+        "Rank",
+        "Chr",
+        "Start",
+        "End",
+        "H-stat",
+        "p-value",
+        "Gene(s)",
+    )
     log.info("-" * 75)
 
     # Store info for labelling the plot.
@@ -620,13 +677,31 @@ def statistical_tests(cn_df, clinical_df, gene_map_df):
         else:
             sig_labels.append((idx, f"chr{chrom}:{start}"))
 
-        log.info("%4d %3d %12d %12d %8.1f %12.2e %s", rank, chrom, start, end, h_stats[idx], pvals[idx], genes)
+        log.info(
+            "%4d %3d %12d %12d %8.1f %12.2e %s",
+            rank,
+            chrom,
+            start,
+            end,
+            h_stats[idx],
+            pvals[idx],
+            genes,
+        )
 
     # Also log the top 20 for reference.
     top_idx = np.argsort(pvals)[:20]
     log.info("")
     log.info("Top 20 most discriminative regions (for reference):")
-    log.info("%4s %3s %12s %12s %8s %12s %s", "Rank", "Chr", "Start", "End", "H-stat", "p-value", "Gene(s)")
+    log.info(
+        "%4s %3s %12s %12s %8s %12s %s",
+        "Rank",
+        "Chr",
+        "Start",
+        "End",
+        "H-stat",
+        "p-value",
+        "Gene(s)",
+    )
     log.info("-" * 75)
     for rank, idx in enumerate(top_idx, 1):
         row = cn_df.iloc[idx]
@@ -641,7 +716,16 @@ def statistical_tests(cn_df, clinical_df, gene_map_df):
         genes = ", ".join(gene_hits[:3]) if len(gene_hits) > 0 else "-"
         if len(gene_hits) > 3:
             genes += f" (+{len(gene_hits)-3})"
-        log.info("%4d %3d %12d %12d %8.1f %12.2e %s", rank, chrom, start, end, h_stats[idx], pvals[idx], genes)
+        log.info(
+            "%4d %3d %12d %12d %8.1f %12.2e %s",
+            rank,
+            chrom,
+            start,
+            end,
+            h_stats[idx],
+            pvals[idx],
+            genes,
+        )
 
     # Manhattan-style plot of -log10(p).
     genome_pos, chrom_boundaries, chrom_centers = compute_genome_positions(cn_df)
@@ -655,22 +739,38 @@ def statistical_tests(cn_df, clinical_df, gene_map_df):
     for chrom in sorted(cn_df["Chromosome"].unique()):
         mask = chroms == chrom
         color = "#3C5488" if chrom % 2 == 1 else "#4DBBD5"
-        ax.scatter(genome_pos[mask], neg_log_p[mask], c=color, s=3, alpha=0.6, rasterized=True)
+        ax.scatter(
+            genome_pos[mask], neg_log_p[mask], c=color, s=3, alpha=0.6, rasterized=True
+        )
 
     # Significance threshold.
-    ax.axhline(bonf_thresh, color="red", linestyle="--", linewidth=0.8,
-               label=f"Bonferroni threshold (0.05 / {n_tests})")
+    ax.axhline(
+        bonf_thresh,
+        color="red",
+        linestyle="--",
+        linewidth=0.8,
+        label=f"Bonferroni threshold (0.05 / {n_tests})",
+    )
 
     # Highlight and label the significant regions.
     for idx, label_text in sig_labels:
         ax.scatter(
-            genome_pos[idx], neg_log_p[idx],
-            c="red", s=25, zorder=5, edgecolors="black", linewidths=0.5,
+            genome_pos[idx],
+            neg_log_p[idx],
+            c="red",
+            s=25,
+            zorder=5,
+            edgecolors="black",
+            linewidths=0.5,
         )
         ax.annotate(
-            label_text, (genome_pos[idx], neg_log_p[idx]),
-            textcoords="offset points", xytext=(4, 6), fontsize=6,
-            ha="left", va="bottom",
+            label_text,
+            (genome_pos[idx], neg_log_p[idx]),
+            textcoords="offset points",
+            xytext=(4, 6),
+            fontsize=6,
+            ha="left",
+            va="bottom",
             arrowprops=dict(arrowstyle="-", color="grey", lw=0.5),
         )
 
@@ -688,14 +788,16 @@ def statistical_tests(cn_df, clinical_df, gene_map_df):
     log.info("Saved: 06_manhattan_kruskal.png")
 
     # Save per-region Kruskal-Wallis results.
-    kw_df = pd.DataFrame({
-        "Chromosome": cn_df["Chromosome"].values,
-        "Start": cn_df["Start"].values,
-        "End": cn_df["End"].values,
-        "H_statistic": h_stats,
-        "p_value": pvals,
-        "significant_bonferroni": sig_bonf,
-    })
+    kw_df = pd.DataFrame(
+        {
+            "Chromosome": cn_df["Chromosome"].values,
+            "Start": cn_df["Start"].values,
+            "End": cn_df["End"].values,
+            "H_statistic": h_stats,
+            "p_value": pvals,
+            "significant_bonferroni": sig_bonf,
+        }
+    )
     kw_df.to_csv(OUT_DIR / "kruskal_wallis_per_region.tsv", sep="\t", index=False)
     log.info("Saved: kruskal_wallis_per_region.tsv")
     log.info("")
@@ -751,7 +853,11 @@ def analyze_correlation(cn_df):
 
     distances = np.array(distances)
     correlations = np.array(correlations)
-    log.info("Total same-chromosome pairs (within %.0f Mb): %d", max_dist / 1e6, len(distances))
+    log.info(
+        "Total same-chromosome pairs (within %.0f Mb): %d",
+        max_dist / 1e6,
+        len(distances),
+    )
 
     # Cross-chromosome baseline: sample random pairs from different chromosomes.
     rng = np.random.RandomState(42)
@@ -769,7 +875,9 @@ def analyze_correlation(cn_df):
             cross_count += 1
     cross_corrs = np.array(cross_corrs)
     cross_median = np.median(cross_corrs)
-    log.info("  Cross-chromosome baseline: median r = %.3f  (n=%d)", cross_median, n_cross)
+    log.info(
+        "  Cross-chromosome baseline: median r = %.3f  (n=%d)", cross_median, n_cross
+    )
 
     # Bin by distance and compute median correlation per bin.
     bin_edges_mb = [0, 0.1, 0.5, 1, 2, 5, 10, 20, 50, 100, 200]
@@ -793,11 +901,23 @@ def analyze_correlation(cn_df):
             bin_corr_arrays.append(bin_corrs)
             # Mann-Whitney U test: is this bin significantly above cross-chromosome?
             u_stat, u_pval = stats.mannwhitneyu(
-                bin_corrs, cross_corrs, alternative="greater",
+                bin_corrs,
+                cross_corrs,
+                alternative="greater",
             )
-            sig_marker = "***" if u_pval < 0.001 else "**" if u_pval < 0.01 else "*" if u_pval < 0.05 else "n.s."
-            log.info("  %8s Mb: median r = %.3f  (n=%d)  vs cross-chr: p=%.2e %s",
-                     label, med, n, u_pval, sig_marker)
+            sig_marker = (
+                "***"
+                if u_pval < 0.001
+                else "**" if u_pval < 0.01 else "*" if u_pval < 0.05 else "n.s."
+            )
+            log.info(
+                "  %8s Mb: median r = %.3f  (n=%d)  vs cross-chr: p=%.2e %s",
+                label,
+                med,
+                n,
+                u_pval,
+                sig_marker,
+            )
 
     # Plot: correlation vs distance (scatter + binned medians).
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
@@ -809,12 +929,19 @@ def analyze_correlation(cn_df):
     else:
         subsample = np.arange(len(distances))
     ax.scatter(
-        distances[subsample] / 1e6, correlations[subsample],
-        s=1, alpha=0.1, color="#3C5488", rasterized=True,
+        distances[subsample] / 1e6,
+        correlations[subsample],
+        s=1,
+        alpha=0.1,
+        color="#3C5488",
+        rasterized=True,
     )
     # Cross-chromosome baseline as horizontal line.
     ax.axhline(
-        cross_median, color="#E64B35", linestyle="--", linewidth=1,
+        cross_median,
+        color="#E64B35",
+        linestyle="--",
+        linewidth=1,
         label=f"Cross-chromosome median (r={cross_median:.2f})",
     )
     ax.set_xlabel("Gap between region boundaries (Mb)")
@@ -831,11 +958,21 @@ def analyze_correlation(cn_df):
     bars = ax.bar(x_pos, bin_medians, color="#00A087", edgecolor="black", linewidth=0.3)
     # Cross-chromosome bar, separated by a gap.
     cross_x = n_bins + 0.5
-    cross_bar = ax.bar(
-        cross_x, cross_median, color="#E64B35", edgecolor="black", linewidth=0.3,
+    ax.bar(
+        cross_x,
+        cross_median,
+        color="#E64B35",
+        edgecolor="black",
+        linewidth=0.3,
     )
-    ax.text(cross_x, cross_median + 0.02, f"n={n_cross}",
-            ha="center", va="bottom", fontsize=5.5)
+    ax.text(
+        cross_x,
+        cross_median + 0.02,
+        f"n={n_cross}",
+        ha="center",
+        va="bottom",
+        fontsize=5.5,
+    )
 
     all_x = x_pos + [cross_x]
     all_labels = bin_labels + ["cross-\nchr"]
@@ -847,12 +984,24 @@ def analyze_correlation(cn_df):
     # Annotate counts and significance on same-chromosome bars.
     for bar, n, bin_corrs in zip(bars, bin_counts, bin_corr_arrays):
         _, u_pval = stats.mannwhitneyu(bin_corrs, cross_corrs, alternative="greater")
-        sig = "***" if u_pval < 0.001 else "**" if u_pval < 0.01 else "*" if u_pval < 0.05 else "n.s."
+        sig = (
+            "***"
+            if u_pval < 0.001
+            else "**" if u_pval < 0.01 else "*" if u_pval < 0.05 else "n.s."
+        )
         bar_x = bar.get_x() + bar.get_width() / 2
         bar_top = bar.get_height()
         ax.text(bar_x, bar_top + 0.02, f"n={n}", ha="center", va="bottom", fontsize=5.5)
-        ax.text(bar_x, bar_top + 0.06, sig, ha="center", va="bottom", fontsize=6,
-                fontweight="bold", color="black" if sig != "n.s." else "grey")
+        ax.text(
+            bar_x,
+            bar_top + 0.06,
+            sig,
+            ha="center",
+            va="bottom",
+            fontsize=6,
+            fontweight="bold",
+            color="black" if sig != "n.s." else "grey",
+        )
     ax.spines[["top", "right"]].set_visible(False)
 
     fig.savefig(FIG_DIR / "07_correlation_vs_distance.png")
@@ -861,17 +1010,21 @@ def analyze_correlation(cn_df):
     log.info("Saved: 07_correlation_vs_distance.png")
 
     # Save binned correlation summary.
-    corr_df = pd.DataFrame({
-        "distance_bin_Mb": bin_labels,
-        "median_r": bin_medians,
-        "n_pairs": bin_counts,
-    })
+    corr_df = pd.DataFrame(
+        {
+            "distance_bin_Mb": bin_labels,
+            "median_r": bin_medians,
+            "n_pairs": bin_counts,
+        }
+    )
     # Append cross-chromosome row.
-    cross_row = pd.DataFrame({
-        "distance_bin_Mb": ["cross_chromosome"],
-        "median_r": [cross_median],
-        "n_pairs": [n_cross],
-    })
+    cross_row = pd.DataFrame(
+        {
+            "distance_bin_Mb": ["cross_chromosome"],
+            "median_r": [cross_median],
+            "n_pairs": [n_cross],
+        }
+    )
     corr_df = pd.concat([corr_df, cross_row], ignore_index=True)
     corr_df.to_csv(OUT_DIR / "correlation_vs_distance.tsv", sep="\t", index=False)
     log.info("Saved: correlation_vs_distance.tsv")
@@ -925,8 +1078,16 @@ def plot_similarity_matrix(cn_df, clinical_df):
     cum = 0
     for subtype in SUBTYPE_ORDER:
         n = sum(1 for s in ordered_samples if label_map.get(s) == subtype)
-        ax.text(-2, cum + n / 2, subtype, va="center", ha="right",
-                fontsize=9, fontweight="bold", color=SUBTYPE_COLORS[subtype])
+        ax.text(
+            -2,
+            cum + n / 2,
+            subtype,
+            va="center",
+            ha="right",
+            fontsize=9,
+            fontweight="bold",
+            color=SUBTYPE_COLORS[subtype],
+        )
         cum += n
 
     cbar = fig.colorbar(im, ax=ax, shrink=0.7, pad=0.02)
@@ -953,15 +1114,21 @@ def main():
         description="Phase 0 data exploration (raw or merged data).",
     )
     parser.add_argument(
-        "--input", type=str, default=None,
+        "--input",
+        type=str,
+        default=None,
         help="Path to alternative CN data file (e.g. merged segments TSV).",
     )
     parser.add_argument(
-        "--tag", type=str, default="",
+        "--tag",
+        type=str,
+        default="",
         help="Suffix for output directories and log file (e.g. 'merged').",
     )
     parser.add_argument(
-        "--name", type=str, default="default_run",
+        "--name",
+        type=str,
+        default="default_run",
         help="Run name for the results directory (default: default_run).",
     )
     args = parser.parse_args()

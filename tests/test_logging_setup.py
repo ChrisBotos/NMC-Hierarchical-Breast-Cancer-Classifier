@@ -3,7 +3,6 @@
 import logging
 
 import pytest
-
 from utils.logging_setup import _get_git_hash, setup_logging
 
 

@@ -1,4 +1,4 @@
-# GLOSSARY.md - TB-Project (CATS)
+# GLOSSARY.md - Hierarchical NMC breast cancer subtype classifier
 
 **Last Updated:** 2026-05-07
 
@@ -32,7 +32,6 @@
 | aCGH | Array comparative genomic hybridisation |
 | BA | Balanced accuracy |
 | BA2 | Stage 2 balanced accuracy |
-| CATS | Classification Assessment of Tumor Subtypes |
 | CN | Copy number |
 | CV | Cross-validation |
 | EN | Elastic Net (multivariate feature selector) |

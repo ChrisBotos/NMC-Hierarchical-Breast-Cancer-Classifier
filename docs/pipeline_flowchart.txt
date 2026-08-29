@@ -1,5 +1,5 @@
 ================================================================================
-              CATS Pipeline Flowchart — Breast Cancer Subtype Classification
+              Pipeline Flowchart - Breast Cancer Subtype Classification
 ================================================================================
 
   Research Question:
@@ -188,7 +188,7 @@
 ================================================================================
 
   Fig 1: CV workflow diagram (based on this flowchart, publication quality).
-  Fig 2: 2x2 AUROC table — directly answers the research question.
+  Fig 2: 2x2 AUROC table - directly answers the research question.
   Fig 3: Genome-wide feature importance map (which regions were selected).
   Fig 4: (optional) Confusion matrix for the winning model.
 

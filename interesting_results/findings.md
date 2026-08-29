@@ -1,4 +1,4 @@
-# Findings - TB-Project (CATS)
+# Findings - Hierarchical NMC breast cancer subtype classifier
 
 Curated log of notable findings, in reverse-chronological order.
 

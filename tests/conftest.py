@@ -1,4 +1,4 @@
-"""Shared pytest fixtures for TB-Project tests."""
+"""Shared pytest fixtures for NMC-Hierarchical-Breast-Cancer-Classifier tests."""
 
 import sys
 from pathlib import Path

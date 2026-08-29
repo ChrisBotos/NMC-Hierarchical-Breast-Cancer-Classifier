@@ -1,10 +1,6 @@
 """Tests for utils.paths module."""
 
 import json
-import shutil
-from pathlib import Path
-
-import pytest
 
 from utils.paths import (
     CODE_DIR,

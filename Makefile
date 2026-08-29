@@ -1,4 +1,4 @@
-.PHONY: install test status validate-status ci-check lint format env-update clean
+.PHONY: test lint format install env-update clean
 
 install:
 	pip install -e ".[dev]" && pre-commit install
@@ -6,30 +6,16 @@ install:
 test:
 	pytest tests/ -v
 
-status:
-	@echo "===== STATUS.md ====="
-	@cat STATUS.md
-	@echo ""
-	@echo "===== TODO.md ====="
-	@cat TODO.md
-
-validate-status:
-	@echo "Validating STATUS.md and TODO.md consistency..."
-	@test -f STATUS.md || (echo "ERROR: STATUS.md not found" && exit 1)
-	@test -f TODO.md || (echo "ERROR: TODO.md not found" && exit 1)
-	@echo "STATUS.md and TODO.md both present."
-	@echo "Validation passed."
-
-ci-check: validate-status lint test
-	@echo "All CI checks passed."
-
 lint:
-	ruff check code/ tests/ scripts/
-	black --check code/ tests/ scripts/
+	ruff check code/ tests/
+	black --check code/ tests/
 
 format:
-	black code/ tests/ scripts/
-	ruff check --fix code/ tests/ scripts/
+	black code/ tests/
+	ruff check --fix code/ tests/
+
+ci-check: lint test
+	@echo "All CI checks passed."
 
 env-update:
 	conda env update -f environment.yml --prune && pip install -e ".[dev]"

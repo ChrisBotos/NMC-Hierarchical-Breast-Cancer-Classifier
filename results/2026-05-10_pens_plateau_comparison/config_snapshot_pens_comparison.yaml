@@ -33,7 +33,7 @@ preprocessing:
   merge_threshold: 0.8
 
 environment:
-  conda_prefix: "/data/cbotos/miniconda3"
+  conda_prefix: "${HOME}/miniconda3"
   conda_env: "tb_310"
 
 slurm:
@@ -41,4 +41,4 @@ slurm:
   time: "0-04:00:00"
   cpus_per_task: 1
   max_concurrent_jobs: 50
-  mail_user: "hcty03@gmail.com"
+  mail_user: "your.email@example.com"

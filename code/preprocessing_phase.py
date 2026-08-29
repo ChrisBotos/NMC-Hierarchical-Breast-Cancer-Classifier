@@ -9,7 +9,7 @@ Affiliation: Computer Science and Bioinformatics Master's Programmes.
 
 Script Name: preprocessing_phase.py.
 Description:
-    Phase 1 preprocessing for the CATS breast cancer subtype classification
+    Phase 1 preprocessing for the breast cancer subtype classification
     project. Performs label-free region merging of spatially correlated aCGH
     regions into consensus segments and generates handoff files for downstream
     feature selection (Phase 2).
@@ -30,11 +30,8 @@ import numpy as np
 import pandas as pd
 import rich.traceback
 from rich.progress import track
-
 from utils import (
     DATA_DIR,
-    SUBTYPE_COLORS,
-    SUBTYPE_ORDER,
     apply_plot_style,
     get_run_dirs,
     get_sample_columns,
@@ -157,8 +154,9 @@ def build_consensus_matrix(cn_df, merge_map, sample_cols):
     nclone_arr = np.empty(n_segments, dtype=int)
     cn_matrix = np.empty((n_segments, len(sample_cols)), dtype=float)
 
-    for seg_id_str in track(sorted(merge_map.keys(), key=int),
-                            description="Building consensus"):
+    for seg_id_str in track(
+        sorted(merge_map.keys(), key=int), description="Building consensus"
+    ):
         seg_id = int(seg_id_str)
         raw_indices = merge_map[seg_id_str]
 
@@ -204,17 +202,26 @@ def plot_merge_summary(train_df, merge_map, merged_df):
     log.info("=" * 60)
 
     chrom_order = sorted(train_df["Chromosome"].unique())
-    before_counts = train_df["Chromosome"].value_counts().reindex(
-        chrom_order,
-    ).values
-    after_counts = merged_df["Chromosome"].value_counts().reindex(
-        chrom_order,
-    ).values
+    before_counts = (
+        train_df["Chromosome"]
+        .value_counts()
+        .reindex(
+            chrom_order,
+        )
+        .values
+    )
+    after_counts = (
+        merged_df["Chromosome"]
+        .value_counts()
+        .reindex(
+            chrom_order,
+        )
+        .values
+    )
 
     log.info("Total regions before merging: %d", len(train_df))
     log.info("Total consensus segments after merging: %d", len(merged_df))
-    log.info("Overall reduction: %.1f%%",
-             (1 - len(merged_df) / len(train_df)) * 100)
+    log.info("Overall reduction: %.1f%%", (1 - len(merged_df) / len(train_df)) * 100)
     log.info("")
     log.info("Per-chromosome summary:")
     log.info("%5s %8s %8s %10s", "Chr", "Before", "After", "Reduction")
@@ -224,16 +231,28 @@ def plot_merge_summary(train_df, merge_map, merged_df):
         ratio = 1 - after / before if before > 0 else 0
         log.info("%5s %8d %8d %9.1f%%", label, before, after, ratio * 100)
 
-    '''Figure 01: Regions per chromosome before and after merging.'''
+    """Figure 01: Regions per chromosome before and after merging."""
     fig, ax = plt.subplots(figsize=(10, 4.5))
     x = np.arange(len(chrom_order))
     width = 0.35
-    ax.bar(x - width / 2, before_counts, width, color="#3C5488",
-           edgecolor="black", linewidth=0.3,
-           label="Raw regions (before merging)")
-    ax.bar(x + width / 2, after_counts, width, color="#00A087",
-           edgecolor="black", linewidth=0.3,
-           label="Consensus segments (after merging)")
+    ax.bar(
+        x - width / 2,
+        before_counts,
+        width,
+        color="#3C5488",
+        edgecolor="black",
+        linewidth=0.3,
+        label="Raw regions (before merging)",
+    )
+    ax.bar(
+        x + width / 2,
+        after_counts,
+        width,
+        color="#00A087",
+        edgecolor="black",
+        linewidth=0.3,
+        label="Consensus segments (after merging)",
+    )
     chrom_labels = ["X" if c == 23 else str(c) for c in chrom_order]
     ax.set_xticks(x)
     ax.set_xticklabels(chrom_labels, fontsize=7)
@@ -246,34 +265,39 @@ def plot_merge_summary(train_df, merge_map, merged_df):
     log.info("")
     log.info("Saved: 01_regions_per_chromosome.png")
 
-    '''Figure 02: Segment size distribution.'''
+    """Figure 02: Segment size distribution."""
     segment_sizes = [len(chain) for chain in merge_map.values()]
     singletons = sum(1 for s in segment_sizes if s == 1)
     log.info("")
     log.info("Segment size statistics:")
-    log.info("  Singletons (1 raw region): %d (%.1f%%)",
-             singletons, singletons / len(segment_sizes) * 100)
-    log.info("  Median segment size: %d raw regions",
-             int(np.median(segment_sizes)))
+    log.info(
+        "  Singletons (1 raw region): %d (%.1f%%)",
+        singletons,
+        singletons / len(segment_sizes) * 100,
+    )
+    log.info("  Median segment size: %d raw regions", int(np.median(segment_sizes)))
     log.info("  Mean segment size: %.1f raw regions", np.mean(segment_sizes))
     log.info("  Max segment size: %d raw regions", max(segment_sizes))
 
     fig, ax = plt.subplots(figsize=(6, 4))
     max_size = max(segment_sizes)
     bins = np.arange(0.5, max_size + 1.5, 1)
-    ax.hist(segment_sizes, bins=bins, color="#4DBBD5",
-            edgecolor="black", linewidth=0.3)
+    ax.hist(segment_sizes, bins=bins, color="#4DBBD5", edgecolor="black", linewidth=0.3)
     ax.set_xlabel("Number of raw regions per consensus segment")
     ax.set_ylabel("Number of consensus segments")
     ax.spines[["top", "right"]].set_visible(False)
     ax.text(
-        0.97, 0.95,
+        0.97,
+        0.95,
         f"n = {len(segment_sizes)} segments\n"
         f"Singletons: {singletons}"
         f" ({singletons / len(segment_sizes) * 100:.0f}%)\n"
         f"Median: {int(np.median(segment_sizes))} regions\n"
         f"Max: {max_size} regions",
-        transform=ax.transAxes, fontsize=8, va="top", ha="right",
+        transform=ax.transAxes,
+        fontsize=8,
+        va="top",
+        ha="right",
         bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
     )
     fig.savefig(FIG_DIR / "02_segment_size_distribution.png")
@@ -301,14 +325,17 @@ def compute_kruskal_wallis(merged_df, clinical_df, sample_cols):
     n_tests = len(pvals)
     bonf_alpha = bonferroni_threshold(n_tests)
     n_sig = (pvals < bonf_alpha).sum()
-    log.info("Kruskal-Wallis: %d / %d segments pass Bonferroni (alpha=%.2e)",
-             n_sig, n_tests, bonf_alpha)
+    log.info(
+        "Kruskal-Wallis: %d / %d segments pass Bonferroni (alpha=%.2e)",
+        n_sig,
+        n_tests,
+        bonf_alpha,
+    )
 
     return pvals, h_stats
 
 
-def save_handoff_files(train_merged, val_merged, merge_map, pvals, h_stats,
-                       train_df):
+def save_handoff_files(train_merged, val_merged, merge_map, pvals, h_stats, train_df):
     """Save all handoff files for Phase 2 (feature selection).
 
     Args:
@@ -326,10 +353,16 @@ def save_handoff_files(train_merged, val_merged, merge_map, pvals, h_stats,
     # Merged data matrices.
     train_merged.to_csv(OUT_DIR / "train_merged.tsv", sep="\t", index=False)
     val_merged.to_csv(OUT_DIR / "validation_merged.tsv", sep="\t", index=False)
-    log.info("Saved: train_merged.tsv (%d segments x %d samples)",
-             len(train_merged), len(get_sample_columns(train_merged)))
-    log.info("Saved: validation_merged.tsv (%d segments x %d samples)",
-             len(val_merged), len(get_sample_columns(val_merged)))
+    log.info(
+        "Saved: train_merged.tsv (%d segments x %d samples)",
+        len(train_merged),
+        len(get_sample_columns(train_merged)),
+    )
+    log.info(
+        "Saved: validation_merged.tsv (%d segments x %d samples)",
+        len(val_merged),
+        len(get_sample_columns(val_merged)),
+    )
 
     # Merge map (JSON).
     with open(OUT_DIR / "merge_map.json", "w") as f:
@@ -342,13 +375,15 @@ def save_handoff_files(train_merged, val_merged, merge_map, pvals, h_stats,
         seg_id = int(seg_id_str)
         raw_indices = merge_map[seg_id_str]
         seg_row = train_merged.iloc[seg_id]
-        segment_rows.append({
-            "SegmentID": seg_id,
-            "Chromosome": int(seg_row["Chromosome"]),
-            "Start": int(seg_row["Start"]),
-            "End": int(seg_row["End"]),
-            "n_raw_regions": len(raw_indices),
-        })
+        segment_rows.append(
+            {
+                "SegmentID": seg_id,
+                "Chromosome": int(seg_row["Chromosome"]),
+                "Start": int(seg_row["Start"]),
+                "End": int(seg_row["End"]),
+                "n_raw_regions": len(raw_indices),
+            }
+        )
     segment_df = pd.DataFrame(segment_rows)
     segment_df.to_csv(OUT_DIR / "segment_sizes.tsv", sep="\t", index=False)
     log.info("Saved: segment_sizes.tsv")
@@ -358,25 +393,27 @@ def save_handoff_files(train_merged, val_merged, merge_map, pvals, h_stats,
     bonf_alpha = bonferroni_threshold(n_tests)
     n_raw_per_seg = [len(merge_map[str(i)]) for i in range(len(merge_map))]
 
-    kw_df = pd.DataFrame({
-        "SegmentID": range(len(pvals)),
-        "Chromosome": train_merged["Chromosome"].values.astype(int),
-        "Start": train_merged["Start"].values.astype(int),
-        "End": train_merged["End"].values.astype(int),
-        "n_raw_regions": n_raw_per_seg,
-        "H_statistic": h_stats,
-        "p_value": pvals,
-        "bonferroni_significant": pvals < bonf_alpha,
-    })
+    kw_df = pd.DataFrame(
+        {
+            "SegmentID": range(len(pvals)),
+            "Chromosome": train_merged["Chromosome"].values.astype(int),
+            "Start": train_merged["Start"].values.astype(int),
+            "End": train_merged["End"].values.astype(int),
+            "n_raw_regions": n_raw_per_seg,
+            "H_statistic": h_stats,
+            "p_value": pvals,
+            "bonferroni_significant": pvals < bonf_alpha,
+        }
+    )
 
     kw_pos = kw_df.sort_values(["Chromosome", "Start"]).reset_index(drop=True)
-    kw_pos.to_csv(OUT_DIR / "kruskal_wallis_by_genomic_position.tsv",
-                  sep="\t", index=False)
+    kw_pos.to_csv(
+        OUT_DIR / "kruskal_wallis_by_genomic_position.tsv", sep="\t", index=False
+    )
     log.info("Saved: kruskal_wallis_by_genomic_position.tsv")
 
     kw_pval = kw_df.sort_values("p_value").reset_index(drop=True)
-    kw_pval.to_csv(OUT_DIR / "kruskal_wallis_by_pvalue.tsv",
-                   sep="\t", index=False)
+    kw_pval.to_csv(OUT_DIR / "kruskal_wallis_by_pvalue.tsv", sep="\t", index=False)
     log.info("Saved: kruskal_wallis_by_pvalue.tsv")
 
     # Per-chromosome merge summary.
@@ -386,15 +423,18 @@ def save_handoff_files(train_merged, val_merged, merge_map, pvals, h_stats,
         before = int((train_df["Chromosome"] == chrom).sum())
         after = int((train_merged["Chromosome"] == chrom).sum())
         ratio = round(after / before, 4) if before > 0 else 0.0
-        summary_rows.append({
-            "Chromosome": chrom,
-            "regions_before": before,
-            "regions_after": after,
-            "reduction_ratio": ratio,
-        })
+        summary_rows.append(
+            {
+                "Chromosome": chrom,
+                "regions_before": before,
+                "regions_after": after,
+                "reduction_ratio": ratio,
+            }
+        )
     summary_df = pd.DataFrame(summary_rows)
-    summary_df.to_csv(OUT_DIR / "per_chromosome_merge_summary.tsv",
-                      sep="\t", index=False)
+    summary_df.to_csv(
+        OUT_DIR / "per_chromosome_merge_summary.tsv", sep="\t", index=False
+    )
     log.info("Saved: per_chromosome_merge_summary.tsv")
     log.info("")
 
@@ -410,7 +450,9 @@ def main():
         description="Phase 1: label-free region merging.",
     )
     parser.add_argument(
-        "--name", type=str, default="default_run",
+        "--name",
+        type=str,
+        default="default_run",
         help="Run name for the results directory (default: default_run).",
     )
     args = parser.parse_args()
@@ -420,7 +462,8 @@ def main():
     apply_plot_style()
 
     save_config(
-        run_dir, "preprocessing_phase",
+        run_dir,
+        "preprocessing_phase",
         merge_threshold=MERGE_THRESHOLD,
     )
 
@@ -431,27 +474,40 @@ def main():
     log.info("=" * 60)
     log.info("PHASE 1: PREPROCESSING (LABEL-FREE REGION MERGING)")
     log.info("=" * 60)
-    log.info("Training data: %d regions x %d samples",
-             len(train_df), len(train_sample_cols))
-    log.info("Validation data: %d regions x %d samples",
-             len(val_df), len(val_sample_cols))
+    log.info(
+        "Training data: %d regions x %d samples", len(train_df), len(train_sample_cols)
+    )
+    log.info(
+        "Validation data: %d regions x %d samples", len(val_df), len(val_sample_cols)
+    )
     log.info("Merge threshold: Pearson r > %.1f", MERGE_THRESHOLD)
     log.info("")
 
     # Perform greedy merging on training data (label-free).
     merge_map = merge_regions(train_df, train_sample_cols)
-    log.info("Merge complete: %d raw regions -> %d consensus segments",
-             len(train_df), len(merge_map))
+    log.info(
+        "Merge complete: %d raw regions -> %d consensus segments",
+        len(train_df),
+        len(merge_map),
+    )
 
     # Build consensus matrices for both training and validation data.
     train_merged = build_consensus_matrix(
-        train_df, merge_map, train_sample_cols,
+        train_df,
+        merge_map,
+        train_sample_cols,
     )
     val_merged = build_consensus_matrix(val_df, merge_map, val_sample_cols)
-    log.info("Training consensus: %d segments x %d samples",
-             len(train_merged), len(train_sample_cols))
-    log.info("Validation consensus: %d segments x %d samples",
-             len(val_merged), len(val_sample_cols))
+    log.info(
+        "Training consensus: %d segments x %d samples",
+        len(train_merged),
+        len(train_sample_cols),
+    )
+    log.info(
+        "Validation consensus: %d segments x %d samples",
+        len(val_merged),
+        len(val_sample_cols),
+    )
     log.info("")
 
     # Merge-specific figures.
@@ -459,12 +515,19 @@ def main():
 
     # Kruskal-Wallis for handoff.
     pvals, h_stats = compute_kruskal_wallis(
-        train_merged, clinical_df, train_sample_cols,
+        train_merged,
+        clinical_df,
+        train_sample_cols,
     )
 
     # Save all handoff files.
     save_handoff_files(
-        train_merged, val_merged, merge_map, pvals, h_stats, train_df,
+        train_merged,
+        val_merged,
+        merge_map,
+        pvals,
+        h_stats,
+        train_df,
     )
 
     log.info("=" * 60)

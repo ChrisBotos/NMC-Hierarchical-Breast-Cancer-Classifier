@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
-name = "tb-project"
+name = "nmc-hierarchical-breast-cancer-classifier"
 version = "0.1.0"
-description = "Classification Assessment of Tumor Subtypes (CATS) - breast cancer molecular subtype classification from aCGH data."
+description = "Hierarchical nearest-mean classifier for breast cancer molecular subtypes from discrete aCGH copy-number profiles."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
@@ -46,6 +46,8 @@ where = ["code"]
 [tool.black]
 line-length = 88
 target-version = ["py310"]
+# Kept byte-for-byte as the course issued it.
+extend-exclude = "code/predictions_file_format_check_v2\\.py"
 
 [tool.ruff]
 line-length = 88
@@ -53,7 +55,18 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
+# Line length is left to black.
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# Every analysis script lives in code/ and reaches its shared helpers by
+# inserting code/ onto sys.path before importing them, because this is a
+# directory of scripts rather than an installed package. That bootstrap has
+# to run before the import it enables, so E402 is structural here.
+"code/*.py" = ["E402"]
+# Provided by the course as the reference checker for the submission format
+# and kept verbatim, so its style is not ours to change.
+"code/predictions_file_format_check_v2.py" = ["E402", "E722", "E712", "F841"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

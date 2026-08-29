@@ -35,15 +35,12 @@ Dependencies:
 
 import argparse
 import json
-import sys
 
 import joblib
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from sklearn.preprocessing import LabelEncoder
-
-from utils import get_run_dirs, save_config, setup_logging
+from utils import save_config, setup_logging
 from utils.cv_config import build_pipeline, build_stage2_pipeline
 from utils.cv_io import load_cv_data
 from utils.paths import DATA_DIR, PROJECT_DIR, RESULTS_DIR
@@ -51,6 +48,7 @@ from utils.paths import DATA_DIR, PROJECT_DIR, RESULTS_DIR
 MODEL_DIR = PROJECT_DIR / "model"
 
 import rich.traceback
+
 rich.traceback.install()
 
 
@@ -101,7 +99,8 @@ def parse_args():
         description="Train the final hierarchical classifier and predict.",
     )
     parser.add_argument(
-        "--name", default="final_hierarchical",
+        "--name",
+        default="final_hierarchical",
         help="Run name for output directories (default: final_hierarchical).",
     )
     return parser.parse_args()
@@ -147,8 +146,7 @@ def load_validation_data(run_dir, feature_names, log):
     val_path = run_dir / "preprocessing" / "data" / "validation_merged.tsv"
     val_df = pd.read_csv(val_path, sep="\t")
     sample_cols = [
-        c for c in val_df.columns
-        if c not in ("Chromosome", "Start", "End", "Nclone")
+        c for c in val_df.columns if c not in ("Chromosome", "Start", "End", "Nclone")
     ]
     X_val = val_df[sample_cols].T
     X_val.columns = feature_names
@@ -174,7 +172,8 @@ def train_stage1(X_train, y, log):
     y_s1 = (y == her2_idx).astype(int)
     log.info(
         "Stage 1 training: %d HER2+ vs %d rest.",
-        y_s1.sum(), len(y_s1) - y_s1.sum(),
+        y_s1.sum(),
+        len(y_s1) - y_s1.sum(),
     )
 
     stage1_pipe = build_pipeline("kw_rf", random_state=42)
@@ -205,7 +204,7 @@ def train_stage2_ensemble(X_train, y, log):
     """
     # Exclude HER2+ samples (class index 0) for Stage 2 training.
     her2_idx = 0
-    mask_s2 = (y != her2_idx)
+    mask_s2 = y != her2_idx
     X_s2 = X_train[mask_s2]
     y_s2 = y[mask_s2]
 
@@ -214,20 +213,25 @@ def train_stage2_ensemble(X_train, y, log):
     y_s2_enc = le_s2.fit_transform(y_s2)
     log.info(
         "Stage 2 training: %d samples, classes %s -> encoded [0, 1].",
-        len(y_s2), le_s2.classes_,
+        len(y_s2),
+        le_s2.classes_,
     )
 
     stage2_models = []
     for i, cfg in enumerate(PLATEAU_CONFIGS):
         pipe = build_stage2_pipeline(
-            "en_nmc", random_state=42, config=STAGE2_CONFIG,
+            "en_nmc",
+            random_state=42,
+            config=STAGE2_CONFIG,
         )
         pipe.set_params(**cfg)
         pipe.fit(X_s2, y_s2_enc)
         stage2_models.append(pipe)
         log.info(
             "  Plateau model %2d/%d trained: %s",
-            i + 1, len(PLATEAU_CONFIGS), cfg,
+            i + 1,
+            len(PLATEAU_CONFIGS),
+            cfg,
         )
 
     log.info("Stage 2 training complete: %d models.", len(stage2_models))
@@ -258,7 +262,7 @@ def predict_hierarchical(stage1_pipe, stage2_models, le_s2, X_val, log):
     log.info("Stage 1 predictions: %d HER2+ out of %d.", n_her2, len(pred_s1))
 
     # Stage 2: classify non-HER2+ samples.
-    mask_s2 = (pred_s1 == 0)
+    mask_s2 = pred_s1 == 0
     X_val_s2 = X_val[mask_s2]
 
     probs = [model.predict_proba(X_val_s2) for model in stage2_models]
@@ -322,7 +326,9 @@ def save_estimate(log):
     est_path = RESULTS_DIR / "estimate.txt"
     with open(est_path, "w", newline="\n") as f:
         f.write(str(estimate))
-    log.info("Estimate saved to %s: %d / 57 (BA=%.4f).", est_path, estimate, MEAN_COMBINED_BA)
+    log.info(
+        "Estimate saved to %s: %d / 57 (BA=%.4f).", est_path, estimate, MEAN_COMBINED_BA
+    )
 
 
 def save_model(stage1_pipe, stage2_models, le_s2, feature_names, run_dir, log):
@@ -363,6 +369,7 @@ def main():
 
     # Resolve the run directory (reuses existing date-prefixed directory).
     from utils.paths import _find_or_create_run_dir
+
     run_dir = _find_or_create_run_dir(args.name)
 
     # Set up logging into a final_training phase directory.
@@ -389,7 +396,11 @@ def main():
     """Generate Predictions"""
 
     final_pred = predict_hierarchical(
-        stage1_pipe, stage2_models, le_s2, X_val, log,
+        stage1_pipe,
+        stage2_models,
+        le_s2,
+        X_val,
+        log,
     )
 
     """Save Deliverables"""

@@ -50,7 +50,11 @@ from utils.constants import PIPELINE_COLORS, PIPELINE_LABELS, PIPELINE_NAMES
 from utils.cv_config import FLAT_PIPELINE_NAMES
 from utils.logging_setup import setup_logging
 from utils.paths import _find_or_create_run_dir, get_run_dirs, save_config
-from utils.plotting import annotate_heatmap, apply_plot_style, draw_significance_brackets
+from utils.plotting import (
+    annotate_heatmap,
+    apply_plot_style,
+    draw_significance_brackets,
+)
 from utils.statistics import nadeau_bengio_test, pairwise_wilcoxon
 
 rich.traceback.install()
@@ -79,7 +83,9 @@ def get_pipeline_color(pipeline_name):
         idx = len(_FALLBACK_COLORS)
         rgba = _TAB10(idx % 10)
         _FALLBACK_COLORS[pipeline_name] = "#{:02x}{:02x}{:02x}".format(
-            int(rgba[0] * 255), int(rgba[1] * 255), int(rgba[2] * 255),
+            int(rgba[0] * 255),
+            int(rgba[1] * 255),
+            int(rgba[2] * 255),
         )
     return _FALLBACK_COLORS[pipeline_name]
 
@@ -108,12 +114,15 @@ def get_pipeline_order(phase, all_results):
     """
     actual_pipelines = set(all_results["pipeline"].unique())
     hierarchical_only = {
-        "nmc_ensemble", "kw_nmc_pens", "standalone_en_pens",
-        "en_nmc_pens", "nmc_pens_ensemble", "standalone_en",
+        "nmc_ensemble",
+        "kw_nmc_pens",
+        "standalone_en_pens",
+        "en_nmc_pens",
+        "nmc_pens_ensemble",
+        "standalone_en",
     }
 
-    if phase in ("hierarchical_nested_cv",) \
-            or actual_pipelines & hierarchical_only:
+    if phase in ("hierarchical_nested_cv",) or actual_pipelines & hierarchical_only:
         canonical = PIPELINE_NAMES
     else:
         canonical = FLAT_PIPELINE_NAMES
@@ -187,7 +196,10 @@ def load_fold_results(nested_cv_data_dir, log):
     all_results = pd.concat(dfs, ignore_index=True)
 
     # Harmonise column names from hierarchical runner to match flat runner.
-    if "stage2_pipeline" in all_results.columns and "pipeline" not in all_results.columns:
+    if (
+        "stage2_pipeline" in all_results.columns
+        and "pipeline" not in all_results.columns
+    ):
         rename_map = {
             "stage2_pipeline": "pipeline",
             "combined_bal_acc": "balanced_accuracy",
@@ -209,7 +221,8 @@ def load_fold_results(nested_cv_data_dir, log):
             log.info(
                 "Filename-derived pipeline names (%d) exceed internal names (%d); "
                 "using filename variants for disambiguation.",
-                len(fname_names), len(internal_names),
+                len(fname_names),
+                len(internal_names),
             )
             all_results["pipeline"] = all_results["_fname_pipeline"]
         all_results = all_results.drop(columns=["_fname_pipeline"])
@@ -246,7 +259,9 @@ def compute_per_repeat_means(all_results):
     if "stage2_bal_acc" in all_results.columns:
         agg_dict["mean_stage2_bal_acc"] = ("stage2_bal_acc", "mean")
 
-    grouped = all_results.groupby(["pipeline", "repeat"], as_index=False).agg(**agg_dict)
+    grouped = all_results.groupby(["pipeline", "repeat"], as_index=False).agg(
+        **agg_dict
+    )
     return grouped
 
 
@@ -281,8 +296,9 @@ def compute_summary_statistics(per_repeat, metric="mean_balanced_accuracy"):
 """Statistical Testing"""
 
 
-def run_statistical_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES,
-                          metric="mean_balanced_accuracy"):
+def run_statistical_tests(
+    per_repeat, log, pipeline_order=PIPELINE_NAMES, metric="mean_balanced_accuracy"
+):
     """Run Friedman test and pairwise Wilcoxon signed-rank tests.
 
     Thin wrapper around utils.statistics.pairwise_wilcoxon that pivots
@@ -303,14 +319,15 @@ def run_statistical_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES,
     """
     # Pivot to wide format: rows=repeats, columns=pipelines.
     wide = per_repeat.pivot(
-        index="repeat", columns="pipeline", values=metric,
+        index="repeat",
+        columns="pipeline",
+        values=metric,
     )
     present = [p for p in pipeline_order if p in wide.columns]
     return pairwise_wilcoxon(wide, present, log)
 
 
-def run_grouped_classifier_test(per_repeat, log,
-                                metric="mean_balanced_accuracy"):
+def run_grouped_classifier_test(per_repeat, log, metric="mean_balanced_accuracy"):
     """Paired Wilcoxon test comparing NMC vs RF, pooling over feature selectors.
 
     For each repeat, the mean balanced accuracy of the two NMC pipelines
@@ -331,7 +348,9 @@ def run_grouped_classifier_test(per_repeat, log,
     rf_pipes = [p for p in ["kw_rf", "en_rf"] if p in per_repeat["pipeline"].values]
 
     if not nmc_pipes or not rf_pipes:
-        log.warning("Cannot run grouped classifier test: need at least one NMC and one RF pipeline.")
+        log.warning(
+            "Cannot run grouped classifier test: need at least one NMC and one RF pipeline."
+        )
         return None
 
     # Compute per-repeat mean across NMC pipelines and across RF pipelines.
@@ -367,13 +386,15 @@ def run_grouped_classifier_test(per_repeat, log,
         "n_repeats": len(common),
     }
 
-    log.info(
-        "Grouped classifier test (NMC vs RF, pooled over feature selectors):"
-    )
+    log.info("Grouped classifier test (NMC vs RF, pooled over feature selectors):")
     log.info(
         "  NMC mean=%.4f, RF mean=%.4f, diff=%.4f, W=%.1f, p=%.6f %s",
-        result["nmc_mean"], result["rf_mean"], mean_diff,
-        stat_val, p_val, "*" if p_val < 0.05 else "",
+        result["nmc_mean"],
+        result["rf_mean"],
+        mean_diff,
+        stat_val,
+        p_val,
+        "*" if p_val < 0.05 else "",
     )
 
     return result
@@ -381,13 +402,12 @@ def run_grouped_classifier_test(per_repeat, log,
 
 # Pre-registered primary comparisons (uncorrected).
 PREREGISTERED_PAIRS = [
-    ("kw_nmc", "en_nmc"),   # Feature selection effect on simple classifier.
-    ("kw_rf", "en_rf"),     # Feature selection effect on complex classifier.
+    ("kw_nmc", "en_nmc"),  # Feature selection effect on simple classifier.
+    ("kw_rf", "en_rf"),  # Feature selection effect on complex classifier.
 ]
 
 
-def run_preregistered_tests(per_repeat, summary, log,
-                            metric="mean_balanced_accuracy"):
+def run_preregistered_tests(per_repeat, summary, log, metric="mean_balanced_accuracy"):
     """Run pre-registered primary comparisons (Wilcoxon, uncorrected).
 
     These comparisons test the core research question (Wessels replication)
@@ -411,7 +431,9 @@ def run_preregistered_tests(per_repeat, summary, log,
             significant. p_corrected equals p_value (no correction).
     """
     wide = per_repeat.pivot(
-        index="repeat", columns="pipeline", values=metric,
+        index="repeat",
+        columns="pipeline",
+        values=metric,
     )
     available = set(wide.columns)
     rows = []
@@ -428,19 +450,24 @@ def run_preregistered_tests(per_repeat, summary, log,
             log.info("  Skipping %s vs %s (fewer than 3 repeats).", a, b)
             continue
         stat_val, p_val = stats.wilcoxon(clean[a].values, clean[b].values)
-        rows.append({
-            "pipeline_a": a,
-            "pipeline_b": b,
-            "comparison_type": "preregistered",
-            "statistic": round(stat_val, 4),
-            "p_value": p_val,
-            "p_corrected": p_val,
-            "significant": p_val < 0.05,
-        })
+        rows.append(
+            {
+                "pipeline_a": a,
+                "pipeline_b": b,
+                "comparison_type": "preregistered",
+                "statistic": round(stat_val, 4),
+                "p_value": p_val,
+                "p_corrected": p_val,
+                "significant": p_val < 0.05,
+            }
+        )
         log.info(
             "  %s vs %s: W=%.1f, p=%.6f %s",
-            PIPELINE_LABELS.get(a, a), PIPELINE_LABELS.get(b, b),
-            stat_val, p_val, "*" if p_val < 0.05 else "",
+            PIPELINE_LABELS.get(a, a),
+            PIPELINE_LABELS.get(b, b),
+            stat_val,
+            p_val,
+            "*" if p_val < 0.05 else "",
         )
 
     # Best base pipeline vs its plateau ensemble variant.
@@ -458,31 +485,40 @@ def run_preregistered_tests(per_repeat, summary, log,
             if len(clean) < 3:
                 continue
             stat_val, p_val = stats.wilcoxon(
-                clean[pipe].values, clean[pens_pipe].values,
+                clean[pipe].values,
+                clean[pens_pipe].values,
             )
-            rows.append({
-                "pipeline_a": pipe,
-                "pipeline_b": pens_pipe,
-                "comparison_type": "preregistered_pens",
-                "statistic": round(stat_val, 4),
-                "p_value": p_val,
-                "p_corrected": p_val,
-                "significant": p_val < 0.05,
-            })
+            rows.append(
+                {
+                    "pipeline_a": pipe,
+                    "pipeline_b": pens_pipe,
+                    "comparison_type": "preregistered_pens",
+                    "statistic": round(stat_val, 4),
+                    "p_value": p_val,
+                    "p_corrected": p_val,
+                    "significant": p_val < 0.05,
+                }
+            )
             log.info(
                 "  %s vs %s (plateau): W=%.1f, p=%.6f %s",
                 PIPELINE_LABELS.get(pipe, pipe),
                 PIPELINE_LABELS.get(pens_pipe, pens_pipe),
-                stat_val, p_val, "*" if p_val < 0.05 else "",
+                stat_val,
+                p_val,
+                "*" if p_val < 0.05 else "",
             )
             break  # Only test the best base pipeline.
 
     return pd.DataFrame(rows) if rows else None
 
 
-def run_exploratory_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES,
-                          metric="mean_balanced_accuracy",
-                          exclude_pairs=None):
+def run_exploratory_tests(
+    per_repeat,
+    log,
+    pipeline_order=PIPELINE_NAMES,
+    metric="mean_balanced_accuracy",
+    exclude_pairs=None,
+):
     """Run exploratory pairwise Wilcoxon tests (Bonferroni-corrected).
 
     Performs all pairwise Wilcoxon signed-rank tests except those already
@@ -503,7 +539,9 @@ def run_exploratory_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES,
             p_corrected, significant.
     """
     wide = per_repeat.pivot(
-        index="repeat", columns="pipeline", values=metric,
+        index="repeat",
+        columns="pipeline",
+        values=metric,
     )
     present = [p for p in pipeline_order if p in wide.columns]
     if len(present) < 2:
@@ -537,27 +575,37 @@ def run_exploratory_tests(per_repeat, log, pipeline_order=PIPELINE_NAMES,
     for a, b in exploratory_pairs:
         stat_val, p_val = stats.wilcoxon(clean[a].values, clean[b].values)
         p_corrected = min(p_val * n_comparisons, 1.0)
-        rows.append({
-            "pipeline_a": a,
-            "pipeline_b": b,
-            "comparison_type": "exploratory",
-            "statistic": round(stat_val, 4),
-            "p_value": p_val,
-            "p_corrected": p_corrected,
-            "significant": p_corrected < 0.05,
-        })
+        rows.append(
+            {
+                "pipeline_a": a,
+                "pipeline_b": b,
+                "comparison_type": "exploratory",
+                "statistic": round(stat_val, 4),
+                "p_value": p_val,
+                "p_corrected": p_corrected,
+                "significant": p_corrected < 0.05,
+            }
+        )
         log.info(
             "  %s vs %s: W=%.1f, p=%.6f, p_corrected=%.6f %s",
-            a, b, stat_val, p_val, p_corrected,
+            a,
+            b,
+            stat_val,
+            p_val,
+            p_corrected,
             "*" if p_corrected < 0.05 else "",
         )
 
     return pd.DataFrame(rows) if rows else None
 
 
-def run_nadeau_bengio_tests(all_results, config, log,
-                           pipeline_order=PIPELINE_NAMES,
-                           fold_metric="balanced_accuracy"):
+def run_nadeau_bengio_tests(
+    all_results,
+    config,
+    log,
+    pipeline_order=PIPELINE_NAMES,
+    fold_metric="balanced_accuracy",
+):
     """Pairwise Nadeau-Bengio corrected resampled t-tests.
 
     Thin wrapper around utils.statistics.nadeau_bengio_test that pivots
@@ -587,10 +635,15 @@ def run_nadeau_bengio_tests(all_results, config, log,
     return nadeau_bengio_test(pivot, present, k, n_samples=100, log=log)
 
 
-def run_bootstrap_ci_tests(per_repeat, log,
-                           pipeline_order=PIPELINE_NAMES,
-                           metric="mean_balanced_accuracy",
-                           n_bootstrap=10000, alpha=0.05, seed=42):
+def run_bootstrap_ci_tests(
+    per_repeat,
+    log,
+    pipeline_order=PIPELINE_NAMES,
+    metric="mean_balanced_accuracy",
+    n_bootstrap=10000,
+    alpha=0.05,
+    seed=42,
+):
     """Paired bootstrap confidence intervals on mean differences.
 
     For each pair of pipelines, computes the mean of paired differences
@@ -613,7 +666,9 @@ def run_bootstrap_ci_tests(per_repeat, log,
             bootstrap_se, distinguishable.
     """
     wide = per_repeat.pivot(
-        index="repeat", columns="pipeline", values=metric,
+        index="repeat",
+        columns="pipeline",
+        values=metric,
     )
     present = [p for p in pipeline_order if p in wide.columns]
     if len(present) < 2:
@@ -624,11 +679,12 @@ def run_bootstrap_ci_tests(per_repeat, log,
 
     log.info(
         "=== Paired Bootstrap CIs (%d resamples, %d%% CI) ===",
-        n_bootstrap, int((1 - alpha) * 100),
+        n_bootstrap,
+        int((1 - alpha) * 100),
     )
 
     for i, a in enumerate(present):
-        for b in present[i + 1:]:
+        for b in present[i + 1 :]:
             clean = wide[[a, b]].dropna()
             diffs = clean[a].values - clean[b].values
             observed_mean = diffs.mean()
@@ -645,19 +701,25 @@ def run_bootstrap_ci_tests(per_repeat, log,
             boot_se = boot_means.std()
             distinguishable = (ci_lo > 0) or (ci_hi < 0)
 
-            rows.append({
-                "pipeline_a": a,
-                "pipeline_b": b,
-                "mean_diff": round(observed_mean, 6),
-                "ci_lower": round(ci_lo, 6),
-                "ci_upper": round(ci_hi, 6),
-                "bootstrap_se": round(boot_se, 6),
-                "distinguishable": distinguishable,
-            })
+            rows.append(
+                {
+                    "pipeline_a": a,
+                    "pipeline_b": b,
+                    "mean_diff": round(observed_mean, 6),
+                    "ci_lower": round(ci_lo, 6),
+                    "ci_upper": round(ci_hi, 6),
+                    "bootstrap_se": round(boot_se, 6),
+                    "distinguishable": distinguishable,
+                }
+            )
             log.info(
                 "  %s vs %s: diff=%+.4f, 95%% CI=[%+.4f, %+.4f], SE=%.4f %s",
-                PIPELINE_LABELS.get(a, a), PIPELINE_LABELS.get(b, b),
-                observed_mean, ci_lo, ci_hi, boot_se,
+                PIPELINE_LABELS.get(a, a),
+                PIPELINE_LABELS.get(b, b),
+                observed_mean,
+                ci_lo,
+                ci_hi,
+                boot_se,
                 "*" if distinguishable else "",
             )
 
@@ -667,10 +729,15 @@ def run_bootstrap_ci_tests(per_repeat, log,
 """Plotting"""
 
 
-def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log,
-                            pipeline_order=PIPELINE_NAMES,
-                            metric="mean_balanced_accuracy",
-                            metric_label="Mean balanced accuracy (across 5 outer folds)"):
+def plot_pipeline_comparison(
+    per_repeat,
+    pairwise_df,
+    fig_dir,
+    log,
+    pipeline_order=PIPELINE_NAMES,
+    metric="mean_balanced_accuracy",
+    metric_label="Mean balanced accuracy (across 5 outer folds)",
+):
     """Violin plot comparing balanced accuracy across pipelines.
 
     Shows per-repeat mean balanced accuracy as violin plots with overlaid
@@ -696,8 +763,7 @@ def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log,
     # Order pipelines by the canonical order.
     pipelines = [p for p in pipeline_order if p in per_repeat["pipeline"].unique()]
     data_by_pipeline = [
-        per_repeat.loc[per_repeat["pipeline"] == p, metric].values
-        for p in pipelines
+        per_repeat.loc[per_repeat["pipeline"] == p, metric].values for p in pipelines
     ]
     labels = [PIPELINE_LABELS.get(p, p) for p in pipelines]
     colors = [get_pipeline_color(p) for p in pipelines]
@@ -718,7 +784,7 @@ def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log,
         body.set_linewidth(0.8)
 
     # Overlay box plot indicators for quartiles and median.
-    bp = ax.boxplot(
+    ax.boxplot(
         data_by_pipeline,
         positions=range(len(pipelines)),
         widths=0.12,
@@ -735,9 +801,14 @@ def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log,
     for i, (vals, color) in enumerate(zip(data_by_pipeline, colors)):
         jitter = rng.uniform(-0.15, 0.15, size=len(vals))
         ax.scatter(
-            np.full(len(vals), i) + jitter, vals,
-            color=color, edgecolors="black", linewidths=0.5,
-            s=15, zorder=3, alpha=0.7,
+            np.full(len(vals), i) + jitter,
+            vals,
+            color=color,
+            edgecolors="black",
+            linewidths=0.5,
+            s=15,
+            zorder=3,
+            alpha=0.7,
         )
 
     # Add significance brackets from pairwise Wilcoxon tests.
@@ -755,9 +826,14 @@ def plot_pipeline_comparison(per_repeat, pairwise_df, fig_dir, log,
     log.info("Saved figure: %s", out_path)
 
 
-def plot_interaction(per_repeat, fig_dir, log, pipeline_order=PIPELINE_NAMES,
-                     metric="mean_balanced_accuracy",
-                     metric_label="Mean balanced accuracy"):
+def plot_interaction(
+    per_repeat,
+    fig_dir,
+    log,
+    pipeline_order=PIPELINE_NAMES,
+    metric="mean_balanced_accuracy",
+    metric_label="Mean balanced accuracy",
+):
     """Interaction plot showing the 2x2 factorial design.
 
     X-axis: feature selection method (Kruskal-Wallis, Elastic Net).
@@ -836,16 +912,23 @@ def plot_interaction(per_repeat, fig_dir, log, pipeline_order=PIPELINE_NAMES,
         yerr = np.array([ci_lower, ci_upper])
 
         ax.errorbar(
-            x_pos, means, yerr=yerr,
-            color=style["color"], marker=style["marker"],
-            markersize=8, linewidth=2, capsize=4, capthick=1.5,
+            x_pos,
+            means,
+            yerr=yerr,
+            color=style["color"],
+            marker=style["marker"],
+            markersize=8,
+            linewidth=2,
+            capsize=4,
+            capthick=1.5,
             label=style["label"],
         )
 
     # Add standalone EN as a single point at the EN x-position.
     if "standalone_en" in actual:
         se_vals = per_repeat.loc[
-            per_repeat["pipeline"] == "standalone_en", metric,
+            per_repeat["pipeline"] == "standalone_en",
+            metric,
         ].values
         if len(se_vals) > 0:
             m = np.mean(se_vals)
@@ -857,9 +940,15 @@ def plot_interaction(per_repeat, fig_dir, log, pipeline_order=PIPELINE_NAMES,
             else:
                 yerr_se = np.array([[0], [0]])
             ax.errorbar(
-                [1], [m], yerr=yerr_se,
-                color="#B09C85", marker="D", markersize=8,
-                linewidth=0, capsize=4, capthick=1.5,
+                [1],
+                [m],
+                yerr=yerr_se,
+                color="#B09C85",
+                marker="D",
+                markersize=8,
+                linewidth=0,
+                capsize=4,
+                capthick=1.5,
                 label="Standalone EN",
             )
 
@@ -876,10 +965,14 @@ def plot_interaction(per_repeat, fig_dir, log, pipeline_order=PIPELINE_NAMES,
     log.info("Saved figure: %s", out_path)
 
 
-def plot_repeat_convergence(per_repeat, fig_dir, log,
-                           pipeline_order=PIPELINE_NAMES,
-                           metric="mean_balanced_accuracy",
-                           metric_label="Cumulative mean balanced accuracy"):
+def plot_repeat_convergence(
+    per_repeat,
+    fig_dir,
+    log,
+    pipeline_order=PIPELINE_NAMES,
+    metric="mean_balanced_accuracy",
+    metric_label="Cumulative mean balanced accuracy",
+):
     """Cumulative mean balanced accuracy across repeats.
 
     Shows how the per-pipeline mean stabilises as more repeats are
@@ -904,7 +997,8 @@ def plot_repeat_convergence(per_repeat, fig_dir, log,
         scores = subset[metric].values
         cumulative_mean = np.cumsum(scores) / np.arange(1, len(scores) + 1)
         ax.plot(
-            range(1, len(scores) + 1), cumulative_mean,
+            range(1, len(scores) + 1),
+            cumulative_mean,
             color=get_pipeline_color(p),
             label=PIPELINE_LABELS.get(p, p),
             linewidth=1.5,
@@ -921,8 +1015,7 @@ def plot_repeat_convergence(per_repeat, fig_dir, log,
     log.info("Saved figure: %s", out_path)
 
 
-def plot_feature_importance(all_results, fig_dir, log,
-                           pipeline_order=PIPELINE_NAMES):
+def plot_feature_importance(all_results, fig_dir, log, pipeline_order=PIPELINE_NAMES):
     """Horizontal bar chart of the most frequently selected features.
 
     Counts how often each feature is selected across all outer folds
@@ -944,9 +1037,12 @@ def plot_feature_importance(all_results, fig_dir, log,
 
     # Count feature frequencies per pipeline. Skip ensemble pipelines with no features.
     pipelines = [
-        p for p in pipeline_order
+        p
+        for p in pipeline_order
         if p in all_results["pipeline"].unique()
-        and all_results.loc[all_results["pipeline"] == p, "selected_features"].notna().any()
+        and all_results.loc[all_results["pipeline"] == p, "selected_features"]
+        .notna()
+        .any()
     ]
     freq_by_pipeline = {}
     for p in pipelines:
@@ -974,7 +1070,9 @@ def plot_feature_importance(all_results, fig_dir, log,
     for i, p in enumerate(pipelines):
         counts = [freq_by_pipeline[p].get(f, 0) for f in top_features]
         ax.barh(
-            y_pos + i * bar_height, counts, bar_height,
+            y_pos + i * bar_height,
+            counts,
+            bar_height,
             color=get_pipeline_color(p),
             label=PIPELINE_LABELS.get(p, p),
             alpha=0.8,
@@ -994,8 +1092,7 @@ def plot_feature_importance(all_results, fig_dir, log,
     log.info("Saved figure: %s", out_path)
 
 
-def plot_confusion_matrices(all_results, fig_dir, log,
-                           pipeline_order=PIPELINE_NAMES):
+def plot_confusion_matrices(all_results, fig_dir, log, pipeline_order=PIPELINE_NAMES):
     """Grid of normalised confusion matrices (one per pipeline).
 
     Aggregates y_true/y_pred across all outer folds and repeats for
@@ -1055,12 +1152,16 @@ def plot_confusion_matrices(all_results, fig_dir, log,
         # Row-normalise to get recall per class.
         row_sums = cm.sum(axis=1, keepdims=True)
         cm_norm = np.divide(
-            cm.astype(float), row_sums,
-            out=np.zeros_like(cm, dtype=float), where=row_sums != 0,
+            cm.astype(float),
+            row_sums,
+            out=np.zeros_like(cm, dtype=float),
+            where=row_sums != 0,
         )
 
         im = ax.imshow(cm_norm, cmap="Blues", vmin=0, vmax=1, aspect="auto")
-        annotate_heatmap(ax, cm_norm, fmt=".2f", raw_counts=cm, threshold=0.6, fontsize=7)
+        annotate_heatmap(
+            ax, cm_norm, fmt=".2f", raw_counts=cm, threshold=0.6, fontsize=7
+        )
 
         ax.set_xticks(range(len(class_labels)))
         ax.set_yticks(range(len(class_labels)))
@@ -1070,8 +1171,13 @@ def plot_confusion_matrices(all_results, fig_dir, log,
         ax.set_ylabel("True", fontsize=8)
         # Pipeline label as subplot annotation (not matplotlib title).
         ax.text(
-            0.5, 1.05, PIPELINE_LABELS.get(p, p),
-            transform=ax.transAxes, ha="center", fontsize=9, fontweight="bold",
+            0.5,
+            1.05,
+            PIPELINE_LABELS.get(p, p),
+            transform=ax.transAxes,
+            ha="center",
+            fontsize=9,
+            fontweight="bold",
         )
 
     # Hide unused axes.
@@ -1188,7 +1294,8 @@ def compute_error_agreement(all_results, log, pipeline_order=PIPELINE_NAMES):
         log.info(
             "  %s: %d errors (%.1f%% error rate)",
             PIPELINE_LABELS.get(pipelines[i], pipelines[i]),
-            pipe_wrong_count[i], error_rate * 100,
+            pipe_wrong_count[i],
+            error_rate * 100,
         )
 
     log.info("Pairwise error overlap (Jaccard index of error sets):")
@@ -1247,8 +1354,15 @@ def plot_error_agreement(agreement_matrix, conditional_matrix, pipelines, fig_di
     ax1.set_yticks(range(n))
     ax1.set_xticklabels(labels, fontsize=tick_fs, rotation=45, ha="right")
     ax1.set_yticklabels(labels, fontsize=tick_fs)
-    ax1.text(0.5, 1.06, "Error overlap (Jaccard index)",
-             transform=ax1.transAxes, ha="center", fontsize=9, fontweight="bold")
+    ax1.text(
+        0.5,
+        1.06,
+        "Error overlap (Jaccard index)",
+        transform=ax1.transAxes,
+        ha="center",
+        fontsize=9,
+        fontweight="bold",
+    )
     fig.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
 
     # Right panel: conditional error probability.
@@ -1260,8 +1374,15 @@ def plot_error_agreement(agreement_matrix, conditional_matrix, pipelines, fig_di
     ax2.set_yticklabels(labels, fontsize=tick_fs)
     ax2.set_xlabel("Pipeline (wrong?)", fontsize=tick_fs)
     ax2.set_ylabel("Pipeline (given wrong)", fontsize=tick_fs)
-    ax2.text(0.5, 1.06, "P(column wrong | row wrong)",
-             transform=ax2.transAxes, ha="center", fontsize=9, fontweight="bold")
+    ax2.text(
+        0.5,
+        1.06,
+        "P(column wrong | row wrong)",
+        transform=ax2.transAxes,
+        ha="center",
+        fontsize=9,
+        fontweight="bold",
+    )
     fig.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
 
     fig.tight_layout()
@@ -1368,13 +1489,15 @@ def _compute_sample_error_rates(all_results, sample_cols, sample_labels):
 
     error_rate = np.where(n_tested > 0, n_errors / n_tested, 0.0)
 
-    return pd.DataFrame({
-        "sample": sample_cols,
-        "true_label": sample_labels,
-        "n_tested": n_tested,
-        "n_errors": n_errors,
-        "error_rate": error_rate,
-    })
+    return pd.DataFrame(
+        {
+            "sample": sample_cols,
+            "true_label": sample_labels,
+            "n_tested": n_tested,
+            "n_errors": n_errors,
+            "error_rate": error_rate,
+        }
+    )
 
 
 def _kw_hard_vs_easy(X, sample_cols, class_df, feature_names, label, log):
@@ -1411,7 +1534,12 @@ def _kw_hard_vs_easy(X, sample_cols, class_df, feature_names, label, log):
 
     log.info(
         "  %s: median error rate=%.3f, hard (>%.3f)=%d, easy (<=%.3f)=%d",
-        label, median_er, threshold, n_hard, threshold, n_easy,
+        label,
+        median_er,
+        threshold,
+        n_hard,
+        threshold,
+        n_easy,
     )
 
     if n_hard < 2 or n_easy < 2:
@@ -1460,16 +1588,24 @@ def _kw_hard_vs_easy(X, sample_cols, class_df, feature_names, label, log):
     log.info("    KW test (hard vs easy within %s):", label)
     log.info(
         "      Features with uncorrected p < 0.05: %d / %d (%.1f expected by chance)",
-        n_sig_raw, n_features, n_expected_by_chance,
+        n_sig_raw,
+        n_features,
+        n_expected_by_chance,
     )
     log.info(
-        "      Features with Bonferroni p < 0.05: %d / %d", n_sig_bonf, n_features,
+        "      Features with Bonferroni p < 0.05: %d / %d",
+        n_sig_bonf,
+        n_features,
     )
     log.info(
-        "      Features with BH-FDR q < 0.05: %d / %d", n_sig_bh05, n_features,
+        "      Features with BH-FDR q < 0.05: %d / %d",
+        n_sig_bh05,
+        n_features,
     )
     log.info(
-        "      Features with BH-FDR q < 0.10: %d / %d", n_sig_bh10, n_features,
+        "      Features with BH-FDR q < 0.10: %d / %d",
+        n_sig_bh10,
+        n_features,
     )
 
     # Report top features by raw p-value.
@@ -1478,7 +1614,11 @@ def _kw_hard_vs_easy(X, sample_cols, class_df, feature_names, label, log):
     for ti in top_idx:
         log.info(
             "        %s: H=%.2f, p_raw=%.4e, p_bonf=%.4e, q_BH=%.4e",
-            feature_names[ti], kw_h[ti], kw_p[ti], kw_p_bonf[ti], kw_p_bh[ti],
+            feature_names[ti],
+            kw_h[ti],
+            kw_p[ti],
+            kw_p_bonf[ti],
+            kw_p_bh[ti],
         )
 
     return {
@@ -1523,7 +1663,8 @@ def _log_hard_sample_conclusions(kw_results_by_class, log):
                 "CONCLUSION (%s): %d feature(s) significant at BH-FDR q < 0.05. "
                 "There is a reproducible biological axis distinguishing hard from "
                 "easy samples.",
-                label, n_bh05,
+                label,
+                n_bh05,
             )
         elif n_bh10 > 0:
             log.info(
@@ -1531,7 +1672,10 @@ def _log_hard_sample_conclusions(kw_results_by_class, log):
                 "(%d uncorrected vs %.1f expected by chance). A weak signal exists "
                 "but is not strong enough to exploit with this sample size. "
                 "Performance is effectively at ceiling.",
-                label, n_bh10, n_uncorr, n_expected,
+                label,
+                n_bh10,
+                n_uncorr,
+                n_expected,
             )
         elif n_uncorr > n_expected * 2:
             log.info(
@@ -1539,14 +1683,18 @@ def _log_hard_sample_conclusions(kw_results_by_class, log):
                 "but %d uncorrected hits vs %.1f expected suggests a diffuse signal "
                 "too weak to resolve. Performance is at ceiling for this "
                 "feature representation.",
-                label, n_uncorr, n_expected,
+                label,
+                n_uncorr,
+                n_expected,
             )
         else:
             log.info(
                 "CONCLUSION (%s): %d uncorrected hits vs %.1f expected by chance - "
                 "pure noise. Hard and easy samples are indistinguishable. "
                 "Performance is at ceiling.",
-                label, n_uncorr, n_expected,
+                label,
+                n_uncorr,
+                n_expected,
             )
 
 
@@ -1580,7 +1728,8 @@ def analyse_hard_samples(all_results, run_dir, log, fig_dir, data_dir):
     missing_cols = [c for c in required if c not in all_results.columns]
     if missing_cols:
         log.warning(
-            "Missing columns for hard sample analysis: %s; skipping.", missing_cols,
+            "Missing columns for hard sample analysis: %s; skipping.",
+            missing_cols,
         )
         return
 
@@ -1592,7 +1741,9 @@ def analyse_hard_samples(all_results, run_dir, log, fig_dir, data_dir):
 
     # Compute per-sample error rates across all fold-pipeline evaluations.
     sample_summary = _compute_sample_error_rates(
-        all_results, sample_cols, sample_labels,
+        all_results,
+        sample_cols,
+        sample_labels,
     )
 
     # Log overall per-class statistics.
@@ -1609,7 +1760,11 @@ def analyse_hard_samples(all_results, run_dir, log, fig_dir, data_dir):
         n_any_error = (subset["error_rate"] > 0).sum()
         log.info(
             "  %s (n=%d): mean error rate=%.3f, never wrong=%d, wrong at least once=%d",
-            label, mask.sum(), mean_er, n_never, n_any_error,
+            label,
+            mask.sum(),
+            mean_er,
+            n_never,
+            n_any_error,
         )
 
     # Focus on Stage 2 classes since Stage 1 (HER2+) is perfect.
@@ -1623,19 +1778,28 @@ def analyse_hard_samples(all_results, run_dir, log, fig_dir, data_dir):
     for label in ["HR+", "Triple Neg"]:
         class_df = s2_summary[s2_summary["true_label"] == label].copy()
         kw_results_by_class[label] = _kw_hard_vs_easy(
-            X, sample_cols, class_df, feature_names, label, log,
+            X,
+            sample_cols,
+            class_df,
+            feature_names,
+            label,
+            log,
         )
 
     # Log every sample that has any error, sorted by error rate.
     hard_samples = s2_summary[s2_summary["error_rate"] > 0].sort_values(
-        "error_rate", ascending=False,
+        "error_rate",
+        ascending=False,
     )
     log.info("All Stage 2 samples with error_rate > 0 (%d samples):", len(hard_samples))
     for _, row in hard_samples.iterrows():
         log.info(
             "  %s (%s): error_rate=%.3f (%d / %d evaluations wrong)",
-            row["sample"], row["true_label"],
-            row["error_rate"], row["n_errors"], row["n_tested"],
+            row["sample"],
+            row["true_label"],
+            row["error_rate"],
+            row["n_errors"],
+            row["n_tested"],
         )
 
     # Save per-sample summary.
@@ -1670,14 +1834,19 @@ def plot_hard_sample_analysis(s2_summary, kw_results_by_class, fig_dir, log):
 
     for ax, label in zip(axes, ["HR+", "Triple Neg"]):
         class_df = s2_summary[s2_summary["true_label"] == label].sort_values(
-            "error_rate", ascending=False,
+            "error_rate",
+            ascending=False,
         )
         n = len(class_df)
         color = SUBTYPE_COLORS.get(label, "#888888")
 
         ax.barh(
-            range(n), class_df["error_rate"].values,
-            color=color, alpha=0.7, edgecolor="black", linewidth=0.4,
+            range(n),
+            class_df["error_rate"].values,
+            color=color,
+            alpha=0.7,
+            edgecolor="black",
+            linewidth=0.4,
         )
         ax.set_yticks(range(n))
         ax.set_yticklabels(class_df["sample"].values, fontsize=5)
@@ -1695,23 +1864,36 @@ def plot_hard_sample_analysis(s2_summary, kw_results_by_class, fig_dir, log):
                 f"BH-FDR q<0.10: {res['n_sig_bh_010']}"
             )
             ax.text(
-                0.95, 0.95, annotation,
-                transform=ax.transAxes, ha="right", va="top",
-                fontsize=7, bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8),
+                0.95,
+                0.95,
+                annotation,
+                transform=ax.transAxes,
+                ha="right",
+                va="top",
+                fontsize=7,
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.8),
             )
 
         # Mark the threshold.
         if res is not None and res["threshold"] > 0:
             threshold_y_count = (class_df["error_rate"] > res["threshold"]).sum()
             ax.axhline(
-                y=threshold_y_count - 0.5, color="grey",
-                linestyle="--", linewidth=0.8, alpha=0.7,
+                y=threshold_y_count - 0.5,
+                color="grey",
+                linestyle="--",
+                linewidth=0.8,
+                alpha=0.7,
             )
 
         # Pipeline label as subplot annotation.
         ax.text(
-            0.5, 1.04, label,
-            transform=ax.transAxes, ha="center", fontsize=10, fontweight="bold",
+            0.5,
+            1.04,
+            label,
+            transform=ax.transAxes,
+            ha="center",
+            fontsize=10,
+            fontweight="bold",
         )
 
     fig.tight_layout()
@@ -1833,18 +2015,23 @@ def main():
         log.info(
             "  %s: mean=%.4f +/- %.4f, median=%.4f, n_repeats=%d",
             PIPELINE_LABELS.get(pipeline, pipeline),
-            row["mean_bal_acc"], row["std_bal_acc"],
-            row["median_bal_acc"], int(row["n_repeats"]),
+            row["mean_bal_acc"],
+            row["std_bal_acc"],
+            row["median_bal_acc"],
+            int(row["n_repeats"]),
         )
 
     # For hierarchical runs, also report combined 3-class BA as secondary diagnostic.
     if is_hierarchical:
         summary_combined = compute_summary_statistics(
-            per_repeat, metric="mean_balanced_accuracy",
+            per_repeat,
+            metric="mean_balanced_accuracy",
         )
         summary_combined_path = data_dir / "summary_statistics_combined_ba.csv"
         summary_combined.to_csv(summary_combined_path)
-        log.info("Combined 3-class BA (secondary diagnostic, inflated by perfect Stage 1):")
+        log.info(
+            "Combined 3-class BA (secondary diagnostic, inflated by perfect Stage 1):"
+        )
         for pipeline in summary.index:
             if pipeline in summary_combined.index:
                 row_comb = summary_combined.loc[pipeline]
@@ -1852,7 +2039,8 @@ def main():
                 log.info(
                     "  %s: BA2=%.4f, combined_BA=%.4f",
                     PIPELINE_LABELS.get(pipeline, pipeline),
-                    row_ba2["mean_bal_acc"], row_comb["mean_bal_acc"],
+                    row_ba2["mean_bal_acc"],
+                    row_comb["mean_bal_acc"],
                 )
         log.info("Saved combined BA summary: %s", summary_combined_path)
 
@@ -1861,26 +2049,41 @@ def main():
     """Step 3b: Sensitivity Analysis Summary (mislabel exclusion)"""
 
     # Use whichever metric matches the primary metric for the sensitivity analysis.
-    excl_col_name = "stage2_bal_acc_excl" if is_hierarchical else "combined_bal_acc_excl"
+    excl_col_name = (
+        "stage2_bal_acc_excl" if is_hierarchical else "combined_bal_acc_excl"
+    )
     if excl_col_name in all_results.columns:
         excl_col = all_results[excl_col_name].dropna()
         if len(excl_col) > 0:
-            log.info("=== Mislabel Exclusion Sensitivity Analysis (metric: %s) ===", excl_col_name)
+            log.info(
+                "=== Mislabel Exclusion Sensitivity Analysis (metric: %s) ===",
+                excl_col_name,
+            )
             excl_repeat = all_results.dropna(subset=[excl_col_name]).copy()
-            excl_grouped = excl_repeat.groupby("pipeline").agg(
-                mean_ba_excl=(excl_col_name, "mean"),
-                std_ba_excl=(excl_col_name, "std"),
-            ).sort_values("mean_ba_excl", ascending=False)
+            excl_grouped = (
+                excl_repeat.groupby("pipeline")
+                .agg(
+                    mean_ba_excl=(excl_col_name, "mean"),
+                    std_ba_excl=(excl_col_name, "std"),
+                )
+                .sort_values("mean_ba_excl", ascending=False)
+            )
 
             for pipeline in excl_grouped.index:
                 row = excl_grouped.loc[pipeline]
-                incl_mean = summary.loc[pipeline, "mean_bal_acc"] if pipeline in summary.index else float("nan")
+                incl_mean = (
+                    summary.loc[pipeline, "mean_bal_acc"]
+                    if pipeline in summary.index
+                    else float("nan")
+                )
                 delta = row["mean_ba_excl"] - incl_mean
                 log.info(
                     "  %s: excl=%.4f +/- %.4f (incl=%.4f, delta=%+.4f)",
                     PIPELINE_LABELS.get(pipeline, pipeline),
-                    row["mean_ba_excl"], row["std_ba_excl"],
-                    incl_mean, delta,
+                    row["mean_ba_excl"],
+                    row["std_ba_excl"],
+                    incl_mean,
+                    delta,
                 )
 
             excl_path = data_dir / "sensitivity_mislabel_exclusion.csv"
@@ -1895,7 +2098,8 @@ def main():
     missing_pipelines = expected_pipelines - actual_pipelines
     if missing_pipelines:
         log.warning(
-            "Missing pipelines (incomplete run?): %s", sorted(missing_pipelines),
+            "Missing pipelines (incomplete run?): %s",
+            sorted(missing_pipelines),
         )
 
     expected_repeats = config.get("cv", {}).get("n_repeats", None)
@@ -1904,19 +2108,28 @@ def main():
             actual = all_results.loc[all_results["pipeline"] == p, "repeat"].nunique()
             if actual < expected_repeats:
                 log.warning(
-                    "Pipeline %s has %d/%d repeats.", p, actual, expected_repeats,
+                    "Pipeline %s has %d/%d repeats.",
+                    p,
+                    actual,
+                    expected_repeats,
                 )
 
     """Step 5: Statistical Testing (Friedman omnibus)"""
 
     friedman_stat, friedman_p, pairwise_df_legacy = run_statistical_tests(
-        per_repeat, log, pipeline_order=pipeline_order, metric=metric,
+        per_repeat,
+        log,
+        pipeline_order=pipeline_order,
+        metric=metric,
     )
 
     """Step 5a: Pre-registered Primary Comparisons (uncorrected Wilcoxon)"""
 
     prereg_df = run_preregistered_tests(
-        per_repeat, summary, log, metric=metric,
+        per_repeat,
+        summary,
+        log,
+        metric=metric,
     )
     if prereg_df is not None:
         prereg_path = data_dir / "preregistered_comparisons.csv"
@@ -1940,7 +2153,10 @@ def main():
             prereg_pair_set.add(tuple(sorted((row["pipeline_a"], row["pipeline_b"]))))
 
     exploratory_df = run_exploratory_tests(
-        per_repeat, log, pipeline_order=pipeline_order, metric=metric,
+        per_repeat,
+        log,
+        pipeline_order=pipeline_order,
+        metric=metric,
         exclude_pairs=prereg_pair_set,
     )
     if exploratory_df is not None:
@@ -1950,7 +2166,9 @@ def main():
 
     # Combine pre-registered and exploratory results for the violin plot.
     pairwise_parts = [df for df in [prereg_df, exploratory_df] if df is not None]
-    pairwise_df = pd.concat(pairwise_parts, ignore_index=True) if pairwise_parts else None
+    pairwise_df = (
+        pd.concat(pairwise_parts, ignore_index=True) if pairwise_parts else None
+    )
 
     # Save combined pairwise results.
     if pairwise_df is not None:
@@ -1961,7 +2179,10 @@ def main():
     """Step 6: Statistical Testing (Nadeau-Bengio Corrected t-test)"""
 
     nb_df = run_nadeau_bengio_tests(
-        all_results, config, log, pipeline_order=pipeline_order,
+        all_results,
+        config,
+        log,
+        pipeline_order=pipeline_order,
         fold_metric=fold_metric,
     )
     if nb_df is not None:
@@ -1972,7 +2193,10 @@ def main():
     """Step 6b: Paired Bootstrap Confidence Intervals"""
 
     boot_df = run_bootstrap_ci_tests(
-        per_repeat, log, pipeline_order=pipeline_order, metric=metric,
+        per_repeat,
+        log,
+        pipeline_order=pipeline_order,
+        metric=metric,
     )
     if boot_df is not None:
         boot_path = data_dir / "pairwise_bootstrap_ci.csv"
@@ -1980,7 +2204,9 @@ def main():
         n_dist = boot_df["distinguishable"].sum()
         log.info(
             "Saved bootstrap CIs: %s (%d/%d pairs distinguishable)",
-            boot_path, n_dist, len(boot_df),
+            boot_path,
+            n_dist,
+            len(boot_df),
         )
 
     """Step 7: Identify Winner"""
@@ -1997,43 +2223,68 @@ def main():
     """Step 8: Error Agreement Analysis"""
 
     agreement_matrix, conditional_matrix, agree_pipelines = compute_error_agreement(
-        all_results, log, pipeline_order=pipeline_order,
+        all_results,
+        log,
+        pipeline_order=pipeline_order,
     )
 
     # Save error agreement data.
     if agreement_matrix is not None:
         agree_labels = [PIPELINE_LABELS.get(p, p) for p in agree_pipelines]
         pd.DataFrame(
-            agreement_matrix, index=agree_labels, columns=agree_labels,
+            agreement_matrix,
+            index=agree_labels,
+            columns=agree_labels,
         ).to_csv(data_dir / "error_agreement_jaccard.csv")
         pd.DataFrame(
-            conditional_matrix, index=agree_labels, columns=agree_labels,
+            conditional_matrix,
+            index=agree_labels,
+            columns=agree_labels,
         ).to_csv(data_dir / "error_agreement_conditional.csv")
         log.info("Saved error agreement matrices.")
 
     """Step 9: Generate Figures"""
 
     plot_pipeline_comparison(
-        per_repeat, pairwise_df, fig_dir, log,
+        per_repeat,
+        pairwise_df,
+        fig_dir,
+        log,
         pipeline_order=pipeline_order,
-        metric=metric, metric_label=metric_label,
+        metric=metric,
+        metric_label=metric_label,
     )
     plot_interaction(
-        per_repeat, fig_dir, log, pipeline_order=pipeline_order,
-        metric=metric, metric_label=metric_label,
+        per_repeat,
+        fig_dir,
+        log,
+        pipeline_order=pipeline_order,
+        metric=metric,
+        metric_label=metric_label,
     )
     plot_repeat_convergence(
-        per_repeat, fig_dir, log, pipeline_order=pipeline_order,
+        per_repeat,
+        fig_dir,
+        log,
+        pipeline_order=pipeline_order,
         metric=metric,
         metric_label=f"Cumulative mean {fold_metric.replace('_', ' ')}",
     )
     plot_feature_importance(
-        all_results, fig_dir, log, pipeline_order=pipeline_order,
+        all_results,
+        fig_dir,
+        log,
+        pipeline_order=pipeline_order,
     )
     plot_confusion_matrices(
-        all_results, fig_dir, log, pipeline_order=pipeline_order,
+        all_results,
+        fig_dir,
+        log,
+        pipeline_order=pipeline_order,
     )
-    plot_error_agreement(agreement_matrix, conditional_matrix, agree_pipelines, fig_dir, log)
+    plot_error_agreement(
+        agreement_matrix, conditional_matrix, agree_pipelines, fig_dir, log
+    )
 
     """Step 9b: Hard Sample Diagnostic Analysis"""
 
@@ -2042,7 +2293,8 @@ def main():
     """Step 10: Save Config Snapshot"""
 
     save_config(
-        run_dir, "analyse_nested_cv",
+        run_dir,
+        "analyse_nested_cv",
         config_file=config["_config_path"],
         n_fold_files=len(list(nested_cv_data_dir.glob("fold_results_*.csv"))),
         n_total_folds=len(all_results),
