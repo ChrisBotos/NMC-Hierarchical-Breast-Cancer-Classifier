@@ -22,6 +22,7 @@ dependencies = [
     "pandas>=1.5",
     "matplotlib>=3.6",
     "seaborn>=0.12",
+    "mpl-scatter-density>=0.8",
     "scikit-learn>=1.1",
     "joblib>=1.2",
     "statsmodels>=0.13",
